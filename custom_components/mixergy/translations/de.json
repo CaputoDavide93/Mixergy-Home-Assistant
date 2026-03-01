@@ -80,7 +80,7 @@
         "state": {
           "electric": "Elektrisch",
           "indirect": "Indirekt (Gas/Öl)",
-          "heatpump": "Wärmepumpe",
+          "heat_pump": "Wärmepumpe",
           "none": "Keine"
         }
       },

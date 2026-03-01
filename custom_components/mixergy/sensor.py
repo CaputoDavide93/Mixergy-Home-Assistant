@@ -129,7 +129,7 @@ SENSOR_DESCRIPTIONS: tuple[MixergySensorEntityDescription, ...] = (
         key="active_heat_source",
         translation_key="active_heat_source",
         device_class=SensorDeviceClass.ENUM,
-        options=["electric", "indirect", "heatpump", "none"],
+        options=["electric", "indirect", "heat_pump", "none"],
         icon="mdi:fire",
         value_fn=lambda data: data.measurement.active_heat_source.value,
     ),

@@ -50,7 +50,7 @@ class HeatSource(StrEnum):
 
     ELECTRIC = "electric"
     INDIRECT = "indirect"
-    HEAT_PUMP = "heatpump"
+    HEAT_PUMP = "heat_pump"
     NONE = "none"
 
 

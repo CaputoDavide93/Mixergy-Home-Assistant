@@ -80,7 +80,7 @@
         "state": {
           "electric": "Electric",
           "indirect": "Indirect (gas/oil)",
-          "heatpump": "Heat pump",
+          "heat_pump": "Heat pump",
           "none": "None"
         }
       },

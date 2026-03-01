@@ -80,7 +80,7 @@
         "state": {
           "electric": "Électrique",
           "indirect": "Indirect (gaz/fioul)",
-          "heatpump": "Pompe à chaleur",
+          "heat_pump": "Pompe à chaleur",
           "none": "Aucune"
         }
       },

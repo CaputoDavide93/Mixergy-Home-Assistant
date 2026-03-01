@@ -92,6 +92,11 @@ def _register_services(hass: HomeAssistant) -> None:
         start_date: datetime = call.data[ATTR_START_DATE]
         end_date: datetime = call.data[ATTR_END_DATE]
 
+        if start_date >= end_date:
+            raise HomeAssistantError(
+                "Holiday start date must be before the end date."
+            )
+
         for coordinator in _get_coordinators(hass):
             serial = coordinator.client.tank_info.serial_number
             try:

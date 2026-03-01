@@ -80,7 +80,7 @@
         "state": {
           "electric": "Elettrica",
           "indirect": "Indiretta (gas/gasolio)",
-          "heatpump": "Pompa di calore",
+          "heat_pump": "Pompa di calore",
           "none": "Nessuna"
         }
       },
