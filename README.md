@@ -1,6 +1,8 @@
 # Mixergy — Home Assistant Integration
 
-![Mixergy](custom_components/mixergy/brand/icon.png)
+<p align="center">
+  <img src="custom_components/mixergy/brand/icon.png" alt="Mixergy" width="100">
+</p>
 
 [![HACS](https://img.shields.io/badge/HACS-Default-41BDF5.svg)](https://hacs.xyz)
 [![GitHub Release](https://img.shields.io/github/v/release/CaputoDavide93/Mixergy_HomeAssistant_Integration)](https://github.com/CaputoDavide93/Mixergy_HomeAssistant_Integration/releases)
