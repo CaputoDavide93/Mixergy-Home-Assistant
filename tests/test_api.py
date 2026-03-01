@@ -27,6 +27,30 @@ from .conftest import (
 )
 
 
+# ── Helpers ───────────────────────────────────────────────────────────────────
+
+
+def _make_resp(status: int = 200, json_data=None, text_data: str | None = None):
+    """Build a context-manager-compatible mock response."""
+    resp = AsyncMock()
+    resp.status = status
+    resp.__aenter__ = AsyncMock(return_value=resp)
+    resp.__aexit__ = AsyncMock(return_value=False)
+    resp.release = AsyncMock()
+    if json_data is not None:
+        resp.json = AsyncMock(return_value=json_data)
+    if text_data is not None:
+        resp.text = AsyncMock(return_value=text_data)
+    return resp
+
+
+def _make_login_post():
+    """Return an async post side_effect that always returns a 201 login response."""
+    def post_side_effect(url, **kwargs):
+        return _make_resp(201, MOCK_LOGIN_RESPONSE)
+    return post_side_effect
+
+
 # ── Authentication ────────────────────────────────────────────────────────────
 
 
@@ -44,11 +68,7 @@ async def test_authenticate_invalid_credentials(
 ) -> None:
     """MixergyAuthError is raised on 401 response."""
     def post_401(url, **kwargs):
-        resp = AsyncMock()
-        resp.status = 401
-        resp.__aenter__ = AsyncMock(return_value=resp)
-        resp.__aexit__ = AsyncMock(return_value=False)
-        return resp
+        return _make_resp(401)
 
     mock_aiohttp_session.post = MagicMock(side_effect=post_401)
 
@@ -109,6 +129,13 @@ async def test_fetch_measurement_heat_source_electric_on(
     mock_aiohttp_session: MagicMock,
 ) -> None:
     """Electric heat source and immersion=on sets is_heating correctly."""
+    from .conftest import (
+        MOCK_ACCOUNT_RESPONSE,
+        MOCK_ROOT_RESPONSE,
+        MOCK_TANK_DETAIL_RESPONSE,
+        MOCK_TANKS_RESPONSE,
+    )
+
     payload = {
         "topTemperature": 50.0,
         "bottomTemperature": 15.0,
@@ -123,28 +150,32 @@ async def test_fetch_measurement_heat_source_electric_on(
         }),
     }
 
+    # session.get is used as ``async with session.get(url) as resp`` (no await),
+    # so the side_effect must be a sync function returning the response directly.
     def get_side_effect(url, **kwargs):
-        resp = AsyncMock()
-        resp.status = 200
-        resp.__aenter__ = AsyncMock(return_value=resp)
-        resp.__aexit__ = AsyncMock(return_value=False)
-        resp.release = AsyncMock()
+        if url.endswith("/api/v2"):
+            return _make_resp(200, MOCK_ROOT_RESPONSE)
+        if url.endswith("/account"):
+            return _make_resp(200, MOCK_ACCOUNT_RESPONSE)
+        if url.endswith("/tanks"):
+            return _make_resp(200, MOCK_TANKS_RESPONSE)
+        if url.endswith(MOCK_SERIAL):
+            return _make_resp(200, MOCK_TANK_DETAIL_RESPONSE)
         if "measurement" in url:
-            resp.json = AsyncMock(return_value=payload)
-        elif url.endswith("/api/v2"):
-            from .conftest import MOCK_ROOT_RESPONSE, MOCK_TANKS_RESPONSE, MOCK_TANK_DETAIL_RESPONSE
-            resp.json = AsyncMock(return_value=MOCK_ROOT_RESPONSE)
-        elif url.endswith("/tanks"):
-            from .conftest import MOCK_TANKS_RESPONSE
-            resp.json = AsyncMock(return_value=MOCK_TANKS_RESPONSE)
-        elif url.endswith(MOCK_SERIAL):
-            from .conftest import MOCK_TANK_DETAIL_RESPONSE
-            resp.json = AsyncMock(return_value=MOCK_TANK_DETAIL_RESPONSE)
-        else:
-            resp.json = AsyncMock(return_value={})
-        return resp
+            return _make_resp(200, payload)
+        return _make_resp(404)
+
+    # session.request is used as ``resp = await session.request(...)`` so it
+    # must be an AsyncMock whose side_effect is an async function.
+    async def request_side_effect(method, url, **kwargs):
+        if method.upper() == "GET":
+            return get_side_effect(url, **kwargs)
+        return _make_resp(200)
 
     mock_aiohttp_session.get = MagicMock(side_effect=get_side_effect)
+    mock_aiohttp_session.post = MagicMock(side_effect=_make_login_post())
+    mock_aiohttp_session.request = AsyncMock(side_effect=request_side_effect)
+
     client = MixergyApiClient(
         session=mock_aiohttp_session,
         username=MOCK_USERNAME,
@@ -191,7 +222,7 @@ async def test_tank_not_found_raises_error(
     mock_aiohttp_session: MagicMock,
 ) -> None:
     """MixergyTankNotFoundError is raised when serial number does not match."""
-    from .conftest import MOCK_TANKS_RESPONSE
+    from .conftest import MOCK_ACCOUNT_RESPONSE, MOCK_ROOT_RESPONSE
 
     wrong_tanks = {
         "_embedded": {
@@ -206,21 +237,17 @@ async def test_tank_not_found_raises_error(
     }
 
     def get_side_effect(url, **kwargs):
-        resp = AsyncMock()
-        resp.status = 200
-        resp.__aenter__ = AsyncMock(return_value=resp)
-        resp.__aexit__ = AsyncMock(return_value=False)
-        resp.release = AsyncMock()
+        if url.endswith("/api/v2"):
+            return _make_resp(200, MOCK_ROOT_RESPONSE)
+        if url.endswith("/account"):
+            return _make_resp(200, MOCK_ACCOUNT_RESPONSE)
         if url.endswith("/tanks"):
-            resp.json = AsyncMock(return_value=wrong_tanks)
-        elif url.endswith("/api/v2"):
-            from .conftest import MOCK_ROOT_RESPONSE
-            resp.json = AsyncMock(return_value=MOCK_ROOT_RESPONSE)
-        else:
-            resp.json = AsyncMock(return_value={})
-        return resp
+            return _make_resp(200, wrong_tanks)
+        return _make_resp(404)
 
     mock_aiohttp_session.get = MagicMock(side_effect=get_side_effect)
+    mock_aiohttp_session.post = MagicMock(side_effect=_make_login_post())
+
     client = MixergyApiClient(
         session=mock_aiohttp_session,
         username=MOCK_USERNAME,
@@ -239,24 +266,17 @@ async def test_set_target_charge_clamps_value(
     api_client: MixergyApiClient, mock_aiohttp_session: MagicMock
 ) -> None:
     """set_target_charge clamps values to 0–100 before sending."""
-    # Ensure the client is initialised
+    # Ensure the client is initialised (discovers tank URLs)
     await api_client.fetch_all()
 
     put_calls: list = []
 
-    def put_side_effect(url, **kwargs):
-        put_calls.append(kwargs.get("json", {}))
-        resp = AsyncMock()
-        resp.status = 200
-        resp.__aenter__ = AsyncMock(return_value=resp)
-        resp.__aexit__ = AsyncMock(return_value=False)
-        return resp
+    async def request_side_effect(method, url, **kwargs):
+        if method.upper() == "PUT":
+            put_calls.append(kwargs.get("json", {}))
+        return _make_resp(200)
 
-    mock_aiohttp_session.request = MagicMock(
-        side_effect=lambda method, url, **kw: put_side_effect(url, **kw)
-        if method.upper() == "PUT"
-        else AsyncMock()
-    )
+    mock_aiohttp_session.request = AsyncMock(side_effect=request_side_effect)
 
     await api_client.set_target_charge(150)  # Should be clamped to 100
     assert any(c.get("charge") == 100 for c in put_calls)
@@ -271,19 +291,12 @@ async def test_set_target_temperature_clamps_value(
 
     put_calls: list = []
 
-    def put_side_effect(url, **kwargs):
-        put_calls.append(kwargs.get("json", {}))
-        resp = AsyncMock()
-        resp.status = 200
-        resp.__aenter__ = AsyncMock(return_value=resp)
-        resp.__aexit__ = AsyncMock(return_value=False)
-        return resp
+    async def request_side_effect(method, url, **kwargs):
+        if method.upper() == "PUT":
+            put_calls.append(kwargs.get("json", {}))
+        return _make_resp(200)
 
-    mock_aiohttp_session.request = MagicMock(
-        side_effect=lambda method, url, **kw: put_side_effect(url, **kw)
-        if method.upper() == "PUT"
-        else AsyncMock()
-    )
+    mock_aiohttp_session.request = AsyncMock(side_effect=request_side_effect)
 
     await api_client.set_target_temperature(100)  # Should be clamped to 70
     assert any(c.get("max_temp") == 70 for c in put_calls)
@@ -298,6 +311,7 @@ async def test_fetch_schedule_normalises_heatpump_to_heat_pump(
 ) -> None:
     """fetch_schedule normalises API "heatpump" → HA "heat_pump"."""
     from .conftest import (
+        MOCK_ACCOUNT_RESPONSE,
         MOCK_MEASUREMENT_RESPONSE,
         MOCK_ROOT_RESPONSE,
         MOCK_SERIAL,
@@ -308,27 +322,30 @@ async def test_fetch_schedule_normalises_heatpump_to_heat_pump(
     schedule_with_heatpump = '{"defaultHeatSource": "heatpump"}'
 
     def get_side_effect(url, **kwargs):
-        resp = AsyncMock()
-        resp.status = 200
-        resp.__aenter__ = AsyncMock(return_value=resp)
-        resp.__aexit__ = AsyncMock(return_value=False)
-        resp.release = AsyncMock()
         if url.endswith("/api/v2"):
-            resp.json = AsyncMock(return_value=MOCK_ROOT_RESPONSE)
-        elif url.endswith("/tanks"):
-            resp.json = AsyncMock(return_value=MOCK_TANKS_RESPONSE)
-        elif url.endswith(MOCK_SERIAL):
-            resp.json = AsyncMock(return_value=MOCK_TANK_DETAIL_RESPONSE)
-        elif "measurement" in url:
-            resp.json = AsyncMock(return_value=MOCK_MEASUREMENT_RESPONSE)
-        elif "schedule" in url:
-            resp.text = AsyncMock(return_value=schedule_with_heatpump)
-        else:
-            resp.json = AsyncMock(return_value={})
-            resp.text = AsyncMock(return_value="{}")
-        return resp
+            return _make_resp(200, MOCK_ROOT_RESPONSE)
+        if url.endswith("/account"):
+            return _make_resp(200, MOCK_ACCOUNT_RESPONSE)
+        if url.endswith("/tanks"):
+            return _make_resp(200, MOCK_TANKS_RESPONSE)
+        if url.endswith(MOCK_SERIAL):
+            return _make_resp(200, MOCK_TANK_DETAIL_RESPONSE)
+        if "measurement" in url:
+            return _make_resp(200, MOCK_MEASUREMENT_RESPONSE)
+        # For any other URL (settings, schedule), return appropriate defaults
+        return _make_resp(200, None, "{}")
+
+    async def request_side_effect(method, url, **kwargs):
+        if method.upper() == "GET":
+            if "schedule" in url:
+                return _make_resp(200, None, schedule_with_heatpump)
+            return get_side_effect(url, **kwargs)
+        return _make_resp(200)
 
     mock_aiohttp_session.get = MagicMock(side_effect=get_side_effect)
+    mock_aiohttp_session.post = MagicMock(side_effect=_make_login_post())
+    mock_aiohttp_session.request = AsyncMock(side_effect=request_side_effect)
+
     client = MixergyApiClient(
         session=mock_aiohttp_session,
         username=MOCK_USERNAME,
@@ -349,18 +366,14 @@ async def test_set_default_heat_source_sends_heatpump_to_api(
 
     put_bodies: list = []
 
-    def request_side_effect(method, url, **kwargs):
-        resp = AsyncMock()
-        resp.status = 200
-        resp.__aenter__ = AsyncMock(return_value=resp)
-        resp.__aexit__ = AsyncMock(return_value=False)
-        resp.release = AsyncMock()
+    async def request_side_effect(method, url, **kwargs):
+        if method.upper() == "GET" and "schedule" in url:
+            return _make_resp(200, None, '{"defaultHeatSource": "electric"}')
         if method.upper() == "PUT":
             put_bodies.append(kwargs.get("json", {}))
-        resp.text = AsyncMock(return_value="{}")
-        return resp
+        return _make_resp(200)
 
-    mock_aiohttp_session.request = MagicMock(side_effect=request_side_effect)
+    mock_aiohttp_session.request = AsyncMock(side_effect=request_side_effect)
     await api_client.set_default_heat_source("heat_pump")
 
     # Find the PUT that updated defaultHeatSource
@@ -378,6 +391,7 @@ async def test_missing_hateoas_link_raises_connection_error(
 ) -> None:
     """Missing HATEOAS link in tank detail raises MixergyConnectionError."""
     from .conftest import (
+        MOCK_ACCOUNT_RESPONSE,
         MOCK_ROOT_RESPONSE,
         MOCK_SERIAL,
         MOCK_TANKS_RESPONSE,
@@ -396,22 +410,19 @@ async def test_missing_hateoas_link_raises_connection_error(
     }
 
     def get_side_effect(url, **kwargs):
-        resp = AsyncMock()
-        resp.status = 200
-        resp.__aenter__ = AsyncMock(return_value=resp)
-        resp.__aexit__ = AsyncMock(return_value=False)
-        resp.release = AsyncMock()
         if url.endswith("/api/v2"):
-            resp.json = AsyncMock(return_value=MOCK_ROOT_RESPONSE)
-        elif url.endswith("/tanks"):
-            resp.json = AsyncMock(return_value=MOCK_TANKS_RESPONSE)
-        elif url.endswith(MOCK_SERIAL):
-            resp.json = AsyncMock(return_value=broken_detail)
-        else:
-            resp.json = AsyncMock(return_value={})
-        return resp
+            return _make_resp(200, MOCK_ROOT_RESPONSE)
+        if url.endswith("/account"):
+            return _make_resp(200, MOCK_ACCOUNT_RESPONSE)
+        if url.endswith("/tanks"):
+            return _make_resp(200, MOCK_TANKS_RESPONSE)
+        if url.endswith(MOCK_SERIAL):
+            return _make_resp(200, broken_detail)
+        return _make_resp(404)
 
     mock_aiohttp_session.get = MagicMock(side_effect=get_side_effect)
+    mock_aiohttp_session.post = MagicMock(side_effect=_make_login_post())
+
     client = MixergyApiClient(
         session=mock_aiohttp_session,
         username=MOCK_USERNAME,

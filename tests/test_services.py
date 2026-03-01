@@ -22,17 +22,9 @@ def _make_coordinator(serial: str = MOCK_SERIAL) -> MagicMock:
     return coordinator
 
 
-def _make_hass(coordinators: list[MagicMock] | None = None) -> MagicMock:
-    """Return a minimal mock HomeAssistant with optional coordinator entries."""
+def _make_hass() -> MagicMock:
+    """Return a minimal mock HomeAssistant."""
     hass = MagicMock()
-    if coordinators is not None:
-        entries = []
-        for coord in coordinators:
-            entry = MagicMock()
-            entry.runtime_data = coord
-            entries.append(entry)
-        hass.config_entries.async_entries.return_value = entries
-        hass.config_entries.async_loaded_entries.return_value = entries
     hass.services.has_service.return_value = False
     hass.services.async_register = MagicMock()
     hass.services.async_remove = MagicMock()
@@ -46,31 +38,31 @@ def _make_hass(coordinators: list[MagicMock] | None = None) -> MagicMock:
 async def test_boost_charge_calls_set_target_charge_100() -> None:
     """boost_charge service sets the target charge to 100 on each coordinator."""
     from custom_components.mixergy import _register_services
-    from custom_components.mixergy.coordinator import MixergyCoordinator
 
     coordinator = _make_coordinator()
     coordinator.client.set_target_charge = AsyncMock()
 
-    hass = _make_hass([coordinator])
-    # Only coordinators that are actual MixergyCoordinator instances are used;
-    # patch isinstance to return True for our mock.
+    hass = _make_hass()
+
+    # Patch _get_coordinators so the service handler sees our mock coordinator
+    # without needing isinstance() to pass against a real MixergyCoordinator.
+    # The patch must remain active when the handler is invoked, so we keep the
+    # context manager open across both _register_services() and the handler call.
     with patch(
-        "custom_components.mixergy.isinstance",
-        side_effect=lambda obj, cls: True,
+        "custom_components.mixergy._get_coordinators",
+        return_value=[coordinator],
     ):
         _register_services(hass)
 
-    # Extract the registered handler
-    boost_call = hass.services.async_register.call_args_list
-    # Find the boost_charge registration
-    boost_handler = next(
-        (call.args[2] for call in boost_call if call.args[1] == "boost_charge"),
-        None,
-    )
-    assert boost_handler is not None
+        # Extract the registered boost_charge handler
+        boost_handler = next(
+            call.args[2]
+            for call in hass.services.async_register.call_args_list
+            if call.args[1] == "boost_charge"
+        )
+        assert boost_handler is not None
 
-    call_mock = MagicMock()
-    await boost_handler(call_mock)
+        await boost_handler(MagicMock())
 
     coordinator.client.set_target_charge.assert_awaited_once_with(100)
     coordinator.async_request_refresh.assert_awaited_once()
@@ -82,28 +74,28 @@ async def test_boost_charge_raises_homeassistant_error_on_api_failure() -> None:
     from homeassistant.exceptions import HomeAssistantError
 
     from custom_components.mixergy import _register_services
-    from custom_components.mixergy.coordinator import MixergyCoordinator
 
     coordinator = _make_coordinator()
     coordinator.client.set_target_charge = AsyncMock(
         side_effect=MixergyApiError("API unreachable")
     )
 
-    hass = _make_hass([coordinator])
+    hass = _make_hass()
+
     with patch(
-        "custom_components.mixergy.isinstance",
-        side_effect=lambda obj, cls: True,
+        "custom_components.mixergy._get_coordinators",
+        return_value=[coordinator],
     ):
         _register_services(hass)
 
-    boost_handler = next(
-        call.args[2]
-        for call in hass.services.async_register.call_args_list
-        if call.args[1] == "boost_charge"
-    )
+        boost_handler = next(
+            call.args[2]
+            for call in hass.services.async_register.call_args_list
+            if call.args[1] == "boost_charge"
+        )
 
-    with pytest.raises(HomeAssistantError):
-        await boost_handler(MagicMock())
+        with pytest.raises(HomeAssistantError):
+            await boost_handler(MagicMock())
 
 
 # ── set_holiday_dates service ─────────────────────────────────────────────────
@@ -115,31 +107,31 @@ async def test_set_holiday_dates_raises_homeassistant_error_on_api_failure() -> 
     from homeassistant.exceptions import HomeAssistantError
 
     from custom_components.mixergy import _register_services
-    from custom_components.mixergy.coordinator import MixergyCoordinator
 
     coordinator = _make_coordinator()
     coordinator.client.set_holiday_dates = AsyncMock(
         side_effect=MixergyApiError("Schedule update failed")
     )
 
-    hass = _make_hass([coordinator])
+    hass = _make_hass()
+
     with patch(
-        "custom_components.mixergy.isinstance",
-        side_effect=lambda obj, cls: True,
+        "custom_components.mixergy._get_coordinators",
+        return_value=[coordinator],
     ):
         _register_services(hass)
 
-    holiday_handler = next(
-        call.args[2]
-        for call in hass.services.async_register.call_args_list
-        if call.args[1] == "set_holiday_dates"
-    )
+        holiday_handler = next(
+            call.args[2]
+            for call in hass.services.async_register.call_args_list
+            if call.args[1] == "set_holiday_dates"
+        )
 
-    start = datetime(2026, 3, 15, 12, 0, tzinfo=timezone.utc)
-    end = datetime(2026, 3, 22, 12, 0, tzinfo=timezone.utc)
+        start = datetime(2026, 3, 15, 12, 0, tzinfo=timezone.utc)
+        end = datetime(2026, 3, 22, 12, 0, tzinfo=timezone.utc)
 
-    call_mock = MagicMock()
-    call_mock.data = {"start_date": start, "end_date": end}
+        call_mock = MagicMock()
+        call_mock.data = {"start_date": start, "end_date": end}
 
-    with pytest.raises(HomeAssistantError):
-        await holiday_handler(call_mock)
+        with pytest.raises(HomeAssistantError):
+            await holiday_handler(call_mock)

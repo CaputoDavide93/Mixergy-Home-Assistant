@@ -97,7 +97,12 @@ MOCK_SCHEDULE_RESPONSE = (
 
 @pytest.fixture
 def mock_aiohttp_session() -> Generator[MagicMock, None, None]:
-    """Return a mock aiohttp ClientSession."""
+    """Return a mock aiohttp ClientSession.
+
+    All HTTP methods (get, post, put, request) are AsyncMock so that
+    ``await session.get(...)`` works correctly in the API client.
+    The side-effects return context-manager-compatible AsyncMock responses.
+    """
     session = MagicMock(spec=aiohttp.ClientSession)
 
     def make_response(status: int, json_data=None, text_data: str | None = None):
@@ -137,17 +142,22 @@ def mock_aiohttp_session() -> Generator[MagicMock, None, None]:
     def put_side_effect(url, **kwargs):
         return make_response(200, {})
 
-    def request_side_effect(method, url, **kwargs):
+    async def request_side_effect(method, url, **kwargs):
         if method.upper() == "GET":
             return get_side_effect(url, **kwargs)
         if method.upper() == "PUT":
             return put_side_effect(url, **kwargs)
         return make_response(404)
 
+    # session.get / session.post are used as ``async with session.get(...) as resp``
+    # (no preceding ``await``), so they must be regular MagicMock returning a
+    # context-manager-compatible response object directly.
     session.get = MagicMock(side_effect=get_side_effect)
     session.post = MagicMock(side_effect=post_side_effect)
     session.put = MagicMock(side_effect=put_side_effect)
-    session.request = MagicMock(side_effect=request_side_effect)
+    # session.request is used as ``resp = await session.request(...)`` so it must
+    # be an AsyncMock so that the await expression produces the response object.
+    session.request = AsyncMock(side_effect=request_side_effect)
 
     yield session
 
