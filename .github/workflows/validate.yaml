@@ -2,21 +2,19 @@ name: HACS Validation
 
 on:
   push:
-    branches: [main]
   pull_request:
-    branches: [main]
   schedule:
-    # Run weekly to catch HACS breaking changes
-    - cron: "0 8 * * 1"
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+
+permissions: {}
 
 jobs:
   validate:
     name: Validate with HACS Action
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
       - name: HACS validation
-        uses: hacs/action@main
+        uses: "hacs/action@main"
         with:
-          category: integration
+          category: "integration"
