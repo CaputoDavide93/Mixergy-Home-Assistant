@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
 
 from homeassistant.components.sensor import (
+    RestoreSensor,
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
@@ -14,10 +16,12 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.const import (
     PERCENTAGE,
+    EntityCategory,
+    UnitOfEnergy,
     UnitOfPower,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .api import TankData
@@ -120,7 +124,7 @@ SENSOR_DESCRIPTIONS: tuple[MixergySensorEntityDescription, ...] = (
         value_fn=lambda data: data.measurement.clamp_power_w,
         available_fn=lambda data: data.info.has_pv_diverter,
     ),
-    # ── Heat source sensor ───────────────────────────────────────────
+    # ── Heat source sensors ──────────────────────────────────────────
     MixergySensorEntityDescription(
         key="active_heat_source",
         translation_key="active_heat_source",
@@ -152,11 +156,12 @@ SENSOR_DESCRIPTIONS: tuple[MixergySensorEntityDescription, ...] = (
         icon="mdi:airplane-landing",
         value_fn=lambda data: data.schedule.holiday_end,
     ),
-    # ── Info sensors ─────────────────────────────────────────────────
+    # ── Diagnostic / info sensors ────────────────────────────────────
     MixergySensorEntityDescription(
         key="firmware_version",
         translation_key="firmware_version",
         icon="mdi:chip",
+        entity_category=EntityCategory.DIAGNOSTIC,
         entity_registry_enabled_default=False,
         value_fn=lambda data: data.info.firmware_version,
     ),
@@ -164,8 +169,18 @@ SENSOR_DESCRIPTIONS: tuple[MixergySensorEntityDescription, ...] = (
         key="model",
         translation_key="model",
         icon="mdi:water-boiler",
+        entity_category=EntityCategory.DIAGNOSTIC,
         entity_registry_enabled_default=False,
         value_fn=lambda data: data.info.model_code,
+    ),
+    MixergySensorEntityDescription(
+        key="last_update",
+        translation_key="last_update",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        icon="mdi:clock-check-outline",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        entity_registry_enabled_default=False,
+        value_fn=lambda data: data.last_update_time,
     ),
 )
 
@@ -178,10 +193,35 @@ async def async_setup_entry(
     """Set up Mixergy sensor entities."""
     coordinator = entry.runtime_data
 
-    async_add_entities(
+    entities: list[SensorEntity] = [
         MixergySensor(coordinator, description)
         for description in SENSOR_DESCRIPTIONS
-    )
+    ]
+
+    # Energy accumulation sensors (persisted across restarts via RestoreSensor)
+    entities.extend([
+        MixergyEnergySensor(
+            coordinator,
+            key="electric_energy",
+            translation_key="electric_energy",
+            icon="mdi:lightning-bolt",
+            power_w_fn=lambda data: (
+                data.measurement.clamp_power_w
+                if data.measurement.electric_heat_source
+                else 0.0
+            ),
+        ),
+        MixergyEnergySensor(
+            coordinator,
+            key="pv_energy",
+            translation_key="pv_energy",
+            icon="mdi:solar-power",
+            power_w_fn=lambda data: data.measurement.pv_power_kw * 1000,
+            available_fn=lambda data: data.info.has_pv_diverter,
+        ),
+    ])
+
+    async_add_entities(entities)
 
 
 class MixergySensor(MixergyEntity, SensorEntity):
@@ -213,3 +253,69 @@ class MixergySensor(MixergyEntity, SensorEntity):
             super().available
             and self.entity_description.available_fn(self.coordinator.data)
         )
+
+
+class MixergyEnergySensor(MixergyEntity, RestoreSensor):
+    """Cumulative energy sensor backed by per-poll power readings.
+
+    Uses RestoreSensor so the running total survives HA restarts.
+    Accumulation: ΔE (kWh) = P (W) × Δt (h) / 1000
+    """
+
+    _attr_device_class = SensorDeviceClass.ENERGY
+    _attr_native_unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR
+    _attr_state_class = SensorStateClass.TOTAL_INCREASING
+    _attr_suggested_display_precision = 3
+
+    def __init__(
+        self,
+        coordinator: MixergyCoordinator,
+        *,
+        key: str,
+        translation_key: str,
+        icon: str,
+        power_w_fn: Callable[[TankData], float],
+        available_fn: Callable[[TankData], bool] = lambda _: True,
+    ) -> None:
+        """Initialise the energy sensor."""
+        super().__init__(coordinator)
+        self._power_w_fn = power_w_fn
+        self._available_fn = available_fn
+        self._accumulated_kwh: float = 0.0
+        self._last_update: float | None = None
+
+        self._attr_unique_id = f"{coordinator.data.info.serial_number}_{key}"
+        self._attr_translation_key = translation_key
+        self._attr_icon = icon
+
+    async def async_added_to_hass(self) -> None:
+        """Restore previous total and begin accumulating."""
+        await super().async_added_to_hass()
+        if (last := await self.async_get_last_sensor_data()) is not None:
+            try:
+                self._accumulated_kwh = float(last.native_value or 0)
+            except (ValueError, TypeError):
+                self._accumulated_kwh = 0.0
+        self._last_update = time.monotonic()
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Integrate power over elapsed time to accumulate energy."""
+        now = time.monotonic()
+        if self._last_update is not None:
+            elapsed_hours = (now - self._last_update) / 3600
+            power_w = self._power_w_fn(self.coordinator.data)
+            if power_w > 0:
+                self._accumulated_kwh += (power_w / 1000) * elapsed_hours
+        self._last_update = now
+        self.async_write_ha_state()
+
+    @property
+    def native_value(self) -> float:
+        """Return the accumulated energy in kWh."""
+        return round(self._accumulated_kwh, 4)
+
+    @property
+    def available(self) -> bool:
+        """Return True if the entity is available."""
+        return super().available and self._available_fn(self.coordinator.data)

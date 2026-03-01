@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Home Assistant Community
+    url: https://community.home-assistant.io/
+    about: Questions and general discussion about Home Assistant integrations
+  - name: Mixergy Support
+    url: https://support.mixergy.io/
+    about: Questions about your Mixergy tank hardware or account

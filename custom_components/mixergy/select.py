@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 from homeassistant.components.select import SelectEntity
+from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import HEAT_SOURCE_OPTIONS
+from .api import MixergyApiError
+from .const import HEAT_SOURCE_OPTIONS, is_advanced_mode
 from .coordinator import MixergyConfigEntry, MixergyCoordinator
 from .entity import MixergyEntity
 
@@ -16,17 +19,21 @@ async def async_setup_entry(
     entry: MixergyConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up Mixergy select entities."""
+    """Set up Mixergy select entities — Advanced mode only."""
+    if not is_advanced_mode(entry):
+        return
+
     coordinator = entry.runtime_data
     async_add_entities([MixergyDefaultHeatSourceSelect(coordinator)])
 
 
 class MixergyDefaultHeatSourceSelect(MixergyEntity, SelectEntity):
-    """Select entity for the default heat source."""
+    """Select entity for the default heat source (Advanced mode)."""
 
     _attr_translation_key = "default_heat_source_select"
     _attr_icon = "mdi:fire-circle"
     _attr_options = HEAT_SOURCE_OPTIONS
+    _attr_entity_category = EntityCategory.CONFIG
 
     def __init__(self, coordinator: MixergyCoordinator) -> None:
         """Initialise the select entity."""
@@ -42,5 +49,8 @@ class MixergyDefaultHeatSourceSelect(MixergyEntity, SelectEntity):
 
     async def async_select_option(self, option: str) -> None:
         """Set the default heat source."""
-        await self.coordinator.client.set_default_heat_source(option)
-        await self.coordinator.async_request_refresh()
+        try:
+            await self.coordinator.client.set_default_heat_source(option)
+            await self.coordinator.async_request_refresh()
+        except MixergyApiError as err:
+            raise HomeAssistantError(str(err)) from err

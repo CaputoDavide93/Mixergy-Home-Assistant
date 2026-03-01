@@ -1,20 +1,19 @@
-# Describes the Mixergy services
+# Field selectors for Mixergy services.
+# Human-readable names and descriptions live in strings.json / translations/.
 
 set_holiday_dates:
-  name: Set holiday dates
-  description: Set the holiday start and end dates for the Mixergy tank.
   fields:
     start_date:
-      name: Start date
-      description: The departure date and time for holiday mode.
       required: true
       example: "2026-03-15 16:00:00"
       selector:
         datetime:
     end_date:
-      name: End date
-      description: The return date and time from holiday mode.
       required: true
       example: "2026-03-22 12:00:00"
       selector:
         datetime:
+
+clear_holiday_dates:
+
+boost_charge:

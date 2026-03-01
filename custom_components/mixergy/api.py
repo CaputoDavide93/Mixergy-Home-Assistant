@@ -25,6 +25,8 @@ API_ROOT = "https://www.mixergy.io/api/v2"
 TOKEN_REFRESH_BUFFER = 300
 # Default token TTL if the API doesn't tell us (1 hour)
 DEFAULT_TOKEN_TTL = 3600
+# Per-request timeout: 30 s total prevents indefinite hangs
+REQUEST_TIMEOUT = aiohttp.ClientTimeout(total=30)
 
 
 class MixergyApiError(Exception):
@@ -56,6 +58,23 @@ class PVType(StrEnum):
     """PV diverter types."""
 
     NO_INVERTER = "NO_INVERTER"
+
+
+# ── Format helpers ────────────────────────────────────────────────────────────
+
+def _api_to_ha_heat_source(api_value: str) -> str:
+    """Normalise API heat-source format to HA-facing format.
+
+    The Mixergy API uses "heatpump" (no underscore) for the schedule's
+    defaultHeatSource field, but the HA select/sensor entities use "heat_pump"
+    (with underscore) to match their translation keys.
+    """
+    return "heat_pump" if api_value == "heatpump" else api_value
+
+
+def _ha_to_api_heat_source(ha_value: str) -> str:
+    """Normalise HA-facing heat-source format back to API format."""
+    return "heatpump" if ha_value == "heat_pump" else ha_value
 
 
 @dataclass
@@ -120,6 +139,7 @@ class TankData:
     measurement: TankMeasurement = field(default_factory=TankMeasurement)
     settings: TankSettings = field(default_factory=TankSettings)
     schedule: TankSchedule = field(default_factory=TankSchedule)
+    last_update_time: datetime | None = None
 
 
 class MixergyApiClient:
@@ -174,7 +194,9 @@ class MixergyApiClient:
             return
 
         try:
-            async with self._session.get(API_ROOT, ssl=True) as resp:
+            async with self._session.get(
+                API_ROOT, ssl=True, timeout=REQUEST_TIMEOUT
+            ) as resp:
                 if resp.status != 200:
                     raise MixergyConnectionError(
                         f"Root endpoint returned {resp.status}"
@@ -182,7 +204,9 @@ class MixergyApiClient:
                 root = await resp.json()
                 account_url = root["_links"]["account"]["href"]
 
-            async with self._session.get(account_url, ssl=True) as resp:
+            async with self._session.get(
+                account_url, ssl=True, timeout=REQUEST_TIMEOUT
+            ) as resp:
                 if resp.status != 200:
                     raise MixergyConnectionError(
                         f"Account endpoint returned {resp.status}"
@@ -214,6 +238,7 @@ class MixergyApiClient:
                 self._login_url,  # type: ignore[arg-type]
                 json={"username": self._username, "password": self._password},
                 ssl=True,
+                timeout=REQUEST_TIMEOUT,
             ) as resp:
                 if resp.status == 401 or resp.status == 403:
                     raise MixergyAuthError("Invalid username or password")
@@ -264,7 +289,7 @@ class MixergyApiClient:
         try:
             # Get tanks list URL from root
             async with self._session.get(
-                API_ROOT, headers=self._auth_headers, ssl=True
+                API_ROOT, headers=self._auth_headers, ssl=True, timeout=REQUEST_TIMEOUT
             ) as resp:
                 if resp.status != 200:
                     raise MixergyConnectionError(
@@ -275,7 +300,7 @@ class MixergyApiClient:
 
             # Get list of tanks
             async with self._session.get(
-                self._tanks_url, headers=self._auth_headers, ssl=True
+                self._tanks_url, headers=self._auth_headers, ssl=True, timeout=REQUEST_TIMEOUT
             ) as resp:
                 if resp.status != 200:
                     raise MixergyConnectionError(
@@ -303,7 +328,7 @@ class MixergyApiClient:
             # Get detailed tank info
             tank_url = tank["_links"]["self"]["href"]
             async with self._session.get(
-                tank_url, headers=self._auth_headers, ssl=True
+                tank_url, headers=self._auth_headers, ssl=True, timeout=REQUEST_TIMEOUT
             ) as resp:
                 if resp.status != 200:
                     raise MixergyConnectionError(
@@ -311,12 +336,18 @@ class MixergyApiClient:
                     )
                 detail = await resp.json()
 
-            self._measurement_url = detail["_links"]["latest_measurement"][
-                "href"
-            ]
-            self._control_url = detail["_links"]["control"]["href"]
-            self._settings_url = detail["_links"]["settings"]["href"]
-            self._schedule_url = detail["_links"]["schedule"]["href"]
+            # Validate required HATEOAS links before accessing them
+            links = detail.get("_links", {})
+            for link_name in ("latest_measurement", "control", "settings", "schedule"):
+                if not links.get(link_name, {}).get("href"):
+                    raise MixergyConnectionError(
+                        f"Missing required API link '{link_name}' in tank detail response"
+                    )
+
+            self._measurement_url = links["latest_measurement"]["href"]
+            self._control_url = links["control"]["href"]
+            self._settings_url = links["settings"]["href"]
+            self._schedule_url = links["schedule"]["href"]
 
             self._tank_info.model_code = detail.get("tankModelCode", "Unknown")
 
@@ -353,7 +384,8 @@ class MixergyApiClient:
         await self._ensure_authenticated()
 
         resp = await self._session.request(
-            method, url, headers=self._auth_headers, ssl=True, **kwargs
+            method, url, headers=self._auth_headers, ssl=True,
+            timeout=REQUEST_TIMEOUT, **kwargs
         )
 
         if resp.status == 401:
@@ -362,7 +394,8 @@ class MixergyApiClient:
             self.invalidate_token()
             await self.authenticate()
             resp = await self._session.request(
-                method, url, headers=self._auth_headers, ssl=True, **kwargs
+                method, url, headers=self._auth_headers, ssl=True,
+                timeout=REQUEST_TIMEOUT, **kwargs
             )
 
         return resp
@@ -478,7 +511,11 @@ class MixergyApiClient:
             data = json.loads(text)
 
         schedule = TankSchedule(raw=data)
-        schedule.default_heat_source = data.get("defaultHeatSource", "electric")
+
+        # Normalise "heatpump" (API) → "heat_pump" (HA) so the select entity
+        # and default_heat_source sensor always show the HA-canonical value.
+        raw_heat_source = data.get("defaultHeatSource", "electric")
+        schedule.default_heat_source = _api_to_ha_heat_source(raw_heat_source)
 
         holiday = data.get("holiday")
         if holiday:
@@ -658,12 +695,16 @@ class MixergyApiClient:
                 )
 
     async def set_default_heat_source(self, heat_source: str) -> None:
-        """Set the default heat source (electric / indirect / heat_pump)."""
+        """Set the default heat source (electric / indirect / heat_pump).
+
+        Accepts HA-canonical values ("heat_pump") and normalises to the API
+        format ("heatpump") before sending.
+        """
         await self._discover_tank()
 
         schedule_data = await self.fetch_schedule()
         raw = schedule_data.raw
-        raw["defaultHeatSource"] = heat_source
+        raw["defaultHeatSource"] = _ha_to_api_heat_source(heat_source)
 
         async with await self._request_with_reauth(
             "PUT",

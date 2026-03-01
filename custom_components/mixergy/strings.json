@@ -2,32 +2,64 @@
   "config": {
     "step": {
       "user": {
-        "title": "Connect to Mixergy",
-        "description": "Enter your Mixergy account credentials and tank serial number.",
+        "title": "Sign in to Mixergy",
+        "description": "Enter your Mixergy cloud account credentials. These are the same details you use to log in to the Mixergy app.",
         "data": {
-          "username": "Username",
-          "password": "Password",
-          "serial_number": "Tank Serial Number"
+          "username": "Email address",
+          "password": "Password"
+        }
+      },
+      "tank": {
+        "title": "Find your tank",
+        "description": "Enter the serial number printed on the label of your Mixergy tank. It is usually 6–8 characters (e.g. `A12345`).",
+        "data": {
+          "serial_number": "Tank serial number"
+        },
+        "data_description": {
+          "serial_number": "Found on the white label on the side of your tank."
+        }
+      },
+      "experience": {
+        "title": "Choose your experience",
+        "description": "Your **{model}** (serial: `{serial}`) is connected!\n\nChoose how you want to interact with the integration. You can change this any time from the **Configure** button on the integration card.\n\n---\n\n### 🟢 Simple\nBest for everyday users who just want to monitor their tank and quickly boost hot water when needed.\n\n✅ Live temperatures & charge level\n✅ Heating status & heat source indicators\n✅ Energy usage (kWh) for the Energy Dashboard\n✅ Holiday mode status\n✅ **Hot water boost** — set your target charge with a slider\n\n❌ No settings editing\n❌ No heat source switching\n❌ No holiday scheduling\n\n---\n\n### ⚙️ Advanced\nBest for power users who want complete control over their tank.\n\n✅ Everything in Simple\n✅ Adjust target temperature and cleansing temperature\n✅ Switch default heat source (electric / indirect / heat pump)\n✅ PV divert controls (if fitted)\n✅ Frost protection & DSR switches\n✅ Holiday mode scheduling\n✅ Full service automation support",
+        "data": {
+          "experience_mode": "Experience mode"
         }
       },
       "reauth_confirm": {
         "title": "Re-authenticate Mixergy",
-        "description": "Your Mixergy credentials are no longer valid. Please enter updated credentials for tank {serial_number}.",
+        "description": "Your Mixergy credentials are no longer valid. Please enter updated credentials for tank `{serial_number}`.",
         "data": {
-          "username": "Username",
+          "username": "Email address",
           "password": "Password"
         }
       }
     },
     "error": {
       "cannot_connect": "Unable to connect to the Mixergy API. Please check your internet connection.",
-      "invalid_auth": "Invalid username or password.",
-      "tank_not_found": "No tank found with the specified serial number.",
+      "invalid_auth": "Invalid email address or password.",
+      "tank_not_found": "No tank found with the specified serial number. Double-check the label on your tank.",
       "unknown": "An unexpected error occurred. Please try again."
     },
     "abort": {
       "already_configured": "This tank is already configured.",
       "reauth_successful": "Re-authentication successful."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Mixergy settings",
+        "description": "**Simple** gives you live monitoring and a hot water boost slider.\n**Advanced** unlocks all settings, heat source control, PV divert, holiday scheduling, and more.",
+        "data": {
+          "experience_mode": "Experience mode",
+          "update_interval": "Update interval (seconds)"
+        },
+        "data_description": {
+          "experience_mode": "Switch between Simple (monitoring + boost) and Advanced (full control). The integration will reload when saved.",
+          "update_interval": "How frequently to fetch data from the Mixergy API (10–300 seconds)."
+        }
+      }
     }
   },
   "entity": {
@@ -39,7 +71,9 @@
       "charge": { "name": "Current charge" },
       "target_charge": { "name": "Target charge" },
       "electric_power": { "name": "Electric heat power" },
+      "electric_energy": { "name": "Electric heat energy" },
       "pv_power": { "name": "PV power" },
+      "pv_energy": { "name": "PV energy" },
       "clamp_power": { "name": "Clamp power" },
       "active_heat_source": {
         "name": "Active heat source",
@@ -61,7 +95,8 @@
       "holiday_start": { "name": "Holiday start date" },
       "holiday_end": { "name": "Holiday end date" },
       "firmware_version": { "name": "Firmware version" },
-      "model": { "name": "Model" }
+      "model": { "name": "Model" },
+      "last_update": { "name": "Last successful update" }
     },
     "binary_sensor": {
       "electric_heat": { "name": "Electric heat active" },
@@ -81,6 +116,7 @@
     "number": {
       "target_temperature_control": { "name": "Target temperature" },
       "target_charge_control": { "name": "Target charge" },
+      "boost_charge_simple": { "name": "Hot water boost" },
       "cleansing_temperature_control": { "name": "Cleansing temperature" },
       "pv_cut_in_threshold": { "name": "PV cut-in threshold" },
       "pv_charge_limit": { "name": "PV charge limit" },
@@ -120,6 +156,14 @@
           "description": "The return date and time from holiday mode."
         }
       }
+    },
+    "clear_holiday_dates": {
+      "name": "Clear holiday dates",
+      "description": "Clear the holiday mode dates for the Mixergy tank."
+    },
+    "boost_charge": {
+      "name": "Boost hot water",
+      "description": "Boost the hot water to 100% charge immediately."
     }
   }
 }

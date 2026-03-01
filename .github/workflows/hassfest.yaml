@@ -1,0 +1,20 @@
+name: Hassfest
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Run weekly to catch HA core breaking changes
+    - cron: "0 9 * * 1"
+
+jobs:
+  validate:
+    name: Validate with Hassfest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Hassfest validation
+        uses: home-assistant/actions/hassfest@master

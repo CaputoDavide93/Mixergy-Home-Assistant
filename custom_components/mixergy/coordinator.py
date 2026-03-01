@@ -12,6 +12,7 @@ from homeassistant.helpers.update_coordinator import (
     DataUpdateCoordinator,
     UpdateFailed,
 )
+from homeassistant.util import dt as dt_util
 
 from .api import (
     MixergyApiClient,
@@ -19,7 +20,7 @@ from .api import (
     MixergyConnectionError,
     TankData,
 )
-from .const import DOMAIN, UPDATE_INTERVAL
+from .const import CONF_UPDATE_INTERVAL, DOMAIN, UPDATE_INTERVAL
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -38,11 +39,14 @@ class MixergyCoordinator(DataUpdateCoordinator[TankData]):
         config_entry: MixergyConfigEntry,
     ) -> None:
         """Initialise the coordinator."""
+        interval = timedelta(
+            seconds=config_entry.options.get(CONF_UPDATE_INTERVAL, UPDATE_INTERVAL)
+        )
         super().__init__(
             hass,
             _LOGGER,
             name=DOMAIN,
-            update_interval=timedelta(seconds=UPDATE_INTERVAL),
+            update_interval=interval,
             config_entry=config_entry,
         )
         self.client = client
@@ -50,7 +54,10 @@ class MixergyCoordinator(DataUpdateCoordinator[TankData]):
     async def _async_update_data(self) -> TankData:
         """Fetch data from the Mixergy API."""
         try:
-            return await self.client.fetch_all()
+            data = await self.client.fetch_all()
+            # Stamp the successful fetch time so the diagnostic sensor can show it
+            data.last_update_time = dt_util.utcnow()
+            return data
         except MixergyAuthError as err:
             # Triggers HA reauth flow
             raise ConfigEntryAuthFailed(

@@ -1,0 +1,169 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connexion à Mixergy",
+        "description": "Entrez les identifiants de votre compte Mixergy. Ce sont les mêmes que ceux utilisés pour vous connecter à l'application Mixergy.",
+        "data": {
+          "username": "Adresse e-mail",
+          "password": "Mot de passe"
+        }
+      },
+      "tank": {
+        "title": "Trouver votre ballon",
+        "description": "Entrez le numéro de série imprimé sur l'étiquette de votre ballon Mixergy. Il comporte généralement 6 à 8 caractères (ex. `A12345`).",
+        "data": {
+          "serial_number": "Numéro de série du ballon"
+        },
+        "data_description": {
+          "serial_number": "Disponible sur l'étiquette blanche sur le côté de votre ballon."
+        }
+      },
+      "experience": {
+        "title": "Choisissez votre expérience",
+        "description": "Votre **{model}** (série : `{serial}`) est connecté !\n\nChoisissez comment vous souhaitez interagir avec l'intégration. Vous pouvez modifier ce choix à tout moment depuis le bouton **Configurer** sur la carte de l'intégration.\n\n---\n\n### 🟢 Simple\nIdéal pour les utilisateurs quotidiens qui souhaitent surveiller leur ballon et augmenter rapidement la température de l'eau chaude.\n\n✅ Températures et niveau de charge en temps réel\n✅ État de chauffage et indicateurs de source de chaleur\n✅ Consommation d'énergie (kWh) pour le tableau de bord Énergie\n✅ État du mode vacances\n✅ **Boost eau chaude** — définissez votre charge cible avec un curseur\n\n❌ Pas de modification des paramètres\n❌ Pas de sélection de source de chaleur\n❌ Pas de planification des vacances\n\n---\n\n### ⚙️ Avancé\nIdéal pour les utilisateurs expérimentés souhaitant un contrôle total du ballon.\n\n✅ Tout ce qui est disponible en Simple\n✅ Régler la température cible et la température de purification\n✅ Changer la source de chaleur par défaut (électrique / indirecte / pompe à chaleur)\n✅ Commandes PV (si installé)\n✅ Interrupteurs protection antigel et DSR\n✅ Planification du mode vacances\n✅ Support complet pour les automatisations",
+        "data": {
+          "experience_mode": "Mode d'expérience"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Ré-authentification Mixergy",
+        "description": "Vos identifiants Mixergy ne sont plus valides. Veuillez saisir de nouveaux identifiants pour le ballon `{serial_number}`.",
+        "data": {
+          "username": "Adresse e-mail",
+          "password": "Mot de passe"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Impossible de se connecter à l'API Mixergy. Vérifiez votre connexion Internet.",
+      "invalid_auth": "Adresse e-mail ou mot de passe invalide.",
+      "tank_not_found": "Aucun ballon trouvé avec le numéro de série spécifié. Vérifiez l'étiquette sur votre ballon.",
+      "unknown": "Une erreur inattendue s'est produite. Veuillez réessayer."
+    },
+    "abort": {
+      "already_configured": "Ce ballon est déjà configuré.",
+      "reauth_successful": "Ré-authentification réussie."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Paramètres Mixergy",
+        "description": "**Simple** offre une surveillance en temps réel et un curseur de boost d'eau chaude.\n**Avancé** déverrouille tous les paramètres, le contrôle de source de chaleur, la déviation PV, la planification des vacances et plus encore.",
+        "data": {
+          "experience_mode": "Mode d'expérience",
+          "update_interval": "Intervalle de mise à jour (secondes)"
+        },
+        "data_description": {
+          "experience_mode": "Basculer entre Simple (surveillance + boost) et Avancé (contrôle total). L'intégration se rechargera à l'enregistrement.",
+          "update_interval": "À quelle fréquence récupérer les données de l'API Mixergy (10–300 secondes)."
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "hot_water_temperature": { "name": "Température eau chaude" },
+      "coldest_water_temperature": { "name": "Température eau la plus froide" },
+      "target_temperature": { "name": "Température cible" },
+      "cleansing_temperature": { "name": "Température de purification" },
+      "charge": { "name": "Charge actuelle" },
+      "target_charge": { "name": "Charge cible" },
+      "electric_power": { "name": "Puissance chauffage électrique" },
+      "electric_energy": { "name": "Énergie chauffage électrique" },
+      "pv_power": { "name": "Puissance photovoltaïque" },
+      "pv_energy": { "name": "Énergie photovoltaïque" },
+      "clamp_power": { "name": "Puissance pince" },
+      "active_heat_source": {
+        "name": "Source de chaleur active",
+        "state": {
+          "electric": "Électrique",
+          "indirect": "Indirect (gaz/fioul)",
+          "heatpump": "Pompe à chaleur",
+          "none": "Aucune"
+        }
+      },
+      "default_heat_source": {
+        "name": "Source de chaleur par défaut",
+        "state": {
+          "electric": "Électrique",
+          "indirect": "Indirect (gaz/fioul)",
+          "heat_pump": "Pompe à chaleur"
+        }
+      },
+      "holiday_start": { "name": "Début des vacances" },
+      "holiday_end": { "name": "Fin des vacances" },
+      "firmware_version": { "name": "Version du firmware" },
+      "model": { "name": "Modèle" },
+      "last_update": { "name": "Dernière mise à jour réussie" }
+    },
+    "binary_sensor": {
+      "electric_heat": { "name": "Chauffage électrique actif" },
+      "indirect_heat": { "name": "Chauffage indirect actif" },
+      "heatpump_heat": { "name": "Pompe à chaleur active" },
+      "is_heating": { "name": "En chauffe" },
+      "low_hot_water": { "name": "Eau chaude faible" },
+      "no_hot_water": { "name": "Pas d'eau chaude" },
+      "holiday_mode": { "name": "Mode vacances" }
+    },
+    "switch": {
+      "dsr_enabled": { "name": "Assistance réseau (DSR)" },
+      "frost_protection": { "name": "Protection contre le gel" },
+      "distributed_computing": { "name": "Don pour la recherche médicale" },
+      "pv_divert": { "name": "Déviation export PV" }
+    },
+    "number": {
+      "target_temperature_control": { "name": "Température cible" },
+      "target_charge_control": { "name": "Charge cible" },
+      "boost_charge_simple": { "name": "Boost eau chaude" },
+      "cleansing_temperature_control": { "name": "Température de purification" },
+      "pv_cut_in_threshold": { "name": "Seuil d'activation PV" },
+      "pv_charge_limit": { "name": "Limite de charge PV" },
+      "pv_target_current": { "name": "Courant cible PV" },
+      "pv_over_temperature": { "name": "Limite de surtempérature PV" }
+    },
+    "select": {
+      "default_heat_source_select": {
+        "name": "Source de chaleur par défaut",
+        "state": {
+          "electric": "Électrique",
+          "indirect": "Indirect (gaz/fioul)",
+          "heat_pump": "Pompe à chaleur"
+        }
+      }
+    },
+    "button": {
+      "clear_holiday": { "name": "Effacer les dates de vacances" }
+    }
+  },
+  "exceptions": {
+    "auth_failed": {
+      "message": "Échec de l'authentification Mixergy. Veuillez saisir à nouveau vos identifiants."
+    }
+  },
+  "services": {
+    "set_holiday_dates": {
+      "name": "Définir les dates de vacances",
+      "description": "Définit les dates de début et de fin du mode vacances pour le ballon Mixergy.",
+      "fields": {
+        "start_date": {
+          "name": "Date de début",
+          "description": "La date et l'heure de départ en mode vacances."
+        },
+        "end_date": {
+          "name": "Date de fin",
+          "description": "La date et l'heure de retour du mode vacances."
+        }
+      }
+    },
+    "clear_holiday_dates": {
+      "name": "Effacer les dates de vacances",
+      "description": "Efface les dates du mode vacances pour le ballon Mixergy."
+    },
+    "boost_charge": {
+      "name": "Booster l'eau chaude",
+      "description": "Porte immédiatement la charge de l'eau chaude à 100%."
+    }
+  }
+}

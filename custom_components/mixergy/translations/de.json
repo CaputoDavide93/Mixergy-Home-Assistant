@@ -1,0 +1,169 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Bei Mixergy anmelden",
+        "description": "Gib deine Mixergy-Kontodaten ein. Diese sind identisch mit den Daten, die du für die Mixergy-App verwendest.",
+        "data": {
+          "username": "E-Mail-Adresse",
+          "password": "Passwort"
+        }
+      },
+      "tank": {
+        "title": "Deinen Tank finden",
+        "description": "Gib die Seriennummer ein, die auf dem Etikett deines Mixergy-Tanks aufgedruckt ist. Sie besteht meist aus 6–8 Zeichen (z.B. `A12345`).",
+        "data": {
+          "serial_number": "Tank-Seriennummer"
+        },
+        "data_description": {
+          "serial_number": "Auf dem weißen Etikett an der Seite deines Tanks zu finden."
+        }
+      },
+      "experience": {
+        "title": "Wähle dein Erlebnis",
+        "description": "Dein **{model}** (Seriennummer: `{serial}`) ist verbunden!\n\nWähle, wie du mit der Integration interagieren möchtest. Du kannst dies jederzeit über die Schaltfläche **Konfigurieren** auf der Integrationskarte ändern.\n\n---\n\n### 🟢 Einfach\nAm besten für Alltagsnutzer, die ihren Tank überwachen und bei Bedarf schnell Warmwasser aufheizen möchten.\n\n✅ Live-Temperaturen & Ladezustand\n✅ Heizstatus & Wärmequellenanzeigen\n✅ Energieverbrauch (kWh) für das Energie-Dashboard\n✅ Urlaubsmodus-Status\n✅ **Warmwasser aufheizen** — Zielladung per Schieberegler einstellen\n\n❌ Keine Einstellungsänderungen\n❌ Keine Wärmequellenauswahl\n❌ Keine Urlaubsplanung\n\n---\n\n### ⚙️ Erweitert\nAm besten für Power-User, die vollständige Kontrolle über ihren Tank wünschen.\n\n✅ Alles aus Einfach\n✅ Zieltemperatur und Reinigungstemperatur anpassen\n✅ Standard-Wärmequelle wechseln (elektrisch / indirekt / Wärmepumpe)\n✅ PV-Steuerung (falls vorhanden)\n✅ Frostschutz- & DSR-Schalter\n✅ Urlaubsmodus-Planung\n✅ Vollständige Automatisierungsunterstützung",
+        "data": {
+          "experience_mode": "Erlebnismodus"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Mixergy erneut authentifizieren",
+        "description": "Deine Mixergy-Anmeldedaten sind nicht mehr gültig. Bitte gib aktualisierte Anmeldedaten für Tank `{serial_number}` ein.",
+        "data": {
+          "username": "E-Mail-Adresse",
+          "password": "Passwort"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Verbindung zur Mixergy-API nicht möglich. Bitte überprüfe deine Internetverbindung.",
+      "invalid_auth": "Ungültige E-Mail-Adresse oder Passwort.",
+      "tank_not_found": "Kein Tank mit der angegebenen Seriennummer gefunden. Überprüfe das Etikett an deinem Tank.",
+      "unknown": "Ein unerwarteter Fehler ist aufgetreten. Bitte versuche es erneut."
+    },
+    "abort": {
+      "already_configured": "Dieser Tank ist bereits konfiguriert.",
+      "reauth_successful": "Erneute Authentifizierung erfolgreich."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Mixergy-Einstellungen",
+        "description": "**Einfach** bietet Live-Überwachung und einen Schieberegler zum Aufheizen.\n**Erweitert** schaltet alle Einstellungen, Wärmequellensteuerung, PV-Umleitung, Urlaubsplanung und mehr frei.",
+        "data": {
+          "experience_mode": "Erlebnismodus",
+          "update_interval": "Aktualisierungsintervall (Sekunden)"
+        },
+        "data_description": {
+          "experience_mode": "Wechsel zwischen Einfach (Überwachung + Aufheizen) und Erweitert (vollständige Kontrolle). Die Integration wird nach dem Speichern neu geladen.",
+          "update_interval": "Wie häufig Daten von der Mixergy-API abgerufen werden (10–300 Sekunden)."
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "hot_water_temperature": { "name": "Warmwassertemperatur" },
+      "coldest_water_temperature": { "name": "Kälteste Wassertemperatur" },
+      "target_temperature": { "name": "Zieltemperatur" },
+      "cleansing_temperature": { "name": "Reinigungstemperatur" },
+      "charge": { "name": "Aktueller Ladezustand" },
+      "target_charge": { "name": "Zielladezustand" },
+      "electric_power": { "name": "Elektrische Heizleistung" },
+      "electric_energy": { "name": "Elektrische Heizenergie" },
+      "pv_power": { "name": "PV-Leistung" },
+      "pv_energy": { "name": "PV-Energie" },
+      "clamp_power": { "name": "Clamp-Leistung" },
+      "active_heat_source": {
+        "name": "Aktive Wärmequelle",
+        "state": {
+          "electric": "Elektrisch",
+          "indirect": "Indirekt (Gas/Öl)",
+          "heatpump": "Wärmepumpe",
+          "none": "Keine"
+        }
+      },
+      "default_heat_source": {
+        "name": "Standard-Wärmequelle",
+        "state": {
+          "electric": "Elektrisch",
+          "indirect": "Indirekt (Gas/Öl)",
+          "heat_pump": "Wärmepumpe"
+        }
+      },
+      "holiday_start": { "name": "Urlaubsbeginn" },
+      "holiday_end": { "name": "Urlaubsende" },
+      "firmware_version": { "name": "Firmware-Version" },
+      "model": { "name": "Modell" },
+      "last_update": { "name": "Letztes erfolgreiches Update" }
+    },
+    "binary_sensor": {
+      "electric_heat": { "name": "Elektrische Heizung aktiv" },
+      "indirect_heat": { "name": "Indirekte Heizung aktiv" },
+      "heatpump_heat": { "name": "Wärmepumpe aktiv" },
+      "is_heating": { "name": "Heizt gerade" },
+      "low_hot_water": { "name": "Wenig Warmwasser" },
+      "no_hot_water": { "name": "Kein Warmwasser" },
+      "holiday_mode": { "name": "Urlaubsmodus" }
+    },
+    "switch": {
+      "dsr_enabled": { "name": "Netzunterstützung (DSR)" },
+      "frost_protection": { "name": "Frostschutz" },
+      "distributed_computing": { "name": "Medizinische Forschungsspende" },
+      "pv_divert": { "name": "PV-Export-Umleitung" }
+    },
+    "number": {
+      "target_temperature_control": { "name": "Zieltemperatur" },
+      "target_charge_control": { "name": "Zielladezustand" },
+      "boost_charge_simple": { "name": "Warmwasser aufheizen" },
+      "cleansing_temperature_control": { "name": "Reinigungstemperatur" },
+      "pv_cut_in_threshold": { "name": "PV-Einschaltschwelle" },
+      "pv_charge_limit": { "name": "PV-Ladelimit" },
+      "pv_target_current": { "name": "PV-Zielstrom" },
+      "pv_over_temperature": { "name": "PV-Übertemperaturlimit" }
+    },
+    "select": {
+      "default_heat_source_select": {
+        "name": "Standard-Wärmequelle",
+        "state": {
+          "electric": "Elektrisch",
+          "indirect": "Indirekt (Gas/Öl)",
+          "heat_pump": "Wärmepumpe"
+        }
+      }
+    },
+    "button": {
+      "clear_holiday": { "name": "Urlaubsdaten löschen" }
+    }
+  },
+  "exceptions": {
+    "auth_failed": {
+      "message": "Mixergy-Authentifizierung fehlgeschlagen. Bitte gib deine Anmeldedaten erneut ein."
+    }
+  },
+  "services": {
+    "set_holiday_dates": {
+      "name": "Urlaubsdaten festlegen",
+      "description": "Legt das Start- und Enddatum des Urlaubsmodus für den Mixergy-Tank fest.",
+      "fields": {
+        "start_date": {
+          "name": "Startdatum",
+          "description": "Das Abreisedatum und die Uhrzeit für den Urlaubsmodus."
+        },
+        "end_date": {
+          "name": "Enddatum",
+          "description": "Das Rückkehrdatum und die Uhrzeit aus dem Urlaubsmodus."
+        }
+      }
+    },
+    "clear_holiday_dates": {
+      "name": "Urlaubsdaten löschen",
+      "description": "Löscht die Urlaubsmodus-Daten für den Mixergy-Tank."
+    },
+    "boost_charge": {
+      "name": "Warmwasser aufheizen",
+      "description": "Heizt das Warmwasser sofort auf 100% Ladung."
+    }
+  }
+}

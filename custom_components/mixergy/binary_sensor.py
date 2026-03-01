@@ -14,6 +14,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .api import TankData
+from .const import LOW_HOT_WATER_THRESHOLD, NO_HOT_WATER_THRESHOLD
 from .coordinator import MixergyConfigEntry, MixergyCoordinator
 from .entity import MixergyEntity
 
@@ -65,14 +66,14 @@ BINARY_SENSOR_DESCRIPTIONS: tuple[
         translation_key="low_hot_water",
         device_class=BinarySensorDeviceClass.PROBLEM,
         icon="mdi:water-percent-alert",
-        is_on_fn=lambda data: data.measurement.charge < 5,
+        is_on_fn=lambda data: data.measurement.charge < LOW_HOT_WATER_THRESHOLD,
     ),
     MixergyBinarySensorEntityDescription(
         key="no_hot_water",
         translation_key="no_hot_water",
         device_class=BinarySensorDeviceClass.PROBLEM,
         icon="mdi:water-remove-outline",
-        is_on_fn=lambda data: data.measurement.charge < 0.5,
+        is_on_fn=lambda data: data.measurement.charge < NO_HOT_WATER_THRESHOLD,
     ),
     # ── Holiday mode ─────────────────────────────────────────────────
     MixergyBinarySensorEntityDescription(

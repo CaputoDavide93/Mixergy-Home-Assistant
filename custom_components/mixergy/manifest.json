@@ -1,13 +1,14 @@
 {
-  "domain": "mixergy",
-  "name": "Mixergy",
-  "codeowners": ["@DCAPmedia"],
+  "codeowners": ["@CaputoDavide93"],
   "config_flow": true,
+  "documentation": "https://github.com/CaputoDavide93/Mixergy_HomeAssistant_Integration",
+  "domain": "mixergy",
   "homeassistant": "2024.4.0",
-  "documentation": "https://github.com/DCAPmedia/homeassistant-mixergy",
   "integration_type": "device",
   "iot_class": "cloud_polling",
-  "issue_tracker": "https://github.com/DCAPmedia/homeassistant-mixergy/issues",
+  "issue_tracker": "https://github.com/CaputoDavide93/Mixergy_HomeAssistant_Integration/issues",
+  "name": "Mixergy",
+  "quality_scale": "bronze",
   "requirements": [],
   "version": "1.0.0"
 }

@@ -1,0 +1,169 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Accedi a Mixergy",
+        "description": "Inserisci le credenziali del tuo account Mixergy. Sono le stesse che usi per accedere all'app Mixergy.",
+        "data": {
+          "username": "Indirizzo email",
+          "password": "Password"
+        }
+      },
+      "tank": {
+        "title": "Trova il tuo serbatoio",
+        "description": "Inserisci il numero di serie riportato sull'etichetta del tuo serbatoio Mixergy. Di solito è composto da 6–8 caratteri (es. `A12345`).",
+        "data": {
+          "serial_number": "Numero di serie del serbatoio"
+        },
+        "data_description": {
+          "serial_number": "Si trova sull'etichetta bianca sul lato del serbatoio."
+        }
+      },
+      "experience": {
+        "title": "Scegli la tua esperienza",
+        "description": "Il tuo **{model}** (seriale: `{serial}`) è connesso!\n\nScegli come vuoi interagire con l'integrazione. Puoi modificare questa scelta in qualsiasi momento dal pulsante **Configura** sulla scheda dell'integrazione.\n\n---\n\n### 🟢 Semplice\nIdeale per gli utenti di tutti i giorni che vogliono monitorare il serbatoio e aumentare rapidamente la temperatura dell'acqua calda.\n\n✅ Temperature e livello di carica in tempo reale\n✅ Stato di riscaldamento e fonte di calore\n✅ Consumo energetico (kWh) per il Pannello Energia\n✅ Stato modalità vacanza\n✅ **Incremento acqua calda** — imposta il livello target con uno slider\n\n❌ Nessuna modifica delle impostazioni\n❌ Nessuna selezione della fonte di calore\n❌ Nessuna pianificazione delle vacanze\n\n---\n\n### ⚙️ Avanzato\nIdeale per gli utenti esperti che vogliono il controllo completo del serbatoio.\n\n✅ Tutto di Semplice\n✅ Regola temperatura target e temperatura di purifica\n✅ Cambia fonte di calore predefinita (elettrica / indiretta / pompa di calore)\n✅ Controlli PV (se installato)\n✅ Interruttori protezione antigelo e DSR\n✅ Pianificazione modalità vacanza\n✅ Supporto completo per automazioni",
+        "data": {
+          "experience_mode": "Modalità esperienza"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Ri-autenticazione Mixergy",
+        "description": "Le credenziali Mixergy non sono più valide. Inserisci le credenziali aggiornate per il serbatoio `{serial_number}`.",
+        "data": {
+          "username": "Indirizzo email",
+          "password": "Password"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Impossibile connettersi all'API Mixergy. Controlla la connessione a Internet.",
+      "invalid_auth": "Indirizzo email o password non validi.",
+      "tank_not_found": "Nessun serbatoio trovato con il numero di serie specificato. Controlla l'etichetta sul tuo serbatoio.",
+      "unknown": "Si è verificato un errore imprevisto. Riprova."
+    },
+    "abort": {
+      "already_configured": "Questo serbatoio è già configurato.",
+      "reauth_successful": "Ri-autenticazione riuscita."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Impostazioni Mixergy",
+        "description": "**Semplice** offre monitoraggio in tempo reale e uno slider per incrementare l'acqua calda.\n**Avanzato** sblocca tutte le impostazioni, il controllo della fonte di calore, il divert PV, la pianificazione delle vacanze e altro ancora.",
+        "data": {
+          "experience_mode": "Modalità esperienza",
+          "update_interval": "Intervallo di aggiornamento (secondi)"
+        },
+        "data_description": {
+          "experience_mode": "Passa tra Semplice (monitoraggio + incremento) e Avanzato (controllo completo). L'integrazione si ricaricherà al salvataggio.",
+          "update_interval": "Con quale frequenza recuperare i dati dall'API Mixergy (10–300 secondi)."
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "hot_water_temperature": { "name": "Temperatura acqua calda" },
+      "coldest_water_temperature": { "name": "Temperatura acqua più fredda" },
+      "target_temperature": { "name": "Temperatura target" },
+      "cleansing_temperature": { "name": "Temperatura di purifica" },
+      "charge": { "name": "Carica attuale" },
+      "target_charge": { "name": "Carica target" },
+      "electric_power": { "name": "Potenza riscaldamento elettrico" },
+      "electric_energy": { "name": "Energia riscaldamento elettrico" },
+      "pv_power": { "name": "Potenza fotovoltaica" },
+      "pv_energy": { "name": "Energia fotovoltaica" },
+      "clamp_power": { "name": "Potenza clamp" },
+      "active_heat_source": {
+        "name": "Fonte di calore attiva",
+        "state": {
+          "electric": "Elettrica",
+          "indirect": "Indiretta (gas/gasolio)",
+          "heatpump": "Pompa di calore",
+          "none": "Nessuna"
+        }
+      },
+      "default_heat_source": {
+        "name": "Fonte di calore predefinita",
+        "state": {
+          "electric": "Elettrica",
+          "indirect": "Indiretta (gas/gasolio)",
+          "heat_pump": "Pompa di calore"
+        }
+      },
+      "holiday_start": { "name": "Data inizio vacanza" },
+      "holiday_end": { "name": "Data fine vacanza" },
+      "firmware_version": { "name": "Versione firmware" },
+      "model": { "name": "Modello" },
+      "last_update": { "name": "Ultimo aggiornamento riuscito" }
+    },
+    "binary_sensor": {
+      "electric_heat": { "name": "Riscaldamento elettrico attivo" },
+      "indirect_heat": { "name": "Riscaldamento indiretto attivo" },
+      "heatpump_heat": { "name": "Pompa di calore attiva" },
+      "is_heating": { "name": "In riscaldamento" },
+      "low_hot_water": { "name": "Acqua calda scarsa" },
+      "no_hot_water": { "name": "Nessuna acqua calda" },
+      "holiday_mode": { "name": "Modalità vacanza" }
+    },
+    "switch": {
+      "dsr_enabled": { "name": "Assistenza rete (DSR)" },
+      "frost_protection": { "name": "Protezione antigelo" },
+      "distributed_computing": { "name": "Donazione ricerca medica" },
+      "pv_divert": { "name": "Deviazione export FV" }
+    },
+    "number": {
+      "target_temperature_control": { "name": "Temperatura target" },
+      "target_charge_control": { "name": "Carica target" },
+      "boost_charge_simple": { "name": "Incremento acqua calda" },
+      "cleansing_temperature_control": { "name": "Temperatura di purifica" },
+      "pv_cut_in_threshold": { "name": "Soglia attivazione FV" },
+      "pv_charge_limit": { "name": "Limite carica FV" },
+      "pv_target_current": { "name": "Corrente target FV" },
+      "pv_over_temperature": { "name": "Limite temperatura FV" }
+    },
+    "select": {
+      "default_heat_source_select": {
+        "name": "Fonte di calore predefinita",
+        "state": {
+          "electric": "Elettrica",
+          "indirect": "Indiretta (gas/gasolio)",
+          "heat_pump": "Pompa di calore"
+        }
+      }
+    },
+    "button": {
+      "clear_holiday": { "name": "Cancella date vacanza" }
+    }
+  },
+  "exceptions": {
+    "auth_failed": {
+      "message": "Autenticazione Mixergy fallita. Reinserisci le credenziali."
+    }
+  },
+  "services": {
+    "set_holiday_dates": {
+      "name": "Imposta date vacanza",
+      "description": "Imposta le date di inizio e fine della modalità vacanza per il serbatoio Mixergy.",
+      "fields": {
+        "start_date": {
+          "name": "Data inizio",
+          "description": "La data e l'ora di partenza per la modalità vacanza."
+        },
+        "end_date": {
+          "name": "Data fine",
+          "description": "La data e l'ora di rientro dalla modalità vacanza."
+        }
+      }
+    },
+    "clear_holiday_dates": {
+      "name": "Cancella date vacanza",
+      "description": "Cancella le date della modalità vacanza per il serbatoio Mixergy."
+    },
+    "boost_charge": {
+      "name": "Incrementa acqua calda",
+      "description": "Porta immediatamente la carica dell'acqua calda al 100%."
+    }
+  }
+}

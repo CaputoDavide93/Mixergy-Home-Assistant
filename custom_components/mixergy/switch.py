@@ -11,10 +11,13 @@ from homeassistant.components.switch import (
     SwitchEntity,
     SwitchEntityDescription,
 )
+from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .api import MixergyApiClient, TankData
+from .api import MixergyApiClient, MixergyApiError, TankData
+from .const import is_advanced_mode
 from .coordinator import MixergyConfigEntry, MixergyCoordinator
 from .entity import MixergyEntity
 
@@ -34,6 +37,7 @@ SWITCH_DESCRIPTIONS: tuple[MixergySwitchEntityDescription, ...] = (
         key="dsr_enabled",
         translation_key="dsr_enabled",
         device_class=SwitchDeviceClass.SWITCH,
+        entity_category=EntityCategory.CONFIG,
         icon="mdi:transmission-tower",
         is_on_fn=lambda data: data.settings.dsr_enabled,
         turn_on_fn=lambda client: client.set_dsr_enabled(True),
@@ -43,6 +47,7 @@ SWITCH_DESCRIPTIONS: tuple[MixergySwitchEntityDescription, ...] = (
         key="frost_protection",
         translation_key="frost_protection",
         device_class=SwitchDeviceClass.SWITCH,
+        entity_category=EntityCategory.CONFIG,
         icon="mdi:snowflake-alert",
         is_on_fn=lambda data: data.settings.frost_protection_enabled,
         turn_on_fn=lambda client: client.set_frost_protection_enabled(True),
@@ -52,19 +57,17 @@ SWITCH_DESCRIPTIONS: tuple[MixergySwitchEntityDescription, ...] = (
         key="distributed_computing",
         translation_key="distributed_computing",
         device_class=SwitchDeviceClass.SWITCH,
+        entity_category=EntityCategory.CONFIG,
         icon="mdi:molecule",
         is_on_fn=lambda data: data.settings.distributed_computing_enabled,
-        turn_on_fn=lambda client: client.set_distributed_computing_enabled(
-            True
-        ),
-        turn_off_fn=lambda client: client.set_distributed_computing_enabled(
-            False
-        ),
+        turn_on_fn=lambda client: client.set_distributed_computing_enabled(True),
+        turn_off_fn=lambda client: client.set_distributed_computing_enabled(False),
     ),
     MixergySwitchEntityDescription(
         key="pv_divert",
         translation_key="pv_divert",
         device_class=SwitchDeviceClass.SWITCH,
+        entity_category=EntityCategory.CONFIG,
         icon="mdi:solar-power",
         is_on_fn=lambda data: data.settings.divert_exported_enabled,
         turn_on_fn=lambda client: client.set_divert_exported_enabled(True),
@@ -79,9 +82,11 @@ async def async_setup_entry(
     entry: MixergyConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up Mixergy switch entities."""
-    coordinator = entry.runtime_data
+    """Set up Mixergy switch entities — Advanced mode only."""
+    if not is_advanced_mode(entry):
+        return
 
+    coordinator = entry.runtime_data
     async_add_entities(
         MixergySwitch(coordinator, description)
         for description in SWITCH_DESCRIPTIONS
@@ -120,10 +125,16 @@ class MixergySwitch(MixergyEntity, SwitchEntity):
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the switch on."""
-        await self.entity_description.turn_on_fn(self.coordinator.client)
-        await self.coordinator.async_request_refresh()
+        try:
+            await self.entity_description.turn_on_fn(self.coordinator.client)
+            await self.coordinator.async_request_refresh()
+        except MixergyApiError as err:
+            raise HomeAssistantError(str(err)) from err
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the switch off."""
-        await self.entity_description.turn_off_fn(self.coordinator.client)
-        await self.coordinator.async_request_refresh()
+        try:
+            await self.entity_description.turn_off_fn(self.coordinator.client)
+            await self.coordinator.async_request_refresh()
+        except MixergyApiError as err:
+            raise HomeAssistantError(str(err)) from err
