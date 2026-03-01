@@ -3,12 +3,11 @@
   "config_flow": true,
   "documentation": "https://github.com/CaputoDavide93/Mixergy_HomeAssistant_Integration",
   "domain": "mixergy",
-  "homeassistant": "2024.4.0",
   "integration_type": "device",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/CaputoDavide93/Mixergy_HomeAssistant_Integration/issues",
   "name": "Mixergy",
   "quality_scale": "bronze",
   "requirements": [],
-  "version": "1.0.0"
+  "version": "1.1.0"
 }
