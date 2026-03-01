@@ -29,3 +29,9 @@ Thumbs.db
 home-assistant_v2.db
 home-assistant_v2.db-wal
 home-assistant_v2.db-shm
+
+# Claude Code
+.claude/
+
+# Source icon (high-res original; brand/ contains the correctly-sized copies)
+/icon.png

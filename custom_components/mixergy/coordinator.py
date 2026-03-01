@@ -24,8 +24,6 @@ from .const import CONF_UPDATE_INTERVAL, DOMAIN, UPDATE_INTERVAL
 
 _LOGGER = logging.getLogger(__name__)
 
-MixergyConfigEntry = ConfigEntry[MixergyCoordinator]
-
 
 class MixergyCoordinator(DataUpdateCoordinator[TankData]):
     """Coordinator to manage fetching Mixergy tank data."""
@@ -68,3 +66,7 @@ class MixergyCoordinator(DataUpdateCoordinator[TankData]):
             raise UpdateFailed(
                 f"Error communicating with Mixergy API: {err}"
             ) from err
+
+
+# Type alias defined after the class so MixergyCoordinator is in scope.
+MixergyConfigEntry = ConfigEntry[MixergyCoordinator]
