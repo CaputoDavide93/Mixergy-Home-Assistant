@@ -1,7 +1,7 @@
 # Mixergy — Home Assistant Integration
 
 <p align="center">
-  <img src="custom_components/mixergy/brand/icon.png" alt="Mixergy" width="400">
+  <img src="custom_components/mixergy/brand/icon@2x.png" alt="Mixergy" width="400">
 </p>
 
 [![HACS](https://img.shields.io/badge/HACS-Default-41BDF5.svg)](https://hacs.xyz)
