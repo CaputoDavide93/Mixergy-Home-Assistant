@@ -106,10 +106,10 @@ def _register_services(hass: HomeAssistant) -> None:
                 raise HomeAssistantError(
                     f"Failed to set holiday dates for tank {serial}: {err}"
                 ) from err
-            except Exception as err:
+            except (OSError, TimeoutError) as err:
                 _LOGGER.exception("Unexpected error setting holiday dates for tank %s", serial)
                 raise HomeAssistantError(
-                    f"Unexpected error for tank {serial}"
+                    f"Unexpected error for tank {serial}: {err}"
                 ) from err
 
     async def handle_clear_holiday(_call: ServiceCall) -> None:
@@ -123,10 +123,10 @@ def _register_services(hass: HomeAssistant) -> None:
                 raise HomeAssistantError(
                     f"Failed to clear holiday dates for tank {serial}: {err}"
                 ) from err
-            except Exception as err:
+            except (OSError, TimeoutError) as err:
                 _LOGGER.exception("Unexpected error clearing holiday dates for tank %s", serial)
                 raise HomeAssistantError(
-                    f"Unexpected error for tank {serial}"
+                    f"Unexpected error for tank {serial}: {err}"
                 ) from err
 
     async def handle_boost_charge(_call: ServiceCall) -> None:
@@ -140,10 +140,10 @@ def _register_services(hass: HomeAssistant) -> None:
                 raise HomeAssistantError(
                     f"Failed to boost charge for tank {serial}: {err}"
                 ) from err
-            except Exception as err:
+            except (OSError, TimeoutError) as err:
                 _LOGGER.exception("Unexpected error boosting charge for tank %s", serial)
                 raise HomeAssistantError(
-                    f"Unexpected error for tank {serial}"
+                    f"Unexpected error for tank {serial}: {err}"
                 ) from err
 
     if not hass.services.has_service(DOMAIN, SERVICE_SET_HOLIDAY):

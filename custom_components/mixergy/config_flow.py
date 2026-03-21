@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import Any
 
+import aiohttp
 import voluptuous as vol
 
 from homeassistant.config_entries import ConfigFlow, ConfigFlowResult, OptionsFlow
@@ -124,8 +126,8 @@ class MixergyConfigFlow(ConfigFlow, domain=DOMAIN):
                 errors["base"] = "invalid_auth"
             except MixergyConnectionError:
                 errors["base"] = "cannot_connect"
-            except Exception:
-                _LOGGER.exception("Unexpected error during authentication")
+            except (asyncio.TimeoutError, aiohttp.ClientError, OSError) as err:
+                _LOGGER.exception("Unexpected error during authentication: %s", err)
                 errors["base"] = "unknown"
             else:
                 self._username = username
@@ -166,8 +168,8 @@ class MixergyConfigFlow(ConfigFlow, domain=DOMAIN):
                 errors[CONF_SERIAL_NUMBER] = "tank_not_found"
             except MixergyConnectionError:
                 errors["base"] = "cannot_connect"
-            except Exception:
-                _LOGGER.exception("Unexpected error during tank lookup")
+            except (asyncio.TimeoutError, aiohttp.ClientError, OSError) as err:
+                _LOGGER.exception("Unexpected error during tank lookup: %s", err)
                 errors["base"] = "unknown"
             else:
                 self._serial = serial
@@ -241,8 +243,8 @@ class MixergyConfigFlow(ConfigFlow, domain=DOMAIN):
                 errors["base"] = "invalid_auth"
             except MixergyConnectionError:
                 errors["base"] = "cannot_connect"
-            except Exception:
-                _LOGGER.exception("Unexpected error during re-authentication")
+            except (asyncio.TimeoutError, aiohttp.ClientError, OSError) as err:
+                _LOGGER.exception("Unexpected error during re-authentication: %s", err)
                 errors["base"] = "unknown"
             else:
                 return self.async_update_reload_and_abort(

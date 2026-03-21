@@ -234,8 +234,9 @@ class MixergyApiClient:
         await self._discover_login_url()
 
         try:
+            assert self._login_url is not None
             async with self._session.post(
-                self._login_url,  # type: ignore[arg-type]
+                self._login_url,
                 json={"username": self._username, "password": self._password},
                 ssl=True,
                 timeout=REQUEST_TIMEOUT,
@@ -404,8 +405,9 @@ class MixergyApiClient:
         """Fetch the latest measurement from the tank."""
         await self._discover_tank()
 
+        assert self._measurement_url is not None
         async with await self._request_with_reauth(
-            "GET", self._measurement_url  # type: ignore[arg-type]
+            "GET", self._measurement_url
         ) as resp:
             if resp.status != 200:
                 raise MixergyConnectionError(
@@ -464,8 +466,9 @@ class MixergyApiClient:
         """Fetch tank settings."""
         await self._discover_tank()
 
+        assert self._settings_url is not None
         async with await self._request_with_reauth(
-            "GET", self._settings_url  # type: ignore[arg-type]
+            "GET", self._settings_url
         ) as resp:
             if resp.status != 200:
                 raise MixergyConnectionError(
@@ -500,8 +503,9 @@ class MixergyApiClient:
         """Fetch tank schedule."""
         await self._discover_tank()
 
+        assert self._schedule_url is not None
         async with await self._request_with_reauth(
-            "GET", self._schedule_url  # type: ignore[arg-type]
+            "GET", self._schedule_url
         ) as resp:
             if resp.status != 200:
                 raise MixergyConnectionError(
@@ -571,9 +575,10 @@ class MixergyApiClient:
         await self._discover_tank()
         charge = max(0, min(100, charge))
 
+        assert self._control_url is not None
         async with await self._request_with_reauth(
             "PUT",
-            self._control_url,  # type: ignore[arg-type]
+            self._control_url,
             json={"charge": charge},
         ) as resp:
             if resp.status != 200:
@@ -586,9 +591,10 @@ class MixergyApiClient:
         await self._discover_tank()
         temperature = max(45, min(70, temperature))
 
+        assert self._settings_url is not None
         async with await self._request_with_reauth(
             "PUT",
-            self._settings_url,  # type: ignore[arg-type]
+            self._settings_url,
             json={"max_temp": temperature},
         ) as resp:
             if resp.status != 200:
@@ -600,9 +606,10 @@ class MixergyApiClient:
         """Set a single tank setting by key."""
         await self._discover_tank()
 
+        assert self._settings_url is not None
         async with await self._request_with_reauth(
             "PUT",
-            self._settings_url,  # type: ignore[arg-type]
+            self._settings_url,
             json={key: value},
         ) as resp:
             if resp.status != 200:
@@ -666,9 +673,10 @@ class MixergyApiClient:
             "returnDate": int(end.timestamp()) * 1000,
         }
 
+        assert self._schedule_url is not None
         async with await self._request_with_reauth(
             "PUT",
-            self._schedule_url,  # type: ignore[arg-type]
+            self._schedule_url,
             json=raw,
         ) as resp:
             if resp.status != 200:
@@ -684,9 +692,10 @@ class MixergyApiClient:
         raw = schedule_data.raw
         raw.pop("holiday", None)
 
+        assert self._schedule_url is not None
         async with await self._request_with_reauth(
             "PUT",
-            self._schedule_url,  # type: ignore[arg-type]
+            self._schedule_url,
             json=raw,
         ) as resp:
             if resp.status != 200:
@@ -706,9 +715,10 @@ class MixergyApiClient:
         raw = schedule_data.raw
         raw["defaultHeatSource"] = _ha_to_api_heat_source(heat_source)
 
+        assert self._schedule_url is not None
         async with await self._request_with_reauth(
             "PUT",
-            self._schedule_url,  # type: ignore[arg-type]
+            self._schedule_url,
             json=raw,
         ) as resp:
             if resp.status != 200:
