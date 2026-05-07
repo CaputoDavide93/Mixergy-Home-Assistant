@@ -300,10 +300,20 @@ class MixergyEnergySensor(MixergyEntity, RestoreSensor):
 
     @callback
     def _handle_coordinator_update(self) -> None:
-        """Integrate power over elapsed time to accumulate energy."""
+        """Integrate power over elapsed time to accumulate energy.
+
+        Cap the integration window at 2× the coordinator's update interval
+        so a long outage (HA paused, network gone, API down) doesn't credit
+        a fictitious multi-hour spike on the next successful tick.
+        """
         now = time.monotonic()
         if self._last_update is not None:
             elapsed_hours = (now - self._last_update) / 3600
+            interval = getattr(self.coordinator, "update_interval", None)
+            if interval is not None:
+                cap_hours = (interval.total_seconds() * 2) / 3600
+                if elapsed_hours > cap_hours:
+                    elapsed_hours = cap_hours
             power_w = self._power_w_fn(self.coordinator.data)
             if power_w > 0:
                 self._accumulated_kwh += (power_w / 1000) * elapsed_hours

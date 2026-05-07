@@ -451,3 +451,139 @@ async def test_request_passes_timeout(
         _, kwargs = call
         assert "timeout" in kwargs, "request() called without timeout"
         assert kwargs["timeout"] is REQUEST_TIMEOUT
+
+
+# ── Concurrency: auth lock + discover lock ────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_concurrent_authenticate_calls_share_one_login(
+    mock_aiohttp_session,
+):
+    """Two concurrent ``authenticate()`` calls must share one login POST.
+
+    Without the asyncio.Lock guard, two coroutines that both find an
+    expired token would each fire a /login POST. This regression test
+    races two coroutines and asserts only ONE login POST hit the wire.
+    """
+    import asyncio
+    from .conftest import MOCK_ACCOUNT_RESPONSE, MOCK_ROOT_RESPONSE
+
+    client = MixergyApiClient(
+        session=mock_aiohttp_session,
+        username=MOCK_USERNAME,
+        password=MOCK_PASSWORD,
+        serial_number=MOCK_SERIAL,
+    )
+
+    login_calls = 0
+
+    def post_side_effect(url, **kwargs):
+        nonlocal login_calls
+        if "login" in url:
+            login_calls += 1
+        return _make_resp(status=201, json_data=MOCK_LOGIN_RESPONSE)
+
+    mock_aiohttp_session.get.side_effect = lambda url, **kw: _make_resp(
+        status=200,
+        json_data=MOCK_ROOT_RESPONSE if url.endswith("/api/v2") else MOCK_ACCOUNT_RESPONSE,
+    )
+    mock_aiohttp_session.post.side_effect = post_side_effect
+
+    # Fire two authenticate() coroutines as a race.
+    await asyncio.gather(client.authenticate(), client.authenticate())
+    assert login_calls == 1, f"expected 1 login POST under lock, got {login_calls}"
+
+
+@pytest.mark.asyncio
+async def test_concurrent_discover_tank_walks_hateoas_once(
+    mock_aiohttp_session,
+):
+    """Two concurrent first-refresh callers must not each walk the HATEOAS
+    chain. With ``_discover_lock``, the second coroutine awaits the lock
+    and then short-circuits on the now-set ``_measurement_url``.
+    """
+    import asyncio
+    from .conftest import (
+        MOCK_ROOT_RESPONSE,
+        MOCK_TANKS_RESPONSE,
+        MOCK_TANK_DETAIL_RESPONSE,
+    )
+
+    client = MixergyApiClient(
+        session=mock_aiohttp_session,
+        username=MOCK_USERNAME,
+        password=MOCK_PASSWORD,
+        serial_number=MOCK_SERIAL,
+    )
+    # Pre-authenticate so _discover_tank doesn't trip the auth path.
+    client._token = MOCK_TOKEN
+    client._token_expiry = 9999999999.0
+
+    tanks_list_hits = 0
+
+    def get_side_effect(url, **kwargs):
+        nonlocal tanks_list_hits
+        if url.endswith("/tanks"):
+            tanks_list_hits += 1
+            return _make_resp(status=200, json_data=MOCK_TANKS_RESPONSE)
+        if url.endswith("/api/v2"):
+            return _make_resp(status=200, json_data=MOCK_ROOT_RESPONSE)
+        if url == f"https://www.mixergy.io/api/v2/tank/{MOCK_SERIAL}":
+            return _make_resp(status=200, json_data=MOCK_TANK_DETAIL_RESPONSE)
+        return _make_resp(status=200, json_data={})
+
+    mock_aiohttp_session.get.side_effect = get_side_effect
+
+    # Race two _discover_tank() calls.
+    await asyncio.gather(client._discover_tank(), client._discover_tank())
+    # Even though two callers raced, the lock + double-checked guard means
+    # the tanks-list endpoint should be hit exactly once.
+    assert tanks_list_hits == 1, (
+        f"expected 1 tanks-list fetch under lock, got {tanks_list_hits}"
+    )
+
+
+# ── Energy integration cap (post-outage spike protection) ─────────────────────
+
+
+def test_energy_elapsed_hours_capped_post_outage():
+    """A multi-hour gap between coordinator updates must NOT credit a
+    fictitious spike. The integration window is capped at
+    2 × update_interval per tick.
+    """
+    import datetime as dt
+
+    from custom_components.mixergy.sensor import MixergyEnergySensor
+
+    # Fabricate a coordinator with a 30s update interval and 1 kW reading.
+    coordinator = MagicMock()
+    coordinator.update_interval = dt.timedelta(seconds=30)
+    coordinator.data = MagicMock()
+
+    sensor = MixergyEnergySensor.__new__(MixergyEnergySensor)
+    sensor.coordinator = coordinator
+    sensor._accumulated_kwh = 0.0
+    sensor._power_w_fn = lambda _data: 1000.0  # constant 1 kW
+    sensor._last_update = 0.0  # monotonic 0
+    sensor.async_write_ha_state = MagicMock()
+
+    # Simulate an hour-long outage: monotonic jumps 3600 s.
+    import time
+    real_monotonic = time.monotonic
+
+    def fake_monotonic():
+        return 3600.0  # +1h since last_update
+
+    time.monotonic = fake_monotonic
+    try:
+        sensor._handle_coordinator_update()
+    finally:
+        time.monotonic = real_monotonic
+
+    # Cap = 2 × 30s = 60s = 1/60 h. At 1 kW that's 1/60 kWh ≈ 0.01667.
+    # Without the cap we'd have credited 1.0 kWh as a fictitious spike.
+    assert sensor._accumulated_kwh < 0.02, (
+        f"energy not capped: got {sensor._accumulated_kwh:.4f} kWh"
+    )
+    assert sensor._accumulated_kwh > 0.0, "cap dropped energy entirely"

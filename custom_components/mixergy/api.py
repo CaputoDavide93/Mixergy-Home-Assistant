@@ -178,6 +178,10 @@ class MixergyApiClient:
         # Static info
         self._tank_info = TankInfo(serial_number=self._serial_number)
 
+        # Concurrency guards
+        self._auth_lock = asyncio.Lock()
+        self._discover_lock = asyncio.Lock()
+
     # ── Authentication ───────────────────────────────────────────────
 
     @property
@@ -224,44 +228,47 @@ class MixergyApiClient:
 
         Returns True on success. Raises MixergyAuthError on failure.
         """
-        if self._token_valid:
-            return True
-
-        # Clear stale token
-        self._token = None
-        self._token_expiry = 0.0
-
-        await self._discover_login_url()
-
-        try:
-            assert self._login_url is not None
-            async with self._session.post(
-                self._login_url,
-                json={"username": self._username, "password": self._password},
-                ssl=True,
-                timeout=REQUEST_TIMEOUT,
-            ) as resp:
-                if resp.status == 401 or resp.status == 403:
-                    raise MixergyAuthError("Invalid username or password")
-                if resp.status != 201:
-                    raise MixergyAuthError(
-                        f"Authentication failed with status {resp.status}"
-                    )
-
-                data = await resp.json()
-                self._token = data["token"]
-
-                # Use token TTL from API response if available
-                ttl = data.get("ttl", DEFAULT_TOKEN_TTL)
-                self._token_expiry = time.time() + ttl
-
-                _LOGGER.debug("Authenticated successfully, token TTL=%s", ttl)
+        async with self._auth_lock:
+            # Re-check inside the lock — a peer coroutine may have refreshed
+            # while we were waiting.
+            if self._token_valid:
                 return True
 
-        except (aiohttp.ClientError, asyncio.TimeoutError) as err:
-            raise MixergyConnectionError(
-                f"Authentication request failed: {err}"
-            ) from err
+            # Clear stale token
+            self._token = None
+            self._token_expiry = 0.0
+
+            await self._discover_login_url()
+
+            try:
+                assert self._login_url is not None
+                async with self._session.post(
+                    self._login_url,
+                    json={"username": self._username, "password": self._password},
+                    ssl=True,
+                    timeout=REQUEST_TIMEOUT,
+                ) as resp:
+                    if resp.status == 401 or resp.status == 403:
+                        raise MixergyAuthError("Invalid username or password")
+                    if resp.status != 201:
+                        raise MixergyAuthError(
+                            f"Authentication failed with status {resp.status}"
+                        )
+
+                    data = await resp.json()
+                    self._token = data["token"]
+
+                    # Use token TTL from API response if available
+                    ttl = data.get("ttl", DEFAULT_TOKEN_TTL)
+                    self._token_expiry = time.time() + ttl
+
+                    _LOGGER.debug("Authenticated successfully, token TTL=%s", ttl)
+                    return True
+
+            except (aiohttp.ClientError, asyncio.TimeoutError) as err:
+                raise MixergyConnectionError(
+                    f"Authentication request failed: {err}"
+                ) from err
 
     def invalidate_token(self) -> None:
         """Force token invalidation (e.g. after a 401 during polling)."""
@@ -282,96 +289,104 @@ class MixergyApiClient:
 
     async def _discover_tank(self) -> None:
         """Discover the tank URLs from the API (HATEOAS walk)."""
+        # Fast path — already discovered.
         if self._measurement_url is not None:
             return
 
-        await self._ensure_authenticated()
+        async with self._discover_lock:
+            # Re-check after acquiring the lock; concurrent first-refresh
+            # callers (gather of measurement/settings/schedule) would
+            # otherwise each issue a full HATEOAS walk.
+            if self._measurement_url is not None:
+                return
 
-        try:
-            # Get tanks list URL from root
-            async with self._session.get(
-                API_ROOT, headers=self._auth_headers, ssl=True, timeout=REQUEST_TIMEOUT
-            ) as resp:
-                if resp.status != 200:
-                    raise MixergyConnectionError(
-                        f"Root endpoint returned {resp.status}"
+            await self._ensure_authenticated()
+
+            try:
+                # Get tanks list URL from root
+                async with self._session.get(
+                    API_ROOT, headers=self._auth_headers, ssl=True, timeout=REQUEST_TIMEOUT
+                ) as resp:
+                    if resp.status != 200:
+                        raise MixergyConnectionError(
+                            f"Root endpoint returned {resp.status}"
+                        )
+                    root = await resp.json()
+                    self._tanks_url = root["_links"]["tanks"]["href"]
+
+                # Get list of tanks
+                async with self._session.get(
+                    self._tanks_url, headers=self._auth_headers, ssl=True, timeout=REQUEST_TIMEOUT
+                ) as resp:
+                    if resp.status != 200:
+                        raise MixergyConnectionError(
+                            f"Tanks endpoint returned {resp.status}"
+                        )
+                    data = await resp.json()
+                    tanks = data["_embedded"]["tankList"]
+
+                # Find our tank
+                tank = None
+                for t in tanks:
+                    if t["serialNumber"].upper() == self._serial_number:
+                        tank = t
+                        break
+
+                if tank is None:
+                    raise MixergyTankNotFoundError(
+                        f"No tank with serial number {self._serial_number}"
                     )
-                root = await resp.json()
-                self._tanks_url = root["_links"]["tanks"]["href"]
 
-            # Get list of tanks
-            async with self._session.get(
-                self._tanks_url, headers=self._auth_headers, ssl=True, timeout=REQUEST_TIMEOUT
-            ) as resp:
-                if resp.status != 200:
-                    raise MixergyConnectionError(
-                        f"Tanks endpoint returned {resp.status}"
-                    )
-                data = await resp.json()
-                tanks = data["_embedded"]["tankList"]
-
-            # Find our tank
-            tank = None
-            for t in tanks:
-                if t["serialNumber"].upper() == self._serial_number:
-                    tank = t
-                    break
-
-            if tank is None:
-                raise MixergyTankNotFoundError(
-                    f"No tank with serial number {self._serial_number}"
+                self._tank_info.firmware_version = tank.get(
+                    "firmwareVersion", "0.0.0"
                 )
 
-            self._tank_info.firmware_version = tank.get(
-                "firmwareVersion", "0.0.0"
-            )
+                # Get detailed tank info
+                tank_url = tank["_links"]["self"]["href"]
+                async with self._session.get(
+                    tank_url, headers=self._auth_headers, ssl=True, timeout=REQUEST_TIMEOUT
+                ) as resp:
+                    if resp.status != 200:
+                        raise MixergyConnectionError(
+                            f"Tank detail endpoint returned {resp.status}"
+                        )
+                    detail = await resp.json()
 
-            # Get detailed tank info
-            tank_url = tank["_links"]["self"]["href"]
-            async with self._session.get(
-                tank_url, headers=self._auth_headers, ssl=True, timeout=REQUEST_TIMEOUT
-            ) as resp:
-                if resp.status != 200:
-                    raise MixergyConnectionError(
-                        f"Tank detail endpoint returned {resp.status}"
-                    )
-                detail = await resp.json()
+                # Validate required HATEOAS links before accessing them
+                links = detail.get("_links", {})
+                for link_name in ("latest_measurement", "control", "settings", "schedule"):
+                    if not links.get(link_name, {}).get("href"):
+                        raise MixergyConnectionError(
+                            f"Missing required API link '{link_name}' in tank detail response"
+                        )
 
-            # Validate required HATEOAS links before accessing them
-            links = detail.get("_links", {})
-            for link_name in ("latest_measurement", "control", "settings", "schedule"):
-                if not links.get(link_name, {}).get("href"):
-                    raise MixergyConnectionError(
-                        f"Missing required API link '{link_name}' in tank detail response"
-                    )
+                self._measurement_url = links["latest_measurement"]["href"]
+                self._control_url = links["control"]["href"]
+                self._settings_url = links["settings"]["href"]
+                self._schedule_url = links["schedule"]["href"]
 
-            self._measurement_url = links["latest_measurement"]["href"]
-            self._control_url = links["control"]["href"]
-            self._settings_url = links["settings"]["href"]
-            self._schedule_url = links["schedule"]["href"]
+                self._tank_info.model_code = detail.get("tankModelCode", "Unknown")
 
-            self._tank_info.model_code = detail.get("tankModelCode", "Unknown")
+                # Parse PV diverter presence
+                config_json = detail.get("configuration", "{}")
+                try:
+                    config = json.loads(config_json)
+                    pv_type = config.get("mixergyPvType", "NO_INVERTER")
+                    self._tank_info.has_pv_diverter = pv_type != "NO_INVERTER"
+                except (json.JSONDecodeError, TypeError):
+                    self._tank_info.has_pv_diverter = False
 
-            # Parse PV diverter presence
-            config_json = detail.get("configuration", "{}")
-            try:
-                config = json.loads(config_json)
-                pv_type = config.get("mixergyPvType", "NO_INVERTER")
-                self._tank_info.has_pv_diverter = pv_type != "NO_INVERTER"
-            except (json.JSONDecodeError, TypeError):
-                self._tank_info.has_pv_diverter = False
+                _LOGGER.debug(
+                    "Tank discovered: model=%s, fw=%s, pv=%s",
+                    self._tank_info.model_code,
+                    self._tank_info.firmware_version,
+                    self._tank_info.has_pv_diverter,
+                )
 
-            _LOGGER.debug(
-                "Tank discovered: model=%s, fw=%s, pv=%s",
-                self._tank_info.model_code,
-                self._tank_info.firmware_version,
-                self._tank_info.has_pv_diverter,
-            )
-
-        except (aiohttp.ClientError, asyncio.TimeoutError, KeyError) as err:
-            raise MixergyConnectionError(
-                f"Failed to discover tank: {err}"
-            ) from err
+            except (aiohttp.ClientError, asyncio.TimeoutError) as err:
+                raise MixergyConnectionError(
+                    f"Failed to discover tank: {err}"
+                ) from err
 
     # ── Data Fetching ────────────────────────────────────────────────
 

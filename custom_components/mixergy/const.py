@@ -21,9 +21,12 @@ CONF_EXPERIENCE_MODE: Final = "experience_mode"
 MODE_SIMPLE: Final = "simple"
 MODE_ADVANCED: Final = "advanced"
 
-# Coordinator update interval (seconds)
+# Coordinator update interval (seconds).
+# 30 s is the default; 30–300 s is the allowed range.
+# Tank measurements update server-side at ~60 s cadence so values below
+# 30 s waste API calls and risk rate-limit throttling on the cloud API.
 UPDATE_INTERVAL: Final = 30
-MIN_UPDATE_INTERVAL: Final = 10
+MIN_UPDATE_INTERVAL: Final = 30
 MAX_UPDATE_INTERVAL: Final = 300
 
 # Heat source options for the select entity (HA-facing format)
