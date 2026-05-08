@@ -396,7 +396,20 @@ class MixergyApiClient:
         url: str,
         **kwargs: Any,
     ) -> aiohttp.ClientResponse:
-        """Make an API request, re-authenticating on 401."""
+        """Make an API request, re-authenticating on 401.
+
+        Only ``json=<dict>`` request bodies are supported (we replay
+        ``kwargs`` verbatim on the 401 retry). Passing ``data=<stream>``
+        or any other one-shot body would silently send an empty payload
+        on the second attempt — assert on import-time-detectable misuse
+        so a future caller can't introduce that footgun unnoticed.
+        """
+        if "data" in kwargs:
+            raise TypeError(
+                "_request_with_reauth: pass `json=<dict>` instead of "
+                "`data=...`; the retry path replays kwargs and one-shot "
+                "streams would be exhausted on the first attempt"
+            )
         await self._ensure_authenticated()
 
         resp = await self._session.request(
