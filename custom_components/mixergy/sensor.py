@@ -289,14 +289,34 @@ class MixergyEnergySensor(MixergyEntity, RestoreSensor):
         self._attr_icon = icon
 
     async def async_added_to_hass(self) -> None:
-        """Restore previous total and begin accumulating."""
+        """Restore previous total and begin accumulating.
+
+        Two corrections from the deep review:
+        - The restored value MUST be written back to the state machine
+          immediately (async_write_ha_state). Without that the entity
+          stays as `unknown` until the first coordinator tick — and if
+          that tick fails, the next render briefly reports 0.0, which
+          a TOTAL_INCREASING state class treats as a counter reset. The
+          Energy dashboard then loses everything accumulated to date.
+        - _last_update tracks WALL-CLOCK time, not time.monotonic().
+          Monotonic resets to 0 at every process start, so on every HA
+          restart `elapsed_hours` came out as ~0 and any energy actually
+          produced during the downtime was silently dropped. Wall-clock
+          combined with the existing 2× interval cap gives correct
+          gap-bridging (energy attributed across short outages) without
+          crediting fictitious multi-hour spikes after long outages.
+        """
         await super().async_added_to_hass()
         if (last := await self.async_get_last_sensor_data()) is not None:
             try:
                 self._accumulated_kwh = float(last.native_value or 0)
             except (ValueError, TypeError):
                 self._accumulated_kwh = 0.0
-        self._last_update = time.monotonic()
+        self._last_update = time.time()
+        # Push the restored value to the state machine so the Energy
+        # dashboard never sees a transient 0 between restart and the
+        # first coordinator tick.
+        self.async_write_ha_state()
 
     @callback
     def _handle_coordinator_update(self) -> None:
@@ -306,7 +326,7 @@ class MixergyEnergySensor(MixergyEntity, RestoreSensor):
         so a long outage (HA paused, network gone, API down) doesn't credit
         a fictitious multi-hour spike on the next successful tick.
         """
-        now = time.monotonic()
+        now = time.time()
         if self._last_update is not None:
             elapsed_hours = (now - self._last_update) / 3600
             interval = getattr(self.coordinator, "update_interval", None)
@@ -314,6 +334,11 @@ class MixergyEnergySensor(MixergyEntity, RestoreSensor):
                 cap_hours = (interval.total_seconds() * 2) / 3600
                 if elapsed_hours > cap_hours:
                     elapsed_hours = cap_hours
+            # Negative elapsed (clock skew, NTP correction) must not
+            # subtract energy — TOTAL_INCREASING would treat it as a
+            # reset. Clamp to 0.
+            if elapsed_hours < 0:
+                elapsed_hours = 0
             power_w = self._power_w_fn(self.coordinator.data)
             if power_w > 0:
                 self._accumulated_kwh += (power_w / 1000) * elapsed_hours

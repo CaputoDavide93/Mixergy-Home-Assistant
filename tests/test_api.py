@@ -565,21 +565,24 @@ def test_energy_elapsed_hours_capped_post_outage():
     sensor.coordinator = coordinator
     sensor._accumulated_kwh = 0.0
     sensor._power_w_fn = lambda _data: 1000.0  # constant 1 kW
-    sensor._last_update = 0.0  # monotonic 0
+    sensor._last_update = 0.0  # wall-clock 0 (epoch)
     sensor.async_write_ha_state = MagicMock()
 
-    # Simulate an hour-long outage: monotonic jumps 3600 s.
+    # Simulate an hour-long outage: time.time() jumps 3600 s.
+    # Sensor migrated from time.monotonic() to time.time() so kWh
+    # accumulation survives HA restarts (monotonic resets at process
+    # start and silently dropped any energy from before the restart).
     import time
-    real_monotonic = time.monotonic
+    real_time = time.time
 
-    def fake_monotonic():
+    def fake_time():
         return 3600.0  # +1h since last_update
 
-    time.monotonic = fake_monotonic
+    time.time = fake_time
     try:
         sensor._handle_coordinator_update()
     finally:
-        time.monotonic = real_monotonic
+        time.time = real_time
 
     # Cap = 2 × 30s = 60s = 1/60 h. At 1 kW that's 1/60 kWh ≈ 0.01667.
     # Without the cap we'd have credited 1.0 kWh as a fictitious spike.
@@ -587,3 +590,78 @@ def test_energy_elapsed_hours_capped_post_outage():
         f"energy not capped: got {sensor._accumulated_kwh:.4f} kWh"
     )
     assert sensor._accumulated_kwh > 0.0, "cap dropped energy entirely"
+
+
+def test_energy_negative_elapsed_clamps_to_zero():
+    """Clock skew or NTP correction can produce negative elapsed time —
+    that must NOT subtract energy (TOTAL_INCREASING treats decreases as
+    counter resets and the Energy dashboard loses history).
+    """
+    import datetime as dt
+    import time
+
+    from custom_components.mixergy.sensor import MixergyEnergySensor
+
+    coordinator = MagicMock()
+    coordinator.update_interval = dt.timedelta(seconds=30)
+    coordinator.data = MagicMock()
+
+    sensor = MixergyEnergySensor.__new__(MixergyEnergySensor)
+    sensor.coordinator = coordinator
+    sensor._accumulated_kwh = 5.0  # 5 kWh accumulated before the skew
+    sensor._power_w_fn = lambda _data: 1000.0
+    sensor._last_update = 10_000.0  # FUTURE relative to the fake time below
+    sensor.async_write_ha_state = MagicMock()
+
+    real_time = time.time
+    time.time = lambda: 9_000.0  # NTP rolled wall-clock backwards by 1000 s
+    try:
+        sensor._handle_coordinator_update()
+    finally:
+        time.time = real_time
+
+    # Accumulated kWh must not decrease.
+    assert sensor._accumulated_kwh == 5.0, (
+        f"clock skew subtracted energy: {sensor._accumulated_kwh} kWh"
+    )
+
+
+@pytest.mark.asyncio
+async def test_energy_restore_writes_state_immediately():
+    """async_added_to_hass MUST call async_write_ha_state after restoring,
+    so the Energy dashboard never sees a transient 0/unknown after restart.
+    TOTAL_INCREASING treats any transient 0 as a counter reset, permanently
+    losing all accumulated kWh stats.
+    """
+    from unittest.mock import AsyncMock, MagicMock
+    from custom_components.mixergy.sensor import MixergyEnergySensor
+
+    coordinator = MagicMock()
+    coordinator.data = MagicMock()
+
+    sensor = MixergyEnergySensor.__new__(MixergyEnergySensor)
+    sensor.coordinator = coordinator
+    sensor._accumulated_kwh = 0.0
+    sensor.hass = MagicMock()
+    sensor.async_write_ha_state = MagicMock()
+
+    # Stub the RestoreSensor + CoordinatorEntity bases for the test.
+    last_state = MagicMock()
+    last_state.native_value = "42.5"
+    sensor.async_get_last_sensor_data = AsyncMock(return_value=last_state)
+
+    # Skip the real super().async_added_to_hass() — it requires a full
+    # HA core fixture. We're testing only our additions.
+    async def _noop(self):
+        pass
+    import custom_components.mixergy.sensor as sensor_mod
+    base = sensor_mod.MixergyEnergySensor.__mro__[1]
+    original = base.async_added_to_hass
+    base.async_added_to_hass = _noop
+    try:
+        await sensor.async_added_to_hass()
+    finally:
+        base.async_added_to_hass = original
+
+    assert sensor._accumulated_kwh == 42.5, "restored kWh not loaded"
+    sensor.async_write_ha_state.assert_called_once_with()
