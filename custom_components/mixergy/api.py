@@ -190,6 +190,16 @@ class MixergyApiClient:
         self._last_settings: TankSettings | None = None
         self._last_schedule: TankSchedule | None = None
 
+        # Serialises schedule read-modify-write operations
+        # (set_holiday_dates, clear_holiday_dates, set_default_heat_source).
+        # Each fetches the current schedule, mutates a field, and PUTs the
+        # whole object back. Two near-simultaneous callers (UI button +
+        # automation, or two automations firing on overlapping triggers)
+        # could read the same starting point, mutate independent fields,
+        # and overwrite each other — only one mutation wins. Lock makes
+        # GET-mutate-PUT atomic from the integration's perspective.
+        self._schedule_write_lock = asyncio.Lock()
+
     # ── Authentication ───────────────────────────────────────────────
 
     @property
@@ -363,9 +373,21 @@ class MixergyApiClient:
                 # Validate required HATEOAS links before accessing them
                 links = detail.get("_links", {})
                 for link_name in ("latest_measurement", "control", "settings", "schedule"):
-                    if not links.get(link_name, {}).get("href"):
+                    href = links.get(link_name, {}).get("href")
+                    if not href:
                         raise MixergyConnectionError(
                             f"Missing required API link '{link_name}' in tank detail response"
+                        )
+                    # Defence-in-depth: HATEOAS links come from the cloud
+                    # API response. A compromised or misconfigured upstream
+                    # could serve http:// links; we'd then silently
+                    # downgrade and leak the bearer token over plaintext.
+                    # aiohttp `ssl=True` only enforces TLS WHEN the URL is
+                    # https:// — http:// urls happily skip TLS entirely.
+                    if not href.startswith("https://"):
+                        raise MixergyConnectionError(
+                            f"API link '{link_name}' is not HTTPS: {href[:60]} "
+                            "(refusing to leak bearer token over plaintext)"
                         )
 
                 self._measurement_url = links["latest_measurement"]["href"]
@@ -756,89 +778,82 @@ class MixergyApiClient:
     ) -> None:
         """Set holiday mode dates.
 
-        Naive datetimes (no tzinfo) are interpreted as UTC. The service
-        schema uses cv.datetime which permits naive inputs; the previous
-        implementation called start.timestamp() on them, which applied
-        the LOCAL system timezone — but the read path (fetch_schedule
-        ~line 559) parses the same epoch with tz=UTC, producing a
-        local-vs-UTC offset between write and read. Holiday mode
-        activated/deactivated at the wrong wall-clock time, hours off
-        in countries with non-zero UTC offset.
+        Naive datetimes (no tzinfo) are interpreted as UTC (matching
+        fetch_schedule's tz=UTC read). Aware datetimes are converted
+        explicitly. Both write and read now agree on timezone.
 
-        Now both write and read agree: naive => UTC, aware datetimes
-        keep their tzinfo.
+        Serialised on _schedule_write_lock — see __init__.
         """
         await self._discover_tank()
 
-        # Normalise to UTC. A naive datetime is assumed already-UTC
-        # (matching fetch_schedule's tz=UTC read). Aware datetimes are
-        # converted explicitly.
         def _to_utc_epoch_ms(d: datetime) -> int:
             if d.tzinfo is None:
                 d = d.replace(tzinfo=timezone.utc)
             return int(d.astimezone(timezone.utc).timestamp() * 1000)
 
-        # Fetch current schedule, update holiday, send back
-        schedule_data = await self.fetch_schedule()
-        raw = schedule_data.raw
+        async with self._schedule_write_lock:
+            schedule_data = await self.fetch_schedule()
+            raw = schedule_data.raw
 
-        raw["holiday"] = {
-            "departDate": _to_utc_epoch_ms(start),
-            "returnDate": _to_utc_epoch_ms(end),
-        }
+            raw["holiday"] = {
+                "departDate": _to_utc_epoch_ms(start),
+                "returnDate": _to_utc_epoch_ms(end),
+            }
 
-        assert self._schedule_url is not None
-        async with await self._request_with_reauth(
-            "PUT",
-            self._schedule_url,
-            json=raw,
-        ) as resp:
-            if resp.status != 200:
-                raise MixergyApiError(
-                    f"Set holiday dates failed: {resp.status}"
-                )
+            assert self._schedule_url is not None
+            async with await self._request_with_reauth(
+                "PUT",
+                self._schedule_url,
+                json=raw,
+            ) as resp:
+                if resp.status != 200:
+                    raise MixergyApiError(
+                        f"Set holiday dates failed: {resp.status}"
+                    )
 
     async def clear_holiday_dates(self) -> None:
-        """Clear holiday mode."""
+        """Clear holiday mode. Serialised on _schedule_write_lock."""
         await self._discover_tank()
 
-        schedule_data = await self.fetch_schedule()
-        raw = schedule_data.raw
-        raw.pop("holiday", None)
+        async with self._schedule_write_lock:
+            schedule_data = await self.fetch_schedule()
+            raw = schedule_data.raw
+            raw.pop("holiday", None)
 
-        assert self._schedule_url is not None
-        async with await self._request_with_reauth(
-            "PUT",
-            self._schedule_url,
-            json=raw,
-        ) as resp:
-            if resp.status != 200:
-                raise MixergyApiError(
-                    f"Clear holiday dates failed: {resp.status}"
-                )
+            assert self._schedule_url is not None
+            async with await self._request_with_reauth(
+                "PUT",
+                self._schedule_url,
+                json=raw,
+            ) as resp:
+                if resp.status != 200:
+                    raise MixergyApiError(
+                        f"Clear holiday dates failed: {resp.status}"
+                    )
 
     async def set_default_heat_source(self, heat_source: str) -> None:
         """Set the default heat source (electric / indirect / heat_pump).
 
         Accepts HA-canonical values ("heat_pump") and normalises to the API
-        format ("heatpump") before sending.
+        format ("heatpump") before sending. Serialised on _schedule_write_lock.
         """
         await self._discover_tank()
 
-        schedule_data = await self.fetch_schedule()
-        raw = schedule_data.raw
-        raw["defaultHeatSource"] = _ha_to_api_heat_source(heat_source)
+        async with self._schedule_write_lock:
+            schedule_data = await self.fetch_schedule()
+            raw = schedule_data.raw
+            raw["defaultHeatSource"] = _ha_to_api_heat_source(heat_source)
 
-        assert self._schedule_url is not None
-        async with await self._request_with_reauth(
-            "PUT",
-            self._schedule_url,
-            json=raw,
-        ) as resp:
-            if resp.status != 200:
-                raise MixergyApiError(
-                    f"Set default heat source failed: {resp.status}"
-                )
+            assert self._schedule_url is not None
+            async with await self._request_with_reauth(
+                "PUT",
+                self._schedule_url,
+                json=raw,
+            ) as resp:
+                if resp.status != 200:
+                    raise MixergyApiError(
+                        f"Set default heat source failed: {resp.status}"
+                    )
 
     # ── Connection Testing ───────────────────────────────────────────
 
