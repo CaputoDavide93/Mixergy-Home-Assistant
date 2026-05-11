@@ -182,6 +182,14 @@ class MixergyApiClient:
         self._auth_lock = asyncio.Lock()
         self._discover_lock = asyncio.Lock()
 
+        # Last-known-good sub-fetch results. fetch_all() falls back to
+        # these when settings/schedule sub-fetches fail transiently —
+        # measurement (the primary signal) still updates; settings and
+        # schedule are slow-changing and tolerate a brief miss without
+        # blanking every entity to `unavailable`.
+        self._last_settings: TankSettings | None = None
+        self._last_schedule: TankSchedule | None = None
+
     # ── Authentication ───────────────────────────────────────────────
 
     @property
@@ -427,6 +435,25 @@ class MixergyApiClient:
                 timeout=REQUEST_TIMEOUT, **kwargs
             )
 
+        # 404/410 on a discovered HATEOAS URL means the cached link is
+        # stale — the cloud API rotated endpoints or the tank firmware
+        # update changed the URL shape. Without this guard the
+        # coordinator kept hitting the dead URL every poll forever, and
+        # the only user remedy was to reload the integration. Clear the
+        # cached discovery so the NEXT call re-runs _discover_tank().
+        if resp.status in (404, 410):
+            _LOGGER.warning(
+                "Mixergy URL %s returned %s — clearing cached HATEOAS "
+                "discovery so the next request re-discovers",
+                url, resp.status,
+            )
+            self._measurement_url = None
+            self._control_url = None
+            self._settings_url = None
+            self._schedule_url = None
+            # tank_url is keyed by serial so it survives — only the
+            # per-tank sub-endpoints can rotate independently.
+
         return resp
 
     async def fetch_measurement(self) -> TankMeasurement:
@@ -568,14 +595,52 @@ class MixergyApiClient:
         return schedule
 
     async def fetch_all(self) -> TankData:
-        """Fetch all tank data in one call (used by coordinator)."""
+        """Fetch all tank data in one call (used by coordinator).
+
+        Tolerant of partial failure: a single failing endpoint (e.g.
+        rate-limited schedule) used to fail the entire poll and blank
+        every entity to `unavailable` for one cycle. Now, measurement
+        is the primary signal (must succeed); settings + schedule fall
+        back to the previous successfully-fetched values if their
+        sub-fetch raises. Tank charge/temperature is what users care
+        about most — settings/schedule change slowly and can ride a
+        brief upstream hiccup without blanking the device card.
+        """
         await self._discover_tank()
 
-        measurement, settings, schedule = await asyncio.gather(
+        results = await asyncio.gather(
             self.fetch_measurement(),
             self.fetch_settings(),
             self.fetch_schedule(),
+            return_exceptions=True,
         )
+        measurement, settings, schedule = results
+
+        # Measurement is the primary signal — bubble up if it failed.
+        if isinstance(measurement, BaseException):
+            raise measurement
+
+        # Settings / schedule: fall back to previous values on failure.
+        if isinstance(settings, BaseException):
+            _LOGGER.warning(
+                "Mixergy settings fetch failed (using cached): %s", settings
+            )
+            settings = self._last_settings
+            if settings is None:
+                # No prior good fetch — let it propagate.
+                raise results[1]
+        else:
+            self._last_settings = settings
+
+        if isinstance(schedule, BaseException):
+            _LOGGER.warning(
+                "Mixergy schedule fetch failed (using cached): %s", schedule
+            )
+            schedule = self._last_schedule
+            if schedule is None:
+                raise results[2]
+        else:
+            self._last_schedule = schedule
 
         return TankData(
             info=TankInfo(
@@ -689,16 +754,37 @@ class MixergyApiClient:
     async def set_holiday_dates(
         self, start: datetime, end: datetime
     ) -> None:
-        """Set holiday mode dates."""
+        """Set holiday mode dates.
+
+        Naive datetimes (no tzinfo) are interpreted as UTC. The service
+        schema uses cv.datetime which permits naive inputs; the previous
+        implementation called start.timestamp() on them, which applied
+        the LOCAL system timezone — but the read path (fetch_schedule
+        ~line 559) parses the same epoch with tz=UTC, producing a
+        local-vs-UTC offset between write and read. Holiday mode
+        activated/deactivated at the wrong wall-clock time, hours off
+        in countries with non-zero UTC offset.
+
+        Now both write and read agree: naive => UTC, aware datetimes
+        keep their tzinfo.
+        """
         await self._discover_tank()
+
+        # Normalise to UTC. A naive datetime is assumed already-UTC
+        # (matching fetch_schedule's tz=UTC read). Aware datetimes are
+        # converted explicitly.
+        def _to_utc_epoch_ms(d: datetime) -> int:
+            if d.tzinfo is None:
+                d = d.replace(tzinfo=timezone.utc)
+            return int(d.astimezone(timezone.utc).timestamp() * 1000)
 
         # Fetch current schedule, update holiday, send back
         schedule_data = await self.fetch_schedule()
         raw = schedule_data.raw
 
         raw["holiday"] = {
-            "departDate": int(start.timestamp()) * 1000,
-            "returnDate": int(end.timestamp()) * 1000,
+            "departDate": _to_utc_epoch_ms(start),
+            "returnDate": _to_utc_epoch_ms(end),
         }
 
         assert self._schedule_url is not None

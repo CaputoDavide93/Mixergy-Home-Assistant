@@ -7,7 +7,7 @@ import logging
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
+from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryError
 from homeassistant.helpers.update_coordinator import (
     DataUpdateCoordinator,
     UpdateFailed,
@@ -16,8 +16,10 @@ from homeassistant.util import dt as dt_util
 
 from .api import (
     MixergyApiClient,
+    MixergyApiError,
     MixergyAuthError,
     MixergyConnectionError,
+    MixergyTankNotFoundError,
     TankData,
 )
 from .const import CONF_UPDATE_INTERVAL, DOMAIN, UPDATE_INTERVAL
@@ -62,9 +64,25 @@ class MixergyCoordinator(DataUpdateCoordinator[TankData]):
                 translation_domain=DOMAIN,
                 translation_key="auth_failed",
             ) from err
+        except MixergyTankNotFoundError as err:
+            # Tank serial no longer present in the user's account
+            # (decommissioned, account changed, hardware replaced). Map
+            # to ConfigEntryError so HA surfaces a clear fix-flow rather
+            # than spamming a traceback on every 30s poll with no user-
+            # facing remediation.
+            raise ConfigEntryError(
+                f"Mixergy tank not found in account: {err}"
+            ) from err
         except MixergyConnectionError as err:
             raise UpdateFailed(
                 f"Error communicating with Mixergy API: {err}"
+            ) from err
+        except MixergyApiError as err:
+            # Any other API-layer error that escapes the more-specific
+            # branches above — surface as UpdateFailed (retryable) rather
+            # than letting the bare exception abort the coordinator.
+            raise UpdateFailed(
+                f"Mixergy API error: {err}"
             ) from err
 
 
