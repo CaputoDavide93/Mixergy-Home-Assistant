@@ -846,3 +846,36 @@ def test_energy_accumulator_ignores_non_finite_power():
 
     assert sensor._accumulated_kwh == 5.0, "inf power must not be accumulated"
     assert sensor.native_value == 5.0
+
+
+# ── v1.3.0: numeric coercion + tank listing ───────────────────────────────────
+
+
+def test_as_float_coerces_and_guards():
+    from custom_components.mixergy.api import _as_float
+
+    assert _as_float(5) == 5.0
+    assert _as_float("7.5") == 7.5
+    assert _as_float(None) == 0.0
+    assert _as_float("nonsense") == 0.0
+    assert _as_float(float("nan")) == 0.0
+    assert _as_float(float("inf")) == 0.0
+    assert _as_float(None, default=-1.0) == -1.0
+
+
+@pytest.mark.asyncio
+async def test_async_list_tanks_returns_serials(
+    mock_aiohttp_session: MagicMock,
+) -> None:
+    """async_list_tanks walks the account and returns serials + firmware."""
+    client = MixergyApiClient(
+        session=mock_aiohttp_session,
+        username=MOCK_USERNAME,
+        password=MOCK_PASSWORD,
+        serial_number=MOCK_SERIAL,
+    )
+    client._token = MOCK_TOKEN
+    client._token_expiry = 9999999999.0
+
+    tanks = await client.async_list_tanks()
+    assert tanks == [{"serial": MOCK_SERIAL, "firmware": "2.1.0"}]

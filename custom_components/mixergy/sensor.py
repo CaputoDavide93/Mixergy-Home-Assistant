@@ -27,10 +27,34 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .api import TankData
+from .const import CONF_ELECTRIC_RATE
 from .coordinator import MixergyConfigEntry, MixergyCoordinator
 from .entity import MixergyEntity
 
 _LOGGER = logging.getLogger(__name__)
+
+# Read-only, coordinator-driven platform — no per-entity API fan-out.
+PARALLEL_UPDATES = 0
+
+
+def _capped_elapsed_hours(
+    now: float, last_update: float | None, interval: object
+) -> float:
+    """Hours since the last tick, capped at 2× the poll interval, floored at 0.
+
+    Capping stops a long outage from crediting a fictitious multi-hour spike;
+    flooring at 0 stops clock skew / NTP correction from subtracting from a
+    TOTAL_INCREASING total (which HA would read as a counter reset).
+    """
+    if last_update is None:
+        return 0.0
+    elapsed = (now - last_update) / 3600
+    total_seconds = getattr(interval, "total_seconds", None)
+    if callable(total_seconds):
+        cap = (total_seconds() * 2) / 3600
+        if elapsed > cap:
+            elapsed = cap
+    return max(0.0, elapsed)
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -106,7 +130,7 @@ SENSOR_DESCRIPTIONS: tuple[MixergySensorEntityDescription, ...] = (
         value_fn=lambda data: (
             data.measurement.clamp_power_w
             if data.measurement.electric_heat_source
-            else 0
+            else 0.0
         ),
     ),
     MixergySensorEntityDescription(
@@ -225,6 +249,11 @@ async def async_setup_entry(
         ),
     ])
 
+    # Optional electric cost sensor — only when a tariff rate is configured.
+    rate = entry.options.get(CONF_ELECTRIC_RATE, 0.0)
+    if rate and rate > 0:
+        entities.append(MixergyElectricCostSensor(coordinator, rate=rate))
+
     async_add_entities(entities)
 
 
@@ -332,17 +361,8 @@ class MixergyEnergySensor(MixergyEntity, RestoreSensor):
         """
         now = time.time()
         if self._last_update is not None:
-            elapsed_hours = (now - self._last_update) / 3600
             interval = getattr(self.coordinator, "update_interval", None)
-            if interval is not None:
-                cap_hours = (interval.total_seconds() * 2) / 3600
-                if elapsed_hours > cap_hours:
-                    elapsed_hours = cap_hours
-            # Negative elapsed (clock skew, NTP correction) must not
-            # subtract energy — TOTAL_INCREASING would treat it as a
-            # reset. Clamp to 0.
-            if elapsed_hours < 0:
-                elapsed_hours = 0
+            elapsed_hours = _capped_elapsed_hours(now, self._last_update, interval)
             power_w = self._power_w_fn(self.coordinator.data)
             # math.isfinite guards against a NaN/inf power reading (e.g. a
             # garbage pvEnergy value divided into pv_power_kw). NaN > 0 is
@@ -371,3 +391,71 @@ class MixergyEnergySensor(MixergyEntity, RestoreSensor):
     def available(self) -> bool:
         """Return True if the entity is available."""
         return super().available and self._available_fn(self.coordinator.data)
+
+
+class MixergyElectricCostSensor(MixergyEntity, RestoreSensor):
+    """Cumulative cost of electric immersion heating.
+
+    Integrates electric power × elapsed time × tariff into a running cost.
+    Stores the COST directly (not kWh) so RestoreSensor round-trips correctly
+    even if the tariff later changes. Created only when a rate is configured.
+    """
+
+    _attr_device_class = SensorDeviceClass.MONETARY
+    _attr_state_class = SensorStateClass.TOTAL_INCREASING
+    _attr_suggested_display_precision = 2
+    _attr_translation_key = "electric_cost"
+    _attr_icon = "mdi:cash"
+
+    def __init__(self, coordinator: MixergyCoordinator, *, rate: float) -> None:
+        """Initialise the cost sensor."""
+        super().__init__(coordinator)
+        self._rate = rate
+        self._accumulated_cost: float = 0.0
+        self._last_update: float | None = None
+        self._attr_unique_id = (
+            f"{coordinator.data.info.serial_number}_electric_cost"
+        )
+        self._attr_native_unit_of_measurement = coordinator.hass.config.currency
+
+    async def async_added_to_hass(self) -> None:
+        """Restore the previous accumulated cost and begin accumulating."""
+        await super().async_added_to_hass()
+        if (last := await self.async_get_last_sensor_data()) is not None:
+            try:
+                self._accumulated_cost = float(last.native_value or 0)
+            except (ValueError, TypeError):
+                self._accumulated_cost = 0.0
+        self._last_update = time.time()
+        self.async_write_ha_state()
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Integrate electric power × tariff over elapsed time."""
+        now = time.time()
+        if self._last_update is not None:
+            interval = getattr(self.coordinator, "update_interval", None)
+            elapsed_hours = _capped_elapsed_hours(now, self._last_update, interval)
+            measurement = self.coordinator.data.measurement
+            power_w = (
+                measurement.clamp_power_w
+                if measurement.electric_heat_source
+                else 0.0
+            )
+            if math.isfinite(power_w) and power_w > 0:
+                self._accumulated_cost += (
+                    (power_w / 1000) * elapsed_hours * self._rate
+                )
+        self._last_update = now
+        self.async_write_ha_state()
+
+    @property
+    def native_value(self) -> float:
+        """Return the accumulated cost."""
+        if not math.isfinite(self._accumulated_cost):
+            _LOGGER.warning(
+                "Cost accumulator for %s went non-finite (%s); resetting to 0",
+                self._attr_unique_id, self._accumulated_cost,
+            )
+            self._accumulated_cost = 0.0
+        return round(self._accumulated_cost, 4)

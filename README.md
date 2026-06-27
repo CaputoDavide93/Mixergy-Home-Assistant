@@ -77,6 +77,7 @@ You can switch modes at any time via **Settings → Devices & Services → Mixer
 | Active heat source | — | Currently active heat source |
 | Default heat source | — | Configured default heat source |
 | Holiday start / end | Timestamp | Holiday mode dates |
+| Electric heating cost | currency | Cumulative cost *(only when a tariff rate is set in options)* |
 | Firmware version | — | Tank firmware *(diagnostic, disabled by default)* |
 | Model | — | Tank model code *(diagnostic, disabled by default)* |
 | Last successful update | Timestamp | Time of the last API refresh *(diagnostic, disabled by default)* |
@@ -89,9 +90,17 @@ You can switch modes at any time via **Settings → Devices & Services → Mixer
 | Indirect heat active | Gas/oil indirect coil is heating |
 | Heat pump active | Heat pump is heating |
 | Heating | Any heat source is actively heating |
-| Low hot water | Charge is below 5% |
-| No hot water | Charge is below 0.5% |
+| Low hot water | Charge is below the low threshold (default 5%, configurable) |
+| No hot water | Charge is below the no-water threshold (default 0.5%, configurable) |
 | Holiday mode | Tank is currently in holiday mode |
+
+### Water heater
+
+In Advanced mode the tank is also exposed as a native Home Assistant
+**water heater** entity — a single card with current/target temperature, the
+heat-source operation mode (electric / gas / heat pump), and an away toggle
+that maps to holiday mode. This works with the standard water-heater card,
+voice assistants, and `water_heater.*` services.
 
 ### Controls
 
@@ -105,6 +114,8 @@ You can switch modes at any time via **Settings → Devices & Services → Mixer
 
 | Entity | Type | Description |
 | ------ | ---- | ----------- |
+| Water heater | Water heater | Temperature, operation mode & away in one card |
+| Holiday start / end | DateTime | Set holiday window from a date/time picker |
 | Target temperature | Number (45–70 °C) | Set the desired water temperature |
 | Target charge | Number (0–100 %) | Set the desired charge level |
 | Cleansing temperature | Number (51–55 °C) | Set anti-legionella temperature |
@@ -150,6 +161,31 @@ action:
   time**.
 
 ---
+
+### Options
+
+Configure via the integration's **Configure** button:
+
+| Option | Description |
+| ------ | ----------- |
+| Experience mode | Simple (monitoring + boost) or Advanced (full control) |
+| Update interval | Poll frequency, 30–300 seconds |
+| Low / no hot water thresholds | Charge % at which the alert binary sensors trip |
+| Electricity price per kWh | Set a tariff to enable the electric heating **cost** sensor (0 = off) |
+
+Changing options reloads the integration automatically.
+
+### Reconfiguring
+
+Use the integration's **Reconfigure** button to update your account credentials
+without removing and re-adding the entry. If a tank goes missing from your
+account, a repair notification will guide you here.
+
+### Device automations
+
+Mixergy tanks expose device **triggers** you can pick straight from the
+Automations UI: *hot water low*, *heating started*, *heating stopped*,
+*holiday started*, and *holiday ended*.
 
 ## Supported Devices
 

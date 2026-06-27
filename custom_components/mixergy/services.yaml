@@ -7,6 +7,7 @@ set_holiday_dates:
       integration: mixergy
     device:
       integration: mixergy
+    area: {}
   fields:
     start_date:
       required: true
@@ -31,6 +32,7 @@ clear_holiday_dates:
       integration: mixergy
     device:
       integration: mixergy
+    area: {}
   fields:
     serial_number:
       required: false
@@ -45,6 +47,7 @@ boost_charge:
       integration: mixergy
     device:
       integration: mixergy
+    area: {}
   fields:
     serial_number:
       required: false

@@ -14,9 +14,17 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .api import TankData
-from .const import LOW_HOT_WATER_THRESHOLD, NO_HOT_WATER_THRESHOLD
+from .const import (
+    CONF_LOW_WATER_THRESHOLD,
+    CONF_NO_WATER_THRESHOLD,
+    LOW_HOT_WATER_THRESHOLD,
+    NO_HOT_WATER_THRESHOLD,
+)
 from .coordinator import MixergyConfigEntry, MixergyCoordinator
 from .entity import MixergyEntity
+
+# Read-only, coordinator-driven platform — no per-entity API fan-out.
+PARALLEL_UPDATES = 0
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -27,7 +35,8 @@ class MixergyBinarySensorEntityDescription(BinarySensorEntityDescription):
     available_fn: Callable[[TankData], bool] = lambda _: True
 
 
-BINARY_SENSOR_DESCRIPTIONS: tuple[
+# Sensors whose state doesn't depend on user-configurable thresholds.
+STATIC_BINARY_SENSOR_DESCRIPTIONS: tuple[
     MixergyBinarySensorEntityDescription, ...
 ] = (
     # ── Heat source active indicators ────────────────────────────────
@@ -60,21 +69,6 @@ BINARY_SENSOR_DESCRIPTIONS: tuple[
         icon="mdi:water-boiler",
         is_on_fn=lambda data: data.measurement.is_heating,
     ),
-    # ── Water level alerts ───────────────────────────────────────────
-    MixergyBinarySensorEntityDescription(
-        key="low_hot_water",
-        translation_key="low_hot_water",
-        device_class=BinarySensorDeviceClass.PROBLEM,
-        icon="mdi:water-percent-alert",
-        is_on_fn=lambda data: data.measurement.charge < LOW_HOT_WATER_THRESHOLD,
-    ),
-    MixergyBinarySensorEntityDescription(
-        key="no_hot_water",
-        translation_key="no_hot_water",
-        device_class=BinarySensorDeviceClass.PROBLEM,
-        icon="mdi:water-remove-outline",
-        is_on_fn=lambda data: data.measurement.charge < NO_HOT_WATER_THRESHOLD,
-    ),
     # ── Holiday mode ─────────────────────────────────────────────────
     MixergyBinarySensorEntityDescription(
         key="holiday_mode",
@@ -85,17 +79,49 @@ BINARY_SENSOR_DESCRIPTIONS: tuple[
 )
 
 
+def _threshold_descriptions(
+    low: float, no: float
+) -> tuple[MixergyBinarySensorEntityDescription, ...]:
+    """Build the water-level alert sensors using configured thresholds."""
+    return (
+        MixergyBinarySensorEntityDescription(
+            key="low_hot_water",
+            translation_key="low_hot_water",
+            device_class=BinarySensorDeviceClass.PROBLEM,
+            icon="mdi:water-percent-alert",
+            is_on_fn=lambda data: data.measurement.charge < low,
+        ),
+        MixergyBinarySensorEntityDescription(
+            key="no_hot_water",
+            translation_key="no_hot_water",
+            device_class=BinarySensorDeviceClass.PROBLEM,
+            icon="mdi:water-remove-outline",
+            is_on_fn=lambda data: data.measurement.charge < no,
+        ),
+    )
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: MixergyConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up Mixergy binary sensor entities."""
-    coordinator = entry.runtime_data
+    """Set up Mixergy binary sensor entities.
 
+    Water-level thresholds are read from options; the options update listener
+    reloads the entry so changes take effect immediately.
+    """
+    coordinator = entry.runtime_data
+    low = entry.options.get(CONF_LOW_WATER_THRESHOLD, LOW_HOT_WATER_THRESHOLD)
+    no = entry.options.get(CONF_NO_WATER_THRESHOLD, NO_HOT_WATER_THRESHOLD)
+
+    descriptions = (
+        *STATIC_BINARY_SENSOR_DESCRIPTIONS,
+        *_threshold_descriptions(low, no),
+    )
     async_add_entities(
         MixergyBinarySensor(coordinator, description)
-        for description in BINARY_SENSOR_DESCRIPTIONS
+        for description in descriptions
     )
 
 

@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+from collections.abc import Awaitable
+
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
+from .api import MixergyApiError, MixergyAuthError
 from .const import DOMAIN, MANUFACTURER
 from .coordinator import MixergyCoordinator
 
@@ -30,5 +34,29 @@ class MixergyEntity(CoordinatorEntity[MixergyCoordinator]):
             name=f"Mixergy Tank ({serial})",
             model=coordinator.data.info.model_code,
             sw_version=coordinator.data.info.firmware_version,
-            suggested_area="utility_room",
+            serial_number=serial,
+            configuration_url="https://www.mixergy.io",
+            suggested_area="Utility Room",
         )
+
+    async def _async_write_command(
+        self, command: Awaitable[None], error_prefix: str
+    ) -> None:
+        """Run a write command, then refresh — with uniform error handling.
+
+        A command-time auth failure starts HA's reauth flow (consistent with
+        the domain services) instead of only surfacing a generic error the
+        user can't act on. MixergyAuthError must be caught before
+        MixergyApiError — it is a subclass.
+        """
+        try:
+            await command
+            await self.coordinator.async_request_refresh()
+        except MixergyAuthError as err:
+            self.coordinator.config_entry.async_start_reauth(self.hass)
+            raise HomeAssistantError(
+                f"{error_prefix}: authentication failed, re-authentication "
+                "required."
+            ) from err
+        except MixergyApiError as err:
+            raise HomeAssistantError(f"{error_prefix}: {err}") from err

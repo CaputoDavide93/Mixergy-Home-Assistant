@@ -13,13 +13,15 @@ from homeassistant.components.switch import (
 )
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .api import MixergyApiClient, MixergyApiError, TankData
+from .api import MixergyApiClient, TankData
 from .const import is_advanced_mode
 from .coordinator import MixergyConfigEntry, MixergyCoordinator
 from .entity import MixergyEntity
+
+# Writes go through the cloud API; serialise them to avoid hammering it.
+PARALLEL_UPDATES = 1
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -125,16 +127,14 @@ class MixergySwitch(MixergyEntity, SwitchEntity):
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the switch on."""
-        try:
-            await self.entity_description.turn_on_fn(self.coordinator.client)
-            await self.coordinator.async_request_refresh()
-        except MixergyApiError as err:
-            raise HomeAssistantError(str(err)) from err
+        await self._async_write_command(
+            self.entity_description.turn_on_fn(self.coordinator.client),
+            f"Failed to turn on {self.entity_description.key}",
+        )
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the switch off."""
-        try:
-            await self.entity_description.turn_off_fn(self.coordinator.client)
-            await self.coordinator.async_request_refresh()
-        except MixergyApiError as err:
-            raise HomeAssistantError(str(err)) from err
+        await self._async_write_command(
+            self.entity_description.turn_off_fn(self.coordinator.client),
+            f"Failed to turn off {self.entity_description.key}",
+        )
