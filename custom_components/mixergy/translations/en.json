@@ -64,17 +64,39 @@
   },
   "entity": {
     "sensor": {
-      "hot_water_temperature": { "name": "Hot water temperature" },
-      "coldest_water_temperature": { "name": "Coldest water temperature" },
-      "target_temperature": { "name": "Target temperature" },
-      "cleansing_temperature": { "name": "Cleansing temperature" },
-      "charge": { "name": "Current charge" },
-      "target_charge": { "name": "Target charge" },
-      "electric_power": { "name": "Electric heat power" },
-      "electric_energy": { "name": "Electric heat energy" },
-      "pv_power": { "name": "PV power" },
-      "pv_energy": { "name": "PV energy" },
-      "clamp_power": { "name": "Clamp power" },
+      "hot_water_temperature": {
+        "name": "Hot water temperature"
+      },
+      "coldest_water_temperature": {
+        "name": "Coldest water temperature"
+      },
+      "target_temperature": {
+        "name": "Target temperature"
+      },
+      "cleansing_temperature": {
+        "name": "Cleansing temperature"
+      },
+      "charge": {
+        "name": "Current charge"
+      },
+      "target_charge": {
+        "name": "Target charge"
+      },
+      "electric_power": {
+        "name": "Electric heat power"
+      },
+      "electric_energy": {
+        "name": "Electric heat energy"
+      },
+      "pv_power": {
+        "name": "PV power"
+      },
+      "pv_energy": {
+        "name": "PV energy"
+      },
+      "clamp_power": {
+        "name": "Clamp power"
+      },
       "active_heat_source": {
         "name": "Active heat source",
         "state": {
@@ -92,36 +114,84 @@
           "heat_pump": "Heat pump"
         }
       },
-      "holiday_start": { "name": "Holiday start date" },
-      "holiday_end": { "name": "Holiday end date" },
-      "firmware_version": { "name": "Firmware version" },
-      "model": { "name": "Model" },
-      "last_update": { "name": "Last successful update" }
+      "holiday_start": {
+        "name": "Holiday start date"
+      },
+      "holiday_end": {
+        "name": "Holiday end date"
+      },
+      "firmware_version": {
+        "name": "Firmware version"
+      },
+      "model": {
+        "name": "Model"
+      },
+      "last_update": {
+        "name": "Last successful update"
+      }
     },
     "binary_sensor": {
-      "electric_heat": { "name": "Electric heat active" },
-      "indirect_heat": { "name": "Indirect heat active" },
-      "heatpump_heat": { "name": "Heat pump active" },
-      "is_heating": { "name": "Heating" },
-      "low_hot_water": { "name": "Low hot water" },
-      "no_hot_water": { "name": "No hot water" },
-      "holiday_mode": { "name": "Holiday mode" }
+      "electric_heat": {
+        "name": "Electric heat active"
+      },
+      "indirect_heat": {
+        "name": "Indirect heat active"
+      },
+      "heatpump_heat": {
+        "name": "Heat pump active"
+      },
+      "is_heating": {
+        "name": "Heating"
+      },
+      "low_hot_water": {
+        "name": "Low hot water"
+      },
+      "no_hot_water": {
+        "name": "No hot water"
+      },
+      "holiday_mode": {
+        "name": "Holiday mode"
+      }
     },
     "switch": {
-      "dsr_enabled": { "name": "Grid assistance (DSR)" },
-      "frost_protection": { "name": "Frost protection" },
-      "distributed_computing": { "name": "Medical research donation" },
-      "pv_divert": { "name": "PV export divert" }
+      "dsr_enabled": {
+        "name": "Grid assistance (DSR)"
+      },
+      "frost_protection": {
+        "name": "Frost protection"
+      },
+      "distributed_computing": {
+        "name": "Medical research donation"
+      },
+      "pv_divert": {
+        "name": "PV export divert"
+      }
     },
     "number": {
-      "target_temperature_control": { "name": "Target temperature" },
-      "target_charge_control": { "name": "Target charge" },
-      "boost_charge_simple": { "name": "Hot water boost" },
-      "cleansing_temperature_control": { "name": "Cleansing temperature" },
-      "pv_cut_in_threshold": { "name": "PV cut-in threshold" },
-      "pv_charge_limit": { "name": "PV charge limit" },
-      "pv_target_current": { "name": "PV target current" },
-      "pv_over_temperature": { "name": "PV over-temperature limit" }
+      "target_temperature_control": {
+        "name": "Target temperature"
+      },
+      "target_charge_control": {
+        "name": "Target charge"
+      },
+      "boost_charge_simple": {
+        "name": "Hot water boost"
+      },
+      "cleansing_temperature_control": {
+        "name": "Cleansing temperature"
+      },
+      "pv_cut_in_threshold": {
+        "name": "PV cut-in threshold"
+      },
+      "pv_charge_limit": {
+        "name": "PV charge limit"
+      },
+      "pv_target_current": {
+        "name": "PV target current"
+      },
+      "pv_over_temperature": {
+        "name": "PV over-temperature limit"
+      }
     },
     "select": {
       "default_heat_source_select": {
@@ -134,7 +204,9 @@
       }
     },
     "button": {
-      "clear_holiday": { "name": "Clear holiday dates" }
+      "clear_holiday": {
+        "name": "Clear holiday dates"
+      }
     }
   },
   "exceptions": {
@@ -154,16 +226,32 @@
         "end_date": {
           "name": "End date",
           "description": "The return date and time from holiday mode."
+        },
+        "serial_number": {
+          "name": "Serial number",
+          "description": "Optional. Restrict to the tank with this serial number. If omitted, applies to all configured tanks."
         }
       }
     },
     "clear_holiday_dates": {
       "name": "Clear holiday dates",
-      "description": "Clear the holiday mode dates for the Mixergy tank."
+      "description": "Clear the holiday mode dates for the Mixergy tank.",
+      "fields": {
+        "serial_number": {
+          "name": "Serial number",
+          "description": "Optional. Restrict to the tank with this serial number. If omitted, applies to all configured tanks."
+        }
+      }
     },
     "boost_charge": {
       "name": "Boost hot water",
-      "description": "Boost the hot water to 100% charge immediately."
+      "description": "Boost the hot water to 100% charge immediately.",
+      "fields": {
+        "serial_number": {
+          "name": "Serial number",
+          "description": "Optional. Restrict to the tank with this serial number. If omitted, applies to all configured tanks."
+        }
+      }
     }
   }
 }

@@ -88,12 +88,17 @@ def test_is_advanced_mode_returns_false_for_simple() -> None:
     assert is_advanced_mode(entry) is False
 
 
-def test_is_advanced_mode_defaults_to_true_when_no_options() -> None:
-    """is_advanced_mode defaults to True for entries without the option."""
+def test_is_advanced_mode_defaults_to_false_when_no_options() -> None:
+    """is_advanced_mode defaults to Simple (False) for entries without the option.
+
+    Matches the setup flow's default (STEP_EXPERIENCE_SCHEMA defaults to
+    Simple) so an entry missing the option never silently exposes the full
+    advanced control surface.
+    """
     from unittest.mock import MagicMock
 
     from custom_components.mixergy.const import is_advanced_mode
 
     entry = MagicMock()
     entry.options = {}
-    assert is_advanced_mode(entry) is True
+    assert is_advanced_mode(entry) is False

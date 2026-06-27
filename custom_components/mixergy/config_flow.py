@@ -239,8 +239,14 @@ class MixergyConfigFlow(ConfigFlow, domain=DOMAIN):
 
             try:
                 await client.test_credentials()
+                # Verify the new credentials still own the configured tank —
+                # otherwise a user could reauth with a different valid account
+                # and the entry would reload straight into tank-not-found.
+                await client.test_connection()
             except MixergyAuthError:
                 errors["base"] = "invalid_auth"
+            except MixergyTankNotFoundError:
+                errors["base"] = "tank_not_found"
             except MixergyConnectionError:
                 errors["base"] = "cannot_connect"
             except (asyncio.TimeoutError, aiohttp.ClientError, OSError) as err:
@@ -289,7 +295,7 @@ class MixergyOptionsFlow(OptionsFlow):
             return self.async_create_entry(data=data)
 
         current_mode = self.config_entry.options.get(
-            CONF_EXPERIENCE_MODE, MODE_ADVANCED
+            CONF_EXPERIENCE_MODE, MODE_SIMPLE
         )
         current_interval = self.config_entry.options.get(
             CONF_UPDATE_INTERVAL, UPDATE_INTERVAL

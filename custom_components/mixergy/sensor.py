@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import logging
+import math
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -27,6 +29,8 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from .api import TankData
 from .coordinator import MixergyConfigEntry, MixergyCoordinator
 from .entity import MixergyEntity
+
+_LOGGER = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -340,7 +344,13 @@ class MixergyEnergySensor(MixergyEntity, RestoreSensor):
             if elapsed_hours < 0:
                 elapsed_hours = 0
             power_w = self._power_w_fn(self.coordinator.data)
-            if power_w > 0:
+            # math.isfinite guards against a NaN/inf power reading (e.g. a
+            # garbage pvEnergy value divided into pv_power_kw). NaN > 0 is
+            # False so NaN is already dropped, but inf > 0 is True and would
+            # be added to a TOTAL_INCREASING total that is PERSISTED across
+            # restarts via RestoreSensor — permanently poisoning the Energy
+            # dashboard until the entity is manually reset.
+            if math.isfinite(power_w) and power_w > 0:
                 self._accumulated_kwh += (power_w / 1000) * elapsed_hours
         self._last_update = now
         self.async_write_ha_state()
@@ -348,6 +358,13 @@ class MixergyEnergySensor(MixergyEntity, RestoreSensor):
     @property
     def native_value(self) -> float:
         """Return the accumulated energy in kWh."""
+        # Defensive: never surface a non-finite total to the state machine.
+        if not math.isfinite(self._accumulated_kwh):
+            _LOGGER.warning(
+                "Energy accumulator for %s went non-finite (%s); resetting to 0",
+                self._attr_unique_id, self._accumulated_kwh,
+            )
+            self._accumulated_kwh = 0.0
         return round(self._accumulated_kwh, 4)
 
     @property

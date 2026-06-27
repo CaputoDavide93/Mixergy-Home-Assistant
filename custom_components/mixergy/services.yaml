@@ -2,6 +2,11 @@
 # Human-readable names and descriptions live in strings.json / translations/.
 
 set_holiday_dates:
+  target:
+    entity:
+      integration: mixergy
+    device:
+      integration: mixergy
   fields:
     start_date:
       required: true
@@ -13,7 +18,37 @@ set_holiday_dates:
       example: "2026-03-22 12:00:00"
       selector:
         datetime:
+    serial_number:
+      required: false
+      advanced: true
+      example: "MX0000000000"
+      selector:
+        text:
 
 clear_holiday_dates:
+  target:
+    entity:
+      integration: mixergy
+    device:
+      integration: mixergy
+  fields:
+    serial_number:
+      required: false
+      advanced: true
+      example: "MX0000000000"
+      selector:
+        text:
 
 boost_charge:
+  target:
+    entity:
+      integration: mixergy
+    device:
+      integration: mixergy
+  fields:
+    serial_number:
+      required: false
+      advanced: true
+      example: "MX0000000000"
+      selector:
+        text:

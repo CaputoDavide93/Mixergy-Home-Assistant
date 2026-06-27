@@ -14,12 +14,19 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import StrEnum
 from typing import Any
+from urllib.parse import urlparse
 
 import aiohttp
 
 _LOGGER = logging.getLogger(__name__)
 
 API_ROOT = "https://www.mixergy.io/api/v2"
+
+# Hosts we are willing to send the bearer token to. HATEOAS links are
+# attacker-influenceable (a compromised/misconfigured upstream could serve
+# off-host or http:// links); restrict to the Mixergy origin.
+_ALLOWED_API_HOST_SUFFIX = ".mixergy.io"
+_ALLOWED_API_HOST = "mixergy.io"
 
 # Token refresh buffer — refresh 5 minutes before expiry
 TOKEN_REFRESH_BUFFER = 300
@@ -61,6 +68,33 @@ class PVType(StrEnum):
 
 
 # ── Format helpers ────────────────────────────────────────────────────────────
+
+def _require_safe_link(href: Any, link_name: str) -> str:
+    """Validate a discovered HATEOAS link before we send a token to it.
+
+    aiohttp ``ssl=True`` only enforces TLS *when* the URL is https://; an
+    http:// link silently downgrades and leaks the bearer token over
+    plaintext, and an off-host link exfiltrates it to a third party. Reject
+    anything that isn't https:// on the Mixergy origin.
+    """
+    if not isinstance(href, str) or not href:
+        raise MixergyConnectionError(
+            f"Missing required API link '{link_name}'"
+        )
+    parsed = urlparse(href)
+    if parsed.scheme != "https":
+        raise MixergyConnectionError(
+            f"API link '{link_name}' is not HTTPS: {href[:60]} "
+            "(refusing to leak bearer token over plaintext)"
+        )
+    host = parsed.hostname or ""
+    if host != _ALLOWED_API_HOST and not host.endswith(_ALLOWED_API_HOST_SUFFIX):
+        raise MixergyConnectionError(
+            f"API link '{link_name}' points to unexpected host "
+            f"'{host}' (refusing to send token off the Mixergy origin)"
+        )
+    return href
+
 
 def _api_to_ha_heat_source(api_value: str) -> str:
     """Normalise API heat-source format to HA-facing format.
@@ -224,7 +258,9 @@ class MixergyApiClient:
                         f"Root endpoint returned {resp.status}"
                     )
                 root = await resp.json()
-                account_url = root["_links"]["account"]["href"]
+                account_url = _require_safe_link(
+                    root["_links"]["account"]["href"], "account"
+                )
 
             async with self._session.get(
                 account_url, ssl=True, timeout=REQUEST_TIMEOUT
@@ -234,9 +270,12 @@ class MixergyApiClient:
                         f"Account endpoint returned {resp.status}"
                     )
                 account = await resp.json()
-                self._login_url = account["_links"]["login"]["href"]
+                self._login_url = _require_safe_link(
+                    account["_links"]["login"]["href"], "login"
+                )
 
-        except (aiohttp.ClientError, asyncio.TimeoutError, KeyError) as err:
+        except (aiohttp.ClientError, asyncio.TimeoutError, KeyError,
+                json.JSONDecodeError) as err:
             raise MixergyConnectionError(
                 f"Failed to discover login URL: {err}"
             ) from err
@@ -274,10 +313,22 @@ class MixergyApiClient:
                         )
 
                     data = await resp.json()
-                    self._token = data["token"]
+                    token = data.get("token")
+                    if not isinstance(token, str) or not token:
+                        raise MixergyAuthError(
+                            "Authentication response missing a valid token"
+                        )
+                    self._token = token
 
-                    # Use token TTL from API response if available
+                    # Use token TTL from API response if available, but don't
+                    # trust it blindly: a non-numeric/zero TTL would crash the
+                    # arithmetic, and a TTL below the refresh buffer would make
+                    # the token instantly "expired" — forcing a fresh login on
+                    # every request and risking API throttling. Clamp it.
                     ttl = data.get("ttl", DEFAULT_TOKEN_TTL)
+                    if not isinstance(ttl, (int, float)) or ttl <= 0:
+                        ttl = DEFAULT_TOKEN_TTL
+                    ttl = max(ttl, TOKEN_REFRESH_BUFFER * 2)
                     self._token_expiry = time.time() + ttl
 
                     _LOGGER.debug("Authenticated successfully, token TTL=%s", ttl)
@@ -286,6 +337,10 @@ class MixergyApiClient:
             except (aiohttp.ClientError, asyncio.TimeoutError) as err:
                 raise MixergyConnectionError(
                     f"Authentication request failed: {err}"
+                ) from err
+            except (json.JSONDecodeError, ValueError) as err:
+                raise MixergyAuthError(
+                    f"Malformed authentication response: {err}"
                 ) from err
 
     def invalidate_token(self) -> None:
@@ -321,20 +376,25 @@ class MixergyApiClient:
             await self._ensure_authenticated()
 
             try:
-                # Get tanks list URL from root
-                async with self._session.get(
-                    API_ROOT, headers=self._auth_headers, ssl=True, timeout=REQUEST_TIMEOUT
+                # Get tanks list URL from root. Authenticated discovery now
+                # goes through _request_with_reauth so a server-side token
+                # revocation is retried/surfaced as MixergyAuthError instead
+                # of being misreported as a connectivity failure.
+                async with await self._request_with_reauth(
+                    "GET", API_ROOT
                 ) as resp:
                     if resp.status != 200:
                         raise MixergyConnectionError(
                             f"Root endpoint returned {resp.status}"
                         )
                     root = await resp.json()
-                    self._tanks_url = root["_links"]["tanks"]["href"]
+                    self._tanks_url = _require_safe_link(
+                        root["_links"]["tanks"]["href"], "tanks"
+                    )
 
                 # Get list of tanks
-                async with self._session.get(
-                    self._tanks_url, headers=self._auth_headers, ssl=True, timeout=REQUEST_TIMEOUT
+                async with await self._request_with_reauth(
+                    "GET", self._tanks_url
                 ) as resp:
                     if resp.status != 200:
                         raise MixergyConnectionError(
@@ -360,9 +420,11 @@ class MixergyApiClient:
                 )
 
                 # Get detailed tank info
-                tank_url = tank["_links"]["self"]["href"]
-                async with self._session.get(
-                    tank_url, headers=self._auth_headers, ssl=True, timeout=REQUEST_TIMEOUT
+                tank_url = _require_safe_link(
+                    tank["_links"]["self"]["href"], "tank_self"
+                )
+                async with await self._request_with_reauth(
+                    "GET", tank_url
                 ) as resp:
                     if resp.status != 200:
                         raise MixergyConnectionError(
@@ -370,30 +432,22 @@ class MixergyApiClient:
                         )
                     detail = await resp.json()
 
-                # Validate required HATEOAS links before accessing them
+                # Validate every required HATEOAS link (https + Mixergy host)
+                # before we cache it and start sending the bearer token to it.
                 links = detail.get("_links", {})
-                for link_name in ("latest_measurement", "control", "settings", "schedule"):
-                    href = links.get(link_name, {}).get("href")
-                    if not href:
-                        raise MixergyConnectionError(
-                            f"Missing required API link '{link_name}' in tank detail response"
-                        )
-                    # Defence-in-depth: HATEOAS links come from the cloud
-                    # API response. A compromised or misconfigured upstream
-                    # could serve http:// links; we'd then silently
-                    # downgrade and leak the bearer token over plaintext.
-                    # aiohttp `ssl=True` only enforces TLS WHEN the URL is
-                    # https:// — http:// urls happily skip TLS entirely.
-                    if not href.startswith("https://"):
-                        raise MixergyConnectionError(
-                            f"API link '{link_name}' is not HTTPS: {href[:60]} "
-                            "(refusing to leak bearer token over plaintext)"
-                        )
-
-                self._measurement_url = links["latest_measurement"]["href"]
-                self._control_url = links["control"]["href"]
-                self._settings_url = links["settings"]["href"]
-                self._schedule_url = links["schedule"]["href"]
+                self._measurement_url = _require_safe_link(
+                    links.get("latest_measurement", {}).get("href"),
+                    "latest_measurement",
+                )
+                self._control_url = _require_safe_link(
+                    links.get("control", {}).get("href"), "control"
+                )
+                self._settings_url = _require_safe_link(
+                    links.get("settings", {}).get("href"), "settings"
+                )
+                self._schedule_url = _require_safe_link(
+                    links.get("schedule", {}).get("href"), "schedule"
+                )
 
                 self._tank_info.model_code = detail.get("tankModelCode", "Unknown")
 
@@ -413,7 +467,8 @@ class MixergyApiClient:
                     self._tank_info.has_pv_diverter,
                 )
 
-            except (aiohttp.ClientError, asyncio.TimeoutError) as err:
+            except (aiohttp.ClientError, asyncio.TimeoutError,
+                    json.JSONDecodeError, KeyError) as err:
                 raise MixergyConnectionError(
                     f"Failed to discover tank: {err}"
                 ) from err
@@ -442,19 +497,45 @@ class MixergyApiClient:
             )
         await self._ensure_authenticated()
 
-        resp = await self._session.request(
-            method, url, headers=self._auth_headers, ssl=True,
-            timeout=REQUEST_TIMEOUT, **kwargs
-        )
+        # Network-layer failures (DNS, TLS, connection reset, timeout) must
+        # be normalised to MixergyConnectionError here — otherwise a raw
+        # aiohttp.ClientError escapes the API boundary during polling and
+        # the coordinator (which only knows MixergyApiError subclasses)
+        # surfaces an untyped traceback instead of a clean UpdateFailed.
+        try:
+            resp = await self._session.request(
+                method, url, headers=self._auth_headers, ssl=True,
+                timeout=REQUEST_TIMEOUT, **kwargs
+            )
+        except (aiohttp.ClientError, asyncio.TimeoutError) as err:
+            raise MixergyConnectionError(
+                f"Request to {url} failed: {err}"
+            ) from err
 
         if resp.status == 401:
             _LOGGER.debug("Got 401, re-authenticating...")
             resp.release()
             self.invalidate_token()
             await self.authenticate()
-            resp = await self._session.request(
-                method, url, headers=self._auth_headers, ssl=True,
-                timeout=REQUEST_TIMEOUT, **kwargs
+            try:
+                resp = await self._session.request(
+                    method, url, headers=self._auth_headers, ssl=True,
+                    timeout=REQUEST_TIMEOUT, **kwargs
+                )
+            except (aiohttp.ClientError, asyncio.TimeoutError) as err:
+                raise MixergyConnectionError(
+                    f"Request to {url} failed after re-auth: {err}"
+                ) from err
+
+        # Still rejected after a fresh login (or a 403 the retry can't fix):
+        # the credentials are genuinely bad/revoked. Surface MixergyAuthError
+        # so the coordinator opens HA's reauth flow, instead of looping on a
+        # retryable MixergyConnectionError forever.
+        if resp.status in (401, 403):
+            resp.release()
+            self.invalidate_token()
+            raise MixergyAuthError(
+                f"Authentication rejected for {url} (status {resp.status})"
             )
 
         # 404/410 on a discovered HATEOAS URL means the cached link is
@@ -490,7 +571,12 @@ class MixergyApiClient:
                 raise MixergyConnectionError(
                     f"Measurement fetch failed: {resp.status}"
                 )
-            data = await resp.json()
+            try:
+                data = await resp.json()
+            except (aiohttp.ClientError, ValueError) as err:
+                raise MixergyConnectionError(
+                    f"Measurement response was not valid JSON: {err}"
+                ) from err
 
         measurement = TankMeasurement(
             hot_water_temperature=data.get("topTemperature", 0.0),
@@ -516,8 +602,11 @@ class MixergyApiClient:
             measurement.in_holiday_mode = source == "Vacation"
 
             if not measurement.in_holiday_mode:
-                heat_source_str = current.get("heat_source", "none").lower()
-                immersion_on = current.get("immersion", "off").lower() == "on"
+                # `or` (not the .get default) guards against an explicit null
+                # value for these keys — .get only substitutes when the key is
+                # absent, so a present-but-None value would crash on .lower().
+                heat_source_str = (current.get("heat_source") or "none").lower()
+                immersion_on = (current.get("immersion") or "off").lower() == "on"
 
                 if heat_source_str == "indirect":
                     measurement.active_heat_source = HeatSource.INDIRECT
@@ -534,7 +623,7 @@ class MixergyApiClient:
                 else:
                     measurement.active_heat_source = HeatSource.NONE
 
-        except (json.JSONDecodeError, KeyError, TypeError) as err:
+        except (json.JSONDecodeError, KeyError, TypeError, AttributeError) as err:
             _LOGGER.warning("Failed to parse measurement state: %s", err)
 
         return measurement
@@ -552,8 +641,13 @@ class MixergyApiClient:
                     f"Settings fetch failed: {resp.status}"
                 )
             # Settings endpoint returns text/plain content-type
-            text = await resp.text()
-            data = json.loads(text)
+            try:
+                text = await resp.text()
+                data = json.loads(text)
+            except (aiohttp.ClientError, ValueError) as err:
+                raise MixergyConnectionError(
+                    f"Settings response was not valid JSON: {err}"
+                ) from err
 
         settings = TankSettings(
             target_temperature=data.get("max_temp", 0.0),
@@ -588,8 +682,13 @@ class MixergyApiClient:
                 raise MixergyConnectionError(
                     f"Schedule fetch failed: {resp.status}"
                 )
-            text = await resp.text()
-            data = json.loads(text)
+            try:
+                text = await resp.text()
+                data = json.loads(text)
+            except (aiohttp.ClientError, ValueError) as err:
+                raise MixergyConnectionError(
+                    f"Schedule response was not valid JSON: {err}"
+                ) from err
 
         schedule = TankSchedule(raw=data)
 
@@ -598,8 +697,10 @@ class MixergyApiClient:
         raw_heat_source = data.get("defaultHeatSource", "electric")
         schedule.default_heat_source = _api_to_ha_heat_source(raw_heat_source)
 
+        # `holiday` should be a dict; tolerate a schema change (string/list)
+        # without raising AttributeError out of the coordinator.
         holiday = data.get("holiday")
-        if holiday:
+        if isinstance(holiday, dict):
             try:
                 depart = holiday.get("departDate")
                 ret = holiday.get("returnDate")

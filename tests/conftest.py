@@ -110,7 +110,9 @@ def mock_aiohttp_session() -> Generator[MagicMock, None, None]:
         resp.status = status
         resp.__aenter__ = AsyncMock(return_value=resp)
         resp.__aexit__ = AsyncMock(return_value=False)
-        resp.release = AsyncMock()
+        # aiohttp ClientResponse.release() is synchronous — use MagicMock so
+        # un-awaited calls in the client don't emit coroutine warnings.
+        resp.release = MagicMock()
         if json_data is not None:
             resp.json = AsyncMock(return_value=json_data)
         if text_data is not None:
@@ -143,10 +145,15 @@ def mock_aiohttp_session() -> Generator[MagicMock, None, None]:
         return make_response(200, {})
 
     async def request_side_effect(method, url, **kwargs):
+        # Delegate to the *live* session.get/session.put mocks (not the
+        # closures above) so a test that overrides session.get is honoured
+        # for requests the client now routes through session.request — e.g.
+        # authenticated HATEOAS discovery, which goes through the reauth
+        # wrapper. In production .request and .get hit the same server.
         if method.upper() == "GET":
-            return get_side_effect(url, **kwargs)
+            return session.get(url, **kwargs)
         if method.upper() == "PUT":
-            return put_side_effect(url, **kwargs)
+            return session.put(url, **kwargs)
         return make_response(404)
 
     # session.get / session.post are used as ``async with session.get(...) as resp``

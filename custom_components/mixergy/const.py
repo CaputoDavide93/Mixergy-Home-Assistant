@@ -38,5 +38,10 @@ NO_HOT_WATER_THRESHOLD: Final = 0.5  # % charge — "empty" warning
 
 
 def is_advanced_mode(entry: ConfigEntry) -> bool:
-    """Return True when the config entry is in Advanced experience mode."""
-    return entry.options.get(CONF_EXPERIENCE_MODE, MODE_ADVANCED) == MODE_ADVANCED
+    """Return True when the config entry is in Advanced experience mode.
+
+    Defaults to Simple when the option is absent, matching the setup flow's
+    default (config_flow STEP_EXPERIENCE_SCHEMA) so an entry missing the
+    option never silently exposes the full advanced control surface.
+    """
+    return entry.options.get(CONF_EXPERIENCE_MODE, MODE_SIMPLE) == MODE_ADVANCED

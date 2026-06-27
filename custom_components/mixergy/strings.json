@@ -154,16 +154,32 @@
         "end_date": {
           "name": "End date",
           "description": "The return date and time from holiday mode."
+        },
+        "serial_number": {
+          "name": "Serial number",
+          "description": "Optional. Restrict to the tank with this serial number. If omitted, applies to all configured tanks."
         }
       }
     },
     "clear_holiday_dates": {
       "name": "Clear holiday dates",
-      "description": "Clear the holiday mode dates for the Mixergy tank."
+      "description": "Clear the holiday mode dates for the Mixergy tank.",
+      "fields": {
+        "serial_number": {
+          "name": "Serial number",
+          "description": "Optional. Restrict to the tank with this serial number. If omitted, applies to all configured tanks."
+        }
+      }
     },
     "boost_charge": {
       "name": "Boost hot water",
-      "description": "Boost the hot water to 100% charge immediately."
+      "description": "Boost the hot water to 100% charge immediately.",
+      "fields": {
+        "serial_number": {
+          "name": "Serial number",
+          "description": "Optional. Restrict to the tank with this serial number. If omitted, applies to all configured tanks."
+        }
+      }
     }
   }
 }
