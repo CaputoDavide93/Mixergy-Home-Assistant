@@ -36,7 +36,7 @@ def _make_resp(status: int = 200, json_data=None, text_data: str | None = None):
     resp.status = status
     resp.__aenter__ = AsyncMock(return_value=resp)
     resp.__aexit__ = AsyncMock(return_value=False)
-    resp.release = AsyncMock()
+    resp.release = MagicMock()  # aiohttp release() is synchronous
     if json_data is not None:
         resp.json = AsyncMock(return_value=json_data)
     if text_data is not None:
@@ -665,3 +665,184 @@ async def test_energy_restore_writes_state_immediately():
 
     assert sensor._accumulated_kwh == 42.5, "restored kWh not loaded"
     sensor.async_write_ha_state.assert_called_once_with()
+
+
+# ── Sprint 4: hardening regressions ───────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_persistent_401_raises_auth_error(
+    mock_aiohttp_session: MagicMock,
+) -> None:
+    """A 401 that survives the re-auth retry must raise MixergyAuthError.
+
+    Previously a second 401 fell through to the caller's status check and
+    became a retryable MixergyConnectionError, so HA never opened reauth for
+    a genuinely revoked credential.
+    """
+    from .conftest import MOCK_TANK_DETAIL_RESPONSE  # noqa: F401
+
+    # request() always returns 401 (token rejected even after fresh login).
+    async def always_401(method, url, **kwargs):
+        return _make_resp(401)
+
+    mock_aiohttp_session.request = AsyncMock(side_effect=always_401)
+    mock_aiohttp_session.post = MagicMock(side_effect=_make_login_post())
+
+    client = MixergyApiClient(
+        session=mock_aiohttp_session,
+        username=MOCK_USERNAME,
+        password=MOCK_PASSWORD,
+        serial_number=MOCK_SERIAL,
+    )
+    # Pre-load discovered URL so we exercise _request_with_reauth directly.
+    client._measurement_url = f"https://www.mixergy.io/api/v2/tank/{MOCK_SERIAL}/measurement"
+    client._token = MOCK_TOKEN
+    client._token_expiry = 9999999999.0
+
+    with pytest.raises(MixergyAuthError):
+        await client._request_with_reauth("GET", client._measurement_url)
+
+
+@pytest.mark.asyncio
+async def test_non_https_hateoas_link_rejected(
+    mock_aiohttp_session: MagicMock,
+) -> None:
+    """A http:// (or off-host) discovered link must be refused, not used."""
+    from .conftest import (
+        MOCK_ACCOUNT_RESPONSE,
+        MOCK_ROOT_RESPONSE,
+        MOCK_TANKS_RESPONSE,
+    )
+
+    evil_detail = {
+        "tankModelCode": "MIXERGY-180",
+        "configuration": "{}",
+        "_links": {
+            # http:// would leak the bearer token over plaintext
+            "latest_measurement": {"href": f"http://www.mixergy.io/api/v2/tank/{MOCK_SERIAL}/measurement"},
+            "control": {"href": f"https://www.mixergy.io/api/v2/tank/{MOCK_SERIAL}/control"},
+            "settings": {"href": f"https://www.mixergy.io/api/v2/tank/{MOCK_SERIAL}/settings"},
+            "schedule": {"href": f"https://www.mixergy.io/api/v2/tank/{MOCK_SERIAL}/schedule"},
+        },
+    }
+
+    def get_side_effect(url, **kwargs):
+        if url.endswith("/api/v2"):
+            return _make_resp(200, MOCK_ROOT_RESPONSE)
+        if url.endswith("/account"):
+            return _make_resp(200, MOCK_ACCOUNT_RESPONSE)
+        if url.endswith("/tanks"):
+            return _make_resp(200, MOCK_TANKS_RESPONSE)
+        if url.endswith(MOCK_SERIAL):
+            return _make_resp(200, evil_detail)
+        return _make_resp(404)
+
+    mock_aiohttp_session.get = MagicMock(side_effect=get_side_effect)
+    mock_aiohttp_session.post = MagicMock(side_effect=_make_login_post())
+
+    client = MixergyApiClient(
+        session=mock_aiohttp_session,
+        username=MOCK_USERNAME,
+        password=MOCK_PASSWORD,
+        serial_number=MOCK_SERIAL,
+    )
+    with pytest.raises(MixergyConnectionError, match="not HTTPS"):
+        await client._discover_tank()
+
+
+@pytest.mark.asyncio
+async def test_off_host_hateoas_link_rejected(
+    mock_aiohttp_session: MagicMock,
+) -> None:
+    """An https link to a non-Mixergy host must be refused."""
+    from .conftest import (
+        MOCK_ACCOUNT_RESPONSE,
+        MOCK_ROOT_RESPONSE,
+        MOCK_TANKS_RESPONSE,
+    )
+
+    evil_detail = {
+        "tankModelCode": "MIXERGY-180",
+        "configuration": "{}",
+        "_links": {
+            "latest_measurement": {"href": "https://evil.example.com/measurement"},
+            "control": {"href": f"https://www.mixergy.io/api/v2/tank/{MOCK_SERIAL}/control"},
+            "settings": {"href": f"https://www.mixergy.io/api/v2/tank/{MOCK_SERIAL}/settings"},
+            "schedule": {"href": f"https://www.mixergy.io/api/v2/tank/{MOCK_SERIAL}/schedule"},
+        },
+    }
+
+    def get_side_effect(url, **kwargs):
+        if url.endswith("/api/v2"):
+            return _make_resp(200, MOCK_ROOT_RESPONSE)
+        if url.endswith("/account"):
+            return _make_resp(200, MOCK_ACCOUNT_RESPONSE)
+        if url.endswith("/tanks"):
+            return _make_resp(200, MOCK_TANKS_RESPONSE)
+        if url.endswith(MOCK_SERIAL):
+            return _make_resp(200, evil_detail)
+        return _make_resp(404)
+
+    mock_aiohttp_session.get = MagicMock(side_effect=get_side_effect)
+    mock_aiohttp_session.post = MagicMock(side_effect=_make_login_post())
+
+    client = MixergyApiClient(
+        session=mock_aiohttp_session,
+        username=MOCK_USERNAME,
+        password=MOCK_PASSWORD,
+        serial_number=MOCK_SERIAL,
+    )
+    with pytest.raises(MixergyConnectionError, match="unexpected host"):
+        await client._discover_tank()
+
+
+@pytest.mark.asyncio
+async def test_network_error_normalised_to_connection_error(
+    mock_aiohttp_session: MagicMock,
+) -> None:
+    """A raw aiohttp.ClientError on a request must surface as MixergyConnectionError."""
+    import aiohttp
+
+    async def boom(method, url, **kwargs):
+        raise aiohttp.ClientError("connection reset")
+
+    mock_aiohttp_session.request = AsyncMock(side_effect=boom)
+
+    client = MixergyApiClient(
+        session=mock_aiohttp_session,
+        username=MOCK_USERNAME,
+        password=MOCK_PASSWORD,
+        serial_number=MOCK_SERIAL,
+    )
+    client._measurement_url = f"https://www.mixergy.io/api/v2/tank/{MOCK_SERIAL}/measurement"
+    client._token = MOCK_TOKEN
+    client._token_expiry = 9999999999.0
+
+    with pytest.raises(MixergyConnectionError):
+        await client._request_with_reauth("GET", client._measurement_url)
+
+
+def test_energy_accumulator_ignores_non_finite_power():
+    """An inf power reading must NOT poison the persisted energy total."""
+    import datetime as dt
+    import time
+
+    from custom_components.mixergy.sensor import MixergyEnergySensor
+
+    coordinator = MagicMock()
+    coordinator.update_interval = dt.timedelta(seconds=30)
+    coordinator.data = MagicMock()
+
+    sensor = MixergyEnergySensor.__new__(MixergyEnergySensor)
+    sensor.coordinator = coordinator
+    sensor._accumulated_kwh = 5.0
+    sensor._power_w_fn = lambda _data: float("inf")
+    sensor._last_update = time.time() - 30
+    sensor.async_write_ha_state = MagicMock()
+    sensor._attr_unique_id = "x"
+
+    sensor._handle_coordinator_update()
+
+    assert sensor._accumulated_kwh == 5.0, "inf power must not be accumulated"
+    assert sensor.native_value == 5.0

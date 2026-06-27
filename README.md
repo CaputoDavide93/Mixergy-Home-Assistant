@@ -127,6 +127,28 @@ You can switch modes at any time via **Settings → Devices & Services → Mixer
 | `mixergy.clear_holiday_dates` | Clear holiday mode immediately |
 | `mixergy.boost_charge` | Instantly boost the tank to 100 % charge |
 
+#### Targeting a specific tank
+
+All three services accept a standard Home Assistant **target** (entity, device,
+or area) so you can pick exactly which tank to act on — useful in multi-tank
+homes:
+
+```yaml
+action:
+  - service: mixergy.boost_charge
+    target:
+      device_id: abcdef0123456789
+```
+
+- **No target** → the service applies to **every** configured tank (unchanged
+  behaviour for single-tank setups).
+- A legacy `serial_number:` field is still accepted as an alternative to a
+  target (shown only in *advanced* mode in the UI).
+- Service calls are **permission-checked per tank**: a non-admin user must have
+  control permission on the targeted tank(s). Holiday `start_date` / `end_date`
+  values without a timezone are interpreted in **your Home Assistant local
+  time**.
+
 ---
 
 ## Supported Devices
