@@ -5,13 +5,14 @@ from __future__ import annotations
 from homeassistant.components.button import ButtonEntity
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .api import MixergyApiError
 from .const import is_advanced_mode
 from .coordinator import MixergyConfigEntry, MixergyCoordinator
 from .entity import MixergyEntity
+
+# Writes go through the cloud API; serialise them to avoid hammering it.
+PARALLEL_UPDATES = 1
 
 
 async def async_setup_entry(
@@ -43,8 +44,7 @@ class MixergyClearHolidayButton(MixergyEntity, ButtonEntity):
 
     async def async_press(self) -> None:
         """Clear the holiday dates."""
-        try:
-            await self.coordinator.client.clear_holiday_dates()
-            await self.coordinator.async_request_refresh()
-        except MixergyApiError as err:
-            raise HomeAssistantError(str(err)) from err
+        await self._async_write_command(
+            self.coordinator.client.clear_holiday_dates(),
+            "Failed to clear holiday dates",
+        )

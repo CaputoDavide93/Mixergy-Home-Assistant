@@ -14,13 +14,15 @@ from homeassistant.components.number import (
 )
 from homeassistant.const import PERCENTAGE, EntityCategory, UnitOfTemperature
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .api import MixergyApiClient, MixergyApiError, TankData
-from .const import MODE_SIMPLE, is_advanced_mode
+from .api import MixergyApiClient, TankData
+from .const import is_advanced_mode
 from .coordinator import MixergyConfigEntry, MixergyCoordinator
 from .entity import MixergyEntity
+
+# Writes go through the cloud API; serialise them to avoid hammering it.
+PARALLEL_UPDATES = 1
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -188,11 +190,10 @@ class MixergyNumber(MixergyEntity, NumberEntity):
 
     async def async_set_native_value(self, value: float) -> None:
         """Set the value."""
-        try:
-            await self.entity_description.set_value_fn(self.coordinator.client, value)
-            await self.coordinator.async_request_refresh()
-        except MixergyApiError as err:
-            raise HomeAssistantError(str(err)) from err
+        await self._async_write_command(
+            self.entity_description.set_value_fn(self.coordinator.client, value),
+            f"Failed to set {self.entity_description.key}",
+        )
 
 
 class MixergyBoostNumber(MixergyEntity, NumberEntity):
@@ -226,8 +227,7 @@ class MixergyBoostNumber(MixergyEntity, NumberEntity):
 
     async def async_set_native_value(self, value: float) -> None:
         """Boost hot water to the selected percentage."""
-        try:
-            await self.coordinator.client.set_target_charge(int(value))
-            await self.coordinator.async_request_refresh()
-        except MixergyApiError as err:
-            raise HomeAssistantError(str(err)) from err
+        await self._async_write_command(
+            self.coordinator.client.set_target_charge(int(value)),
+            "Failed to set boost charge",
+        )

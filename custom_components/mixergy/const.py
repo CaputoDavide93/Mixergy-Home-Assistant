@@ -16,6 +16,10 @@ CONF_SERIAL_NUMBER: Final = "serial_number"
 # Options keys
 CONF_UPDATE_INTERVAL: Final = "update_interval"
 CONF_EXPERIENCE_MODE: Final = "experience_mode"
+CONF_LOW_WATER_THRESHOLD: Final = "low_water_threshold"
+CONF_NO_WATER_THRESHOLD: Final = "no_water_threshold"
+# Energy cost (per kWh) for the optional cost sensors
+CONF_ELECTRIC_RATE: Final = "electric_rate"
 
 # Experience mode values
 MODE_SIMPLE: Final = "simple"

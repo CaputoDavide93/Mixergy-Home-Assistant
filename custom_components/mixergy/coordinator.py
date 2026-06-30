@@ -8,6 +8,7 @@ import logging
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryError
+from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.update_coordinator import (
     DataUpdateCoordinator,
     UpdateFailed,
@@ -51,12 +52,21 @@ class MixergyCoordinator(DataUpdateCoordinator[TankData]):
         )
         self.client = client
 
+    @property
+    def _tank_not_found_issue_id(self) -> str:
+        """Stable repair-issue id for this entry's tank-not-found state."""
+        return f"tank_not_found_{self.config_entry.entry_id}"
+
     async def _async_update_data(self) -> TankData:
         """Fetch data from the Mixergy API."""
         try:
             data = await self.client.fetch_all()
             # Stamp the successful fetch time so the diagnostic sensor can show it
             data.last_update_time = dt_util.utcnow()
+            # Clear a previously-raised tank-not-found repair if we recovered.
+            ir.async_delete_issue(
+                self.hass, DOMAIN, self._tank_not_found_issue_id
+            )
             return data
         except MixergyAuthError as err:
             # Triggers HA reauth flow
@@ -66,10 +76,21 @@ class MixergyCoordinator(DataUpdateCoordinator[TankData]):
             ) from err
         except MixergyTankNotFoundError as err:
             # Tank serial no longer present in the user's account
-            # (decommissioned, account changed, hardware replaced). Map
-            # to ConfigEntryError so HA surfaces a clear fix-flow rather
-            # than spamming a traceback on every 30s poll with no user-
-            # facing remediation.
+            # (decommissioned, account changed, hardware replaced). Raise a
+            # repair issue with an actionable fix (reconfigure) and map to
+            # ConfigEntryError so HA surfaces a clear state rather than
+            # spamming a traceback on every poll.
+            ir.async_create_issue(
+                self.hass,
+                DOMAIN,
+                self._tank_not_found_issue_id,
+                is_fixable=False,
+                severity=ir.IssueSeverity.ERROR,
+                translation_key="tank_not_found",
+                translation_placeholders={
+                    "serial": self.client.tank_info.serial_number
+                },
+            )
             raise ConfigEntryError(
                 f"Mixergy tank not found in account: {err}"
             ) from err

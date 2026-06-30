@@ -44,5 +44,16 @@ async def async_get_config_entry_diagnostics(
 
     return {
         "config": config_data,
+        # Options carry no secrets (experience mode, poll interval, thresholds,
+        # tariff) and are essential for reproducing a user's setup.
+        "options": dict(entry.options),
+        "coordinator": {
+            "update_interval": (
+                coordinator.update_interval.total_seconds()
+                if coordinator.update_interval
+                else None
+            ),
+            "last_update_success": coordinator.last_update_success,
+        },
         "tank_data": tank_data,
     }

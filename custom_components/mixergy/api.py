@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import math
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -68,6 +69,20 @@ class PVType(StrEnum):
 
 
 # ── Format helpers ────────────────────────────────────────────────────────────
+
+def _as_float(value: Any, default: float = 0.0) -> float:
+    """Coerce an API value to a finite float, else return default.
+
+    Cloud responses occasionally carry null, strings, or non-finite numbers;
+    feeding those straight into entities (or the energy integrator) produces
+    bad states. Normalise at the boundary.
+    """
+    try:
+        result = float(value)
+    except (TypeError, ValueError):
+        return default
+    return result if math.isfinite(result) else default
+
 
 def _require_safe_link(href: Any, link_name: str) -> str:
     """Validate a discovered HATEOAS link before we send a token to it.
@@ -579,23 +594,23 @@ class MixergyApiClient:
                 ) from err
 
         measurement = TankMeasurement(
-            hot_water_temperature=data.get("topTemperature", 0.0),
-            coldest_water_temperature=data.get("bottomTemperature", 0.0),
-            charge=data.get("charge", 0.0),
+            hot_water_temperature=_as_float(data.get("topTemperature")),
+            coldest_water_temperature=_as_float(data.get("bottomTemperature")),
+            charge=_as_float(data.get("charge")),
         )
 
         # PV power: API returns energy in joules per minute
         if "pvEnergy" in data:
-            measurement.pv_power_kw = data["pvEnergy"] / 60000
+            measurement.pv_power_kw = _as_float(data["pvEnergy"]) / 60000
         if "clampPower" in data:
-            measurement.clamp_power_w = data["clampPower"]
+            measurement.clamp_power_w = _as_float(data["clampPower"])
 
         # Parse state JSON
         try:
             state = json.loads(data.get("state", "{}"))
             current = state.get("current", {})
 
-            measurement.target_charge = current.get("target", 0)
+            measurement.target_charge = _as_float(current.get("target"))
 
             # Holiday mode
             source = current.get("source", "")
@@ -650,23 +665,25 @@ class MixergyApiClient:
                 ) from err
 
         settings = TankSettings(
-            target_temperature=data.get("max_temp", 0.0),
-            dsr_enabled=data.get("dsr_enabled", False),
-            frost_protection_enabled=data.get("frost_protection_enabled", False),
-            distributed_computing_enabled=data.get(
-                "distributed_computing_enabled", False
+            target_temperature=_as_float(data.get("max_temp")),
+            dsr_enabled=bool(data.get("dsr_enabled", False)),
+            frost_protection_enabled=bool(
+                data.get("frost_protection_enabled", False)
             ),
-            cleansing_temperature=data.get("cleansing_temperature", 0.0),
+            distributed_computing_enabled=bool(
+                data.get("distributed_computing_enabled", False)
+            ),
+            cleansing_temperature=_as_float(data.get("cleansing_temperature")),
         )
 
         # PV settings may not exist on all tanks
-        settings.divert_exported_enabled = data.get(
-            "divert_exported_enabled", False
+        settings.divert_exported_enabled = bool(
+            data.get("divert_exported_enabled", False)
         )
-        settings.pv_cut_in_threshold = data.get("pv_cut_in_threshold", 0.0)
-        settings.pv_charge_limit = data.get("pv_charge_limit", 0.0)
-        settings.pv_target_current = data.get("pv_target_current", 0.0)
-        settings.pv_over_temperature = data.get("pv_over_temperature", 0.0)
+        settings.pv_cut_in_threshold = _as_float(data.get("pv_cut_in_threshold"))
+        settings.pv_charge_limit = _as_float(data.get("pv_charge_limit"))
+        settings.pv_target_current = _as_float(data.get("pv_target_current"))
+        settings.pv_over_temperature = _as_float(data.get("pv_over_temperature"))
 
         return settings
 
@@ -955,6 +972,45 @@ class MixergyApiClient:
                     raise MixergyApiError(
                         f"Set default heat source failed: {resp.status}"
                     )
+
+    async def async_list_tanks(self) -> list[dict[str, str]]:
+        """Return all tanks on the account: ``[{"serial", "firmware"}, ...]``.
+
+        Used by the config flow to offer a picker instead of manual serial
+        entry. Authenticated HATEOAS walk; does not require a serial.
+        """
+        await self._ensure_authenticated()
+        try:
+            async with await self._request_with_reauth("GET", API_ROOT) as resp:
+                if resp.status != 200:
+                    raise MixergyConnectionError(
+                        f"Root endpoint returned {resp.status}"
+                    )
+                root = await resp.json()
+            tanks_url = _require_safe_link(
+                root["_links"]["tanks"]["href"], "tanks"
+            )
+            async with await self._request_with_reauth("GET", tanks_url) as resp:
+                if resp.status != 200:
+                    raise MixergyConnectionError(
+                        f"Tanks endpoint returned {resp.status}"
+                    )
+                data = await resp.json()
+            tanks = data["_embedded"]["tankList"]
+        except (aiohttp.ClientError, asyncio.TimeoutError,
+                json.JSONDecodeError, KeyError, TypeError) as err:
+            raise MixergyConnectionError(
+                f"Failed to list tanks: {err}"
+            ) from err
+
+        return [
+            {
+                "serial": str(t["serialNumber"]).upper(),
+                "firmware": t.get("firmwareVersion", ""),
+            }
+            for t in tanks
+            if t.get("serialNumber")
+        ]
 
     # ── Connection Testing ───────────────────────────────────────────
 

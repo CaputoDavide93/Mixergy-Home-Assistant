@@ -33,6 +33,14 @@
           "username": "Email address",
           "password": "Password"
         }
+      },
+      "reconfigure": {
+        "title": "Reconfigure Mixergy",
+        "description": "Update the account credentials for tank {serial_number}.",
+        "data": {
+          "username": "Email address",
+          "password": "Password"
+        }
       }
     },
     "error": {
@@ -43,7 +51,8 @@
     },
     "abort": {
       "already_configured": "This tank is already configured.",
-      "reauth_successful": "Re-authentication successful."
+      "reauth_successful": "Re-authentication successful.",
+      "reconfigure_successful": "Re-configuration was successful"
     }
   },
   "options": {
@@ -53,11 +62,17 @@
         "description": "**Simple** gives you live monitoring and a hot water boost slider.\n**Advanced** unlocks all settings, heat source control, PV divert, holiday scheduling, and more.",
         "data": {
           "experience_mode": "Experience mode",
-          "update_interval": "Update interval (seconds)"
+          "update_interval": "Update interval (seconds)",
+          "low_water_threshold": "Low hot water alert threshold (%)",
+          "no_water_threshold": "No hot water alert threshold (%)",
+          "electric_rate": "Electricity price per kWh (0 to disable cost sensor)"
         },
         "data_description": {
           "experience_mode": "Switch between Simple (monitoring + boost) and Advanced (full control). The integration will reload when saved.",
-          "update_interval": "How frequently to fetch data from the Mixergy API (10–300 seconds)."
+          "update_interval": "How frequently to fetch data from the Mixergy API (30–300 seconds).",
+          "low_water_threshold": "The 'low hot water' binary sensor turns on below this charge.",
+          "no_water_threshold": "The 'no hot water' binary sensor turns on below this charge.",
+          "electric_rate": "Used to compute the electricity cost sensor. Leave at 0 to disable it."
         }
       }
     }
@@ -128,6 +143,9 @@
       },
       "last_update": {
         "name": "Last successful update"
+      },
+      "electric_cost": {
+        "name": "Electric heating cost"
       }
     },
     "binary_sensor": {
@@ -207,6 +225,14 @@
       "clear_holiday": {
         "name": "Clear holiday dates"
       }
+    },
+    "datetime": {
+      "holiday_start_set": {
+        "name": "Holiday start"
+      },
+      "holiday_end_set": {
+        "name": "Holiday end"
+      }
     }
   },
   "exceptions": {
@@ -252,6 +278,29 @@
           "description": "Optional. Restrict to the tank with this serial number. If omitted, applies to all configured tanks."
         }
       }
+    }
+  },
+  "selector": {
+    "experience_mode": {
+      "options": {
+        "simple": "Simple",
+        "advanced": "Advanced"
+      }
+    }
+  },
+  "device_automation": {
+    "trigger_type": {
+      "low_hot_water": "Hot water is low",
+      "heating_started": "Heating started",
+      "heating_stopped": "Heating stopped",
+      "holiday_started": "Holiday mode started",
+      "holiday_ended": "Holiday mode ended"
+    }
+  },
+  "issues": {
+    "tank_not_found": {
+      "title": "Mixergy tank not found",
+      "description": "The tank with serial number {serial} is no longer present in your Mixergy account. If you replaced or renamed the tank, use Reconfigure to update the integration, or remove and re-add it."
     }
   }
 }
