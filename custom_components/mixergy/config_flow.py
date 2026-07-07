@@ -375,19 +375,45 @@ class MixergyOptionsFlow(OptionsFlow):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Single options step covering experience mode and poll interval."""
+        errors: dict[str, str] = {}
+
         if user_input is not None:
-            # NumberSelector returns float; coerce interval to int for timedelta
-            data = dict(user_input)
-            if CONF_UPDATE_INTERVAL in data:
-                data[CONF_UPDATE_INTERVAL] = int(data[CONF_UPDATE_INTERVAL])
-            return self.async_create_entry(data=data)
+            # Cross-field check: the "no hot water" threshold must sit BELOW
+            # the "low hot water" threshold, otherwise the two alert binary
+            # sensors contradict each other (no-water on while low-water off).
+            low = user_input.get(CONF_LOW_WATER_THRESHOLD)
+            no = user_input.get(CONF_NO_WATER_THRESHOLD)
+            if low is not None and no is not None and no >= low:
+                errors["base"] = "no_water_threshold_too_high"
+            else:
+                # NumberSelector returns float; coerce interval to int for
+                # timedelta
+                data = dict(user_input)
+                if CONF_UPDATE_INTERVAL in data:
+                    data[CONF_UPDATE_INTERVAL] = int(data[CONF_UPDATE_INTERVAL])
+                return self.async_create_entry(data=data)
 
         opts = self.config_entry.options
-        current_mode = opts.get(CONF_EXPERIENCE_MODE, MODE_SIMPLE)
-        current_interval = opts.get(CONF_UPDATE_INTERVAL, UPDATE_INTERVAL)
-        current_low = opts.get(CONF_LOW_WATER_THRESHOLD, LOW_HOT_WATER_THRESHOLD)
-        current_no = opts.get(CONF_NO_WATER_THRESHOLD, NO_HOT_WATER_THRESHOLD)
-        current_rate = opts.get(CONF_ELECTRIC_RATE, 0.0)
+        # On a validation error, re-show the form pre-filled with what the
+        # user just typed (not the stored options) so nothing is lost.
+        src = user_input or {}
+        current_mode = src.get(
+            CONF_EXPERIENCE_MODE, opts.get(CONF_EXPERIENCE_MODE, MODE_SIMPLE)
+        )
+        current_interval = src.get(
+            CONF_UPDATE_INTERVAL, opts.get(CONF_UPDATE_INTERVAL, UPDATE_INTERVAL)
+        )
+        current_low = src.get(
+            CONF_LOW_WATER_THRESHOLD,
+            opts.get(CONF_LOW_WATER_THRESHOLD, LOW_HOT_WATER_THRESHOLD),
+        )
+        current_no = src.get(
+            CONF_NO_WATER_THRESHOLD,
+            opts.get(CONF_NO_WATER_THRESHOLD, NO_HOT_WATER_THRESHOLD),
+        )
+        current_rate = src.get(
+            CONF_ELECTRIC_RATE, opts.get(CONF_ELECTRIC_RATE, 0.0)
+        )
 
         return self.async_show_form(
             step_id="init",
@@ -441,4 +467,5 @@ class MixergyOptionsFlow(OptionsFlow):
                     ),
                 }
             ),
+            errors=errors,
         )

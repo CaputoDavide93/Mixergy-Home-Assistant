@@ -220,9 +220,14 @@ async def test_options_flow_shows_current_interval() -> None:
 
     captured: dict = {}
 
-    def capture_form(step_id, data_schema):
+    def capture_form(step_id, data_schema, errors=None):
         captured["step_id"] = step_id
-        return {"type": "form", "step_id": step_id, "schema": data_schema}
+        return {
+            "type": "form",
+            "step_id": step_id,
+            "schema": data_schema,
+            "errors": errors,
+        }
 
     flow.async_show_form = capture_form
 
@@ -267,7 +272,7 @@ async def test_options_flow_defaults_to_update_interval_constant() -> None:
 
     captured: dict = {}
 
-    def capture_form(step_id, data_schema):
+    def capture_form(step_id, data_schema, errors=None):
         # Extract the default from the voluptuous schema keys
         for key in data_schema.schema:
             if hasattr(key, "default") and str(key) == CONF_UPDATE_INTERVAL:
@@ -282,3 +287,49 @@ async def test_options_flow_defaults_to_update_interval_constant() -> None:
         await flow.async_step_init()
 
     assert captured.get("default") == UPDATE_INTERVAL
+
+
+@pytest.mark.asyncio
+async def test_options_flow_rejects_no_water_at_or_above_low_water() -> None:
+    """no_water_threshold >= low_water_threshold must re-show the form
+    with an error — otherwise the two alert binary sensors contradict
+    each other (no-water on while low-water off)."""
+    from custom_components.mixergy.config_flow import MixergyOptionsFlow
+    from custom_components.mixergy.const import (
+        CONF_LOW_WATER_THRESHOLD,
+        CONF_NO_WATER_THRESHOLD,
+    )
+
+    mock_entry = MagicMock()
+    mock_entry.options = {}
+
+    flow = MixergyOptionsFlow()
+    flow.async_create_entry = lambda data: {"type": "create_entry", "data": data}
+
+    def capture_form(step_id, data_schema, errors=None):
+        return {"type": "form", "step_id": step_id, "errors": errors}
+
+    flow.async_show_form = capture_form
+
+    with patch.object(
+        type(flow), "config_entry", new_callable=PropertyMock, return_value=mock_entry
+    ):
+        # Equal thresholds -> rejected
+        result = await flow.async_step_init(
+            {CONF_LOW_WATER_THRESHOLD: 20, CONF_NO_WATER_THRESHOLD: 20}
+        )
+        assert result["type"] == "form"
+        assert result["errors"]["base"] == "no_water_threshold_too_high"
+
+        # Inverted thresholds -> rejected
+        result = await flow.async_step_init(
+            {CONF_LOW_WATER_THRESHOLD: 10, CONF_NO_WATER_THRESHOLD: 30}
+        )
+        assert result["errors"]["base"] == "no_water_threshold_too_high"
+
+        # Correct ordering -> accepted
+        result = await flow.async_step_init(
+            {CONF_LOW_WATER_THRESHOLD: 20, CONF_NO_WATER_THRESHOLD: 5}
+        )
+        assert result["type"] == "create_entry"
+        assert result["data"][CONF_NO_WATER_THRESHOLD] == 5

@@ -312,10 +312,10 @@ class MixergyApiClient:
 
             await self._discover_login_url()
 
+            login_url = self._require_url(self._login_url, "login")
             try:
-                assert self._login_url is not None
                 async with self._session.post(
-                    self._login_url,
+                    login_url,
                     json={"username": self._username, "password": self._password},
                     ssl=True,
                     timeout=REQUEST_TIMEOUT,
@@ -367,6 +367,26 @@ class MixergyApiClient:
     def _auth_headers(self) -> dict[str, str]:
         """Get authorization headers."""
         return {"Authorization": f"Bearer {self._token}"}
+
+    def _require_url(self, url: str | None, name: str) -> str:
+        """Snapshot a discovered URL, raising a typed error when absent.
+
+        fetch_all() gathers three sub-fetches concurrently, and the 404/410
+        handler in _request_with_reauth nulls the whole discovery cache
+        mid-flight. A sibling sub-fetch that already passed _discover_tank()'s
+        fast path can then observe a None URL. An `assert` here would (a)
+        escape the MixergyApiError taxonomy — the coordinator would log an
+        untyped traceback instead of a clean UpdateFailed — and (b) be
+        stripped entirely under `python -O`, passing None to aiohttp.
+        MixergyConnectionError retries cleanly on the next poll, which
+        re-runs discovery.
+        """
+        if url is None:
+            raise MixergyConnectionError(
+                f"Discovered URL for '{name}' is no longer cached; "
+                "the next request will re-discover"
+            )
+        return url
 
     # ── Tank Discovery ───────────────────────────────────────────────
 
@@ -578,10 +598,8 @@ class MixergyApiClient:
         """Fetch the latest measurement from the tank."""
         await self._discover_tank()
 
-        assert self._measurement_url is not None
-        async with await self._request_with_reauth(
-            "GET", self._measurement_url
-        ) as resp:
+        url = self._require_url(self._measurement_url, "measurement")
+        async with await self._request_with_reauth("GET", url) as resp:
             if resp.status != 200:
                 raise MixergyConnectionError(
                     f"Measurement fetch failed: {resp.status}"
@@ -647,10 +665,8 @@ class MixergyApiClient:
         """Fetch tank settings."""
         await self._discover_tank()
 
-        assert self._settings_url is not None
-        async with await self._request_with_reauth(
-            "GET", self._settings_url
-        ) as resp:
+        url = self._require_url(self._settings_url, "settings")
+        async with await self._request_with_reauth("GET", url) as resp:
             if resp.status != 200:
                 raise MixergyConnectionError(
                     f"Settings fetch failed: {resp.status}"
@@ -691,10 +707,8 @@ class MixergyApiClient:
         """Fetch tank schedule."""
         await self._discover_tank()
 
-        assert self._schedule_url is not None
-        async with await self._request_with_reauth(
-            "GET", self._schedule_url
-        ) as resp:
+        url = self._require_url(self._schedule_url, "schedule")
+        async with await self._request_with_reauth("GET", url) as resp:
             if resp.status != 200:
                 raise MixergyConnectionError(
                     f"Schedule fetch failed: {resp.status}"
@@ -808,10 +822,10 @@ class MixergyApiClient:
         await self._discover_tank()
         charge = max(0, min(100, charge))
 
-        assert self._control_url is not None
+        url = self._require_url(self._control_url, "control")
         async with await self._request_with_reauth(
             "PUT",
-            self._control_url,
+            url,
             json={"charge": charge},
         ) as resp:
             if resp.status != 200:
@@ -824,10 +838,10 @@ class MixergyApiClient:
         await self._discover_tank()
         temperature = max(45, min(70, temperature))
 
-        assert self._settings_url is not None
+        url = self._require_url(self._settings_url, "settings")
         async with await self._request_with_reauth(
             "PUT",
-            self._settings_url,
+            url,
             json={"max_temp": temperature},
         ) as resp:
             if resp.status != 200:
@@ -839,10 +853,10 @@ class MixergyApiClient:
         """Set a single tank setting by key."""
         await self._discover_tank()
 
-        assert self._settings_url is not None
+        url = self._require_url(self._settings_url, "settings")
         async with await self._request_with_reauth(
             "PUT",
-            self._settings_url,
+            url,
             json={key: value},
         ) as resp:
             if resp.status != 200:
@@ -918,10 +932,10 @@ class MixergyApiClient:
                 "returnDate": _to_utc_epoch_ms(end),
             }
 
-            assert self._schedule_url is not None
+            url = self._require_url(self._schedule_url, "schedule")
             async with await self._request_with_reauth(
                 "PUT",
-                self._schedule_url,
+                url,
                 json=raw,
             ) as resp:
                 if resp.status != 200:
@@ -938,10 +952,10 @@ class MixergyApiClient:
             raw = schedule_data.raw
             raw.pop("holiday", None)
 
-            assert self._schedule_url is not None
+            url = self._require_url(self._schedule_url, "schedule")
             async with await self._request_with_reauth(
                 "PUT",
-                self._schedule_url,
+                url,
                 json=raw,
             ) as resp:
                 if resp.status != 200:
@@ -962,10 +976,10 @@ class MixergyApiClient:
             raw = schedule_data.raw
             raw["defaultHeatSource"] = _ha_to_api_heat_source(heat_source)
 
-            assert self._schedule_url is not None
+            url = self._require_url(self._schedule_url, "schedule")
             async with await self._request_with_reauth(
                 "PUT",
-                self._schedule_url,
+                url,
                 json=raw,
             ) as resp:
                 if resp.status != 200:

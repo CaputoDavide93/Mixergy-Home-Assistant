@@ -60,21 +60,46 @@
           "update_interval": "Con quale frequenza recuperare i dati dall'API Mixergy (10–300 secondi)."
         }
       }
+    },
+    "error": {
+      "no_water_threshold_too_high": "La soglia 'niente acqua calda' deve essere inferiore alla soglia 'poca acqua calda'."
     }
   },
   "entity": {
     "sensor": {
-      "hot_water_temperature": { "name": "Temperatura acqua calda" },
-      "coldest_water_temperature": { "name": "Temperatura acqua più fredda" },
-      "target_temperature": { "name": "Temperatura target" },
-      "cleansing_temperature": { "name": "Temperatura di purifica" },
-      "charge": { "name": "Carica attuale" },
-      "target_charge": { "name": "Carica target" },
-      "electric_power": { "name": "Potenza riscaldamento elettrico" },
-      "electric_energy": { "name": "Energia riscaldamento elettrico" },
-      "pv_power": { "name": "Potenza fotovoltaica" },
-      "pv_energy": { "name": "Energia fotovoltaica" },
-      "clamp_power": { "name": "Potenza clamp" },
+      "hot_water_temperature": {
+        "name": "Temperatura acqua calda"
+      },
+      "coldest_water_temperature": {
+        "name": "Temperatura acqua più fredda"
+      },
+      "target_temperature": {
+        "name": "Temperatura target"
+      },
+      "cleansing_temperature": {
+        "name": "Temperatura di purifica"
+      },
+      "charge": {
+        "name": "Carica attuale"
+      },
+      "target_charge": {
+        "name": "Carica target"
+      },
+      "electric_power": {
+        "name": "Potenza riscaldamento elettrico"
+      },
+      "electric_energy": {
+        "name": "Energia riscaldamento elettrico"
+      },
+      "pv_power": {
+        "name": "Potenza fotovoltaica"
+      },
+      "pv_energy": {
+        "name": "Energia fotovoltaica"
+      },
+      "clamp_power": {
+        "name": "Potenza clamp"
+      },
       "active_heat_source": {
         "name": "Fonte di calore attiva",
         "state": {
@@ -92,36 +117,84 @@
           "heat_pump": "Pompa di calore"
         }
       },
-      "holiday_start": { "name": "Data inizio vacanza" },
-      "holiday_end": { "name": "Data fine vacanza" },
-      "firmware_version": { "name": "Versione firmware" },
-      "model": { "name": "Modello" },
-      "last_update": { "name": "Ultimo aggiornamento riuscito" }
+      "holiday_start": {
+        "name": "Data inizio vacanza"
+      },
+      "holiday_end": {
+        "name": "Data fine vacanza"
+      },
+      "firmware_version": {
+        "name": "Versione firmware"
+      },
+      "model": {
+        "name": "Modello"
+      },
+      "last_update": {
+        "name": "Ultimo aggiornamento riuscito"
+      }
     },
     "binary_sensor": {
-      "electric_heat": { "name": "Riscaldamento elettrico attivo" },
-      "indirect_heat": { "name": "Riscaldamento indiretto attivo" },
-      "heatpump_heat": { "name": "Pompa di calore attiva" },
-      "is_heating": { "name": "In riscaldamento" },
-      "low_hot_water": { "name": "Acqua calda scarsa" },
-      "no_hot_water": { "name": "Nessuna acqua calda" },
-      "holiday_mode": { "name": "Modalità vacanza" }
+      "electric_heat": {
+        "name": "Riscaldamento elettrico attivo"
+      },
+      "indirect_heat": {
+        "name": "Riscaldamento indiretto attivo"
+      },
+      "heatpump_heat": {
+        "name": "Pompa di calore attiva"
+      },
+      "is_heating": {
+        "name": "In riscaldamento"
+      },
+      "low_hot_water": {
+        "name": "Acqua calda scarsa"
+      },
+      "no_hot_water": {
+        "name": "Nessuna acqua calda"
+      },
+      "holiday_mode": {
+        "name": "Modalità vacanza"
+      }
     },
     "switch": {
-      "dsr_enabled": { "name": "Assistenza rete (DSR)" },
-      "frost_protection": { "name": "Protezione antigelo" },
-      "distributed_computing": { "name": "Donazione ricerca medica" },
-      "pv_divert": { "name": "Deviazione export FV" }
+      "dsr_enabled": {
+        "name": "Assistenza rete (DSR)"
+      },
+      "frost_protection": {
+        "name": "Protezione antigelo"
+      },
+      "distributed_computing": {
+        "name": "Donazione ricerca medica"
+      },
+      "pv_divert": {
+        "name": "Deviazione export FV"
+      }
     },
     "number": {
-      "target_temperature_control": { "name": "Temperatura target" },
-      "target_charge_control": { "name": "Carica target" },
-      "boost_charge_simple": { "name": "Incremento acqua calda" },
-      "cleansing_temperature_control": { "name": "Temperatura di purifica" },
-      "pv_cut_in_threshold": { "name": "Soglia attivazione FV" },
-      "pv_charge_limit": { "name": "Limite carica FV" },
-      "pv_target_current": { "name": "Corrente target FV" },
-      "pv_over_temperature": { "name": "Limite temperatura FV" }
+      "target_temperature_control": {
+        "name": "Temperatura target"
+      },
+      "target_charge_control": {
+        "name": "Carica target"
+      },
+      "boost_charge_simple": {
+        "name": "Incremento acqua calda"
+      },
+      "cleansing_temperature_control": {
+        "name": "Temperatura di purifica"
+      },
+      "pv_cut_in_threshold": {
+        "name": "Soglia attivazione FV"
+      },
+      "pv_charge_limit": {
+        "name": "Limite carica FV"
+      },
+      "pv_target_current": {
+        "name": "Corrente target FV"
+      },
+      "pv_over_temperature": {
+        "name": "Limite temperatura FV"
+      }
     },
     "select": {
       "default_heat_source_select": {
@@ -134,7 +207,9 @@
       }
     },
     "button": {
-      "clear_holiday": { "name": "Cancella date vacanza" }
+      "clear_holiday": {
+        "name": "Cancella date vacanza"
+      }
     }
   },
   "exceptions": {

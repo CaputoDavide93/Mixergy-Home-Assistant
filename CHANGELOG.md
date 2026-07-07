@@ -4,6 +4,33 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.1] - 2026-07-06
+
+Hardening release from a dual-AI (Claude + Codex) adversarial review focused on
+HA-core compatibility and robustness. Also fixes the hassfest `services.yaml`
+schema failures (invalid `area`/`device` target filters).
+
+### Fixed
+- **Cost sensor state class** — `MONETARY` device class only permits `TOTAL`;
+  was `TOTAL_INCREASING`, which HA core rejects for long-term statistics.
+- **Stale-poll accumulator poisoning** — the energy and cost accumulator
+  sensors kept integrating power across failed coordinator polls,
+  manufacturing phantom kWh from stale readings. They now skip integration
+  and resync their clock while the poll is failing.
+- **API URL guards** — 10 `assert <url> is not None` sites in `api.py`
+  replaced with a typed `_require_url()` raising `MixergyConnectionError`;
+  `AssertionError` escaped the integration's error taxonomy and disappears
+  under `python -O`.
+- **Options flow cross-field validation** — `no_water_threshold` can no longer
+  be set at or above `low_water_threshold` (which made the "low water" state
+  unreachable); the form re-shows with a translated error (en/de/fr/it).
+- **services.yaml schema drift** — removed `area: {}` and `device:` filters
+  from service `target:` blocks; hassfest now only accepts `entity:` filters.
+
+### Added
+- 4 regression tests covering the fixes above (failed-poll guard ×2,
+  MONETARY/TOTAL, `_require_url`). 76 tests total.
+
 ## [1.3.0] - 2026-06-27
 
 Feature release: a native water-heater entity plus several new entities and

@@ -360,6 +360,16 @@ class MixergyEnergySensor(MixergyEntity, RestoreSensor):
         a fictitious multi-hour spike on the next successful tick.
         """
         now = time.time()
+        if not self.coordinator.last_update_success:
+            # Failed poll: the coordinator notifies listeners on the
+            # success→failure edge too, with coordinator.data STALE.
+            # Integrating stale power would credit phantom kWh into a
+            # total that RestoreSensor PERSISTS across restarts. Resync
+            # the clock so the outage window isn't credited on recovery
+            # either.
+            self._last_update = now
+            self.async_write_ha_state()
+            return
         if self._last_update is not None:
             interval = getattr(self.coordinator, "update_interval", None)
             elapsed_hours = _capped_elapsed_hours(now, self._last_update, interval)
@@ -402,7 +412,12 @@ class MixergyElectricCostSensor(MixergyEntity, RestoreSensor):
     """
 
     _attr_device_class = SensorDeviceClass.MONETARY
-    _attr_state_class = SensorStateClass.TOTAL_INCREASING
+    # HA's DEVICE_CLASS_STATE_CLASSES permits ONLY `TOTAL` for MONETARY —
+    # TOTAL_INCREASING logs an "impossible state class" warning on every
+    # state write and fails long-term statistics validation. The value is
+    # still a monotonic running total, so TOTAL (without last_reset)
+    # records identically.
+    _attr_state_class = SensorStateClass.TOTAL
     _attr_suggested_display_precision = 2
     _attr_translation_key = "electric_cost"
     _attr_icon = "mdi:cash"
@@ -433,6 +448,13 @@ class MixergyElectricCostSensor(MixergyEntity, RestoreSensor):
     def _handle_coordinator_update(self) -> None:
         """Integrate electric power × tariff over elapsed time."""
         now = time.time()
+        if not self.coordinator.last_update_success:
+            # Failed poll: coordinator.data is stale — integrating it would
+            # credit phantom cost into a persisted total (see the energy
+            # sensor for the full rationale).
+            self._last_update = now
+            self.async_write_ha_state()
+            return
         if self._last_update is not None:
             interval = getattr(self.coordinator, "update_interval", None)
             elapsed_hours = _capped_elapsed_hours(now, self._last_update, interval)

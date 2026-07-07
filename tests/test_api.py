@@ -879,3 +879,27 @@ async def test_async_list_tanks_returns_serials(
 
     tanks = await client.async_list_tanks()
     assert tanks == [{"serial": MOCK_SERIAL, "firmware": "2.1.0"}]
+
+
+# ── _require_url: nulled HATEOAS cache raises typed error, not AssertionError ──
+
+
+def test_require_url_raises_typed_error_when_cache_nulled() -> None:
+    """The 404/410 handler nulls the discovery cache mid-flight; a sibling
+    sub-fetch past _discover_tank()'s fast path must get a retryable
+    MixergyConnectionError — NOT an AssertionError that escapes the
+    MixergyApiError taxonomy (and vanishes under `python -O`)."""
+    client = MixergyApiClient(
+        session=MagicMock(),
+        username=MOCK_USERNAME,
+        password=MOCK_PASSWORD,
+        serial_number=MOCK_SERIAL,
+    )
+
+    with pytest.raises(MixergyConnectionError, match="measurement"):
+        client._require_url(None, "measurement")
+
+    # Present URL round-trips unchanged.
+    assert client._require_url("https://www.mixergy.io/x", "x") == (
+        "https://www.mixergy.io/x"
+    )

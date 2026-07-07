@@ -204,6 +204,82 @@ def test_cost_sensor_ignores_non_electric_power() -> None:
     assert sensor._accumulated_cost == 1.0  # unchanged: heat source not electric
 
 
+def test_cost_sensor_state_class_is_total() -> None:
+    """MONETARY permits ONLY SensorStateClass.TOTAL — TOTAL_INCREASING is
+    rejected by HA's DEVICE_CLASS_STATE_CLASSES and breaks statistics."""
+    from homeassistant.components.sensor import SensorStateClass
+
+    from custom_components.mixergy.sensor import MixergyElectricCostSensor
+
+    # HA's CachedProperties metaclass shadows class-level _attr_* with a
+    # property, so read it through an instance.
+    sensor = MixergyElectricCostSensor.__new__(MixergyElectricCostSensor)
+    assert sensor._attr_state_class == SensorStateClass.TOTAL
+    assert sensor.state_class == SensorStateClass.TOTAL
+
+
+def test_cost_sensor_skips_integration_on_failed_poll() -> None:
+    """A failed coordinator poll notifies listeners with STALE data; the
+    cost accumulator must not integrate it (phantom cost would be
+    persisted forever via RestoreSensor). The clock must resync so the
+    outage window is not credited on recovery either."""
+    import time
+
+    from custom_components.mixergy.sensor import MixergyElectricCostSensor
+
+    coordinator = MagicMock()
+    coordinator.update_interval = timedelta(seconds=30)
+    coordinator.last_update_success = False  # failed-poll edge
+    coordinator.data = TankData(
+        info=TankInfo(serial_number="T1"),
+        measurement=TankMeasurement(
+            clamp_power_w=3000.0, electric_heat_source=True  # stale 3 kW
+        ),
+    )
+
+    sensor = MixergyElectricCostSensor.__new__(MixergyElectricCostSensor)
+    sensor.coordinator = coordinator
+    sensor._rate = 0.30
+    sensor._accumulated_cost = 1.0
+    sensor._last_update = time.time() - 30
+    sensor.async_write_ha_state = MagicMock()
+    sensor._attr_unique_id = "T1_electric_cost"
+
+    before = time.time()
+    sensor._handle_coordinator_update()
+
+    assert sensor._accumulated_cost == 1.0  # no phantom cost
+    assert sensor._last_update >= before  # clock resynced
+    sensor.async_write_ha_state.assert_called_once()
+
+
+def test_energy_sensor_skips_integration_on_failed_poll() -> None:
+    """Same guard for the kWh accumulator: stale power on the
+    success->failure edge must not be integrated into a persisted total."""
+    import time
+
+    from custom_components.mixergy.sensor import MixergyEnergySensor
+
+    coordinator = MagicMock()
+    coordinator.update_interval = timedelta(seconds=30)
+    coordinator.last_update_success = False
+    coordinator.data = MagicMock()
+
+    sensor = MixergyEnergySensor.__new__(MixergyEnergySensor)
+    sensor.coordinator = coordinator
+    sensor._accumulated_kwh = 5.0
+    sensor._power_w_fn = lambda _data: 3000.0  # stale 3 kW reading
+    sensor._last_update = time.time() - 30
+    sensor.async_write_ha_state = MagicMock()
+
+    before = time.time()
+    sensor._handle_coordinator_update()
+
+    assert sensor._accumulated_kwh == 5.0  # no phantom energy
+    assert sensor._last_update >= before  # clock resynced
+    sensor.async_write_ha_state.assert_called_once()
+
+
 def test_capped_elapsed_hours():
     from custom_components.mixergy.sensor import _capped_elapsed_hours
 

@@ -60,21 +60,46 @@
           "update_interval": "À quelle fréquence récupérer les données de l'API Mixergy (10–300 secondes)."
         }
       }
+    },
+    "error": {
+      "no_water_threshold_too_high": "Le seuil « pas d'eau chaude » doit être inférieur au seuil « eau chaude faible »."
     }
   },
   "entity": {
     "sensor": {
-      "hot_water_temperature": { "name": "Température eau chaude" },
-      "coldest_water_temperature": { "name": "Température eau la plus froide" },
-      "target_temperature": { "name": "Température cible" },
-      "cleansing_temperature": { "name": "Température de purification" },
-      "charge": { "name": "Charge actuelle" },
-      "target_charge": { "name": "Charge cible" },
-      "electric_power": { "name": "Puissance chauffage électrique" },
-      "electric_energy": { "name": "Énergie chauffage électrique" },
-      "pv_power": { "name": "Puissance photovoltaïque" },
-      "pv_energy": { "name": "Énergie photovoltaïque" },
-      "clamp_power": { "name": "Puissance pince" },
+      "hot_water_temperature": {
+        "name": "Température eau chaude"
+      },
+      "coldest_water_temperature": {
+        "name": "Température eau la plus froide"
+      },
+      "target_temperature": {
+        "name": "Température cible"
+      },
+      "cleansing_temperature": {
+        "name": "Température de purification"
+      },
+      "charge": {
+        "name": "Charge actuelle"
+      },
+      "target_charge": {
+        "name": "Charge cible"
+      },
+      "electric_power": {
+        "name": "Puissance chauffage électrique"
+      },
+      "electric_energy": {
+        "name": "Énergie chauffage électrique"
+      },
+      "pv_power": {
+        "name": "Puissance photovoltaïque"
+      },
+      "pv_energy": {
+        "name": "Énergie photovoltaïque"
+      },
+      "clamp_power": {
+        "name": "Puissance pince"
+      },
       "active_heat_source": {
         "name": "Source de chaleur active",
         "state": {
@@ -92,36 +117,84 @@
           "heat_pump": "Pompe à chaleur"
         }
       },
-      "holiday_start": { "name": "Début des vacances" },
-      "holiday_end": { "name": "Fin des vacances" },
-      "firmware_version": { "name": "Version du firmware" },
-      "model": { "name": "Modèle" },
-      "last_update": { "name": "Dernière mise à jour réussie" }
+      "holiday_start": {
+        "name": "Début des vacances"
+      },
+      "holiday_end": {
+        "name": "Fin des vacances"
+      },
+      "firmware_version": {
+        "name": "Version du firmware"
+      },
+      "model": {
+        "name": "Modèle"
+      },
+      "last_update": {
+        "name": "Dernière mise à jour réussie"
+      }
     },
     "binary_sensor": {
-      "electric_heat": { "name": "Chauffage électrique actif" },
-      "indirect_heat": { "name": "Chauffage indirect actif" },
-      "heatpump_heat": { "name": "Pompe à chaleur active" },
-      "is_heating": { "name": "En chauffe" },
-      "low_hot_water": { "name": "Eau chaude faible" },
-      "no_hot_water": { "name": "Pas d'eau chaude" },
-      "holiday_mode": { "name": "Mode vacances" }
+      "electric_heat": {
+        "name": "Chauffage électrique actif"
+      },
+      "indirect_heat": {
+        "name": "Chauffage indirect actif"
+      },
+      "heatpump_heat": {
+        "name": "Pompe à chaleur active"
+      },
+      "is_heating": {
+        "name": "En chauffe"
+      },
+      "low_hot_water": {
+        "name": "Eau chaude faible"
+      },
+      "no_hot_water": {
+        "name": "Pas d'eau chaude"
+      },
+      "holiday_mode": {
+        "name": "Mode vacances"
+      }
     },
     "switch": {
-      "dsr_enabled": { "name": "Assistance réseau (DSR)" },
-      "frost_protection": { "name": "Protection contre le gel" },
-      "distributed_computing": { "name": "Don pour la recherche médicale" },
-      "pv_divert": { "name": "Déviation export PV" }
+      "dsr_enabled": {
+        "name": "Assistance réseau (DSR)"
+      },
+      "frost_protection": {
+        "name": "Protection contre le gel"
+      },
+      "distributed_computing": {
+        "name": "Don pour la recherche médicale"
+      },
+      "pv_divert": {
+        "name": "Déviation export PV"
+      }
     },
     "number": {
-      "target_temperature_control": { "name": "Température cible" },
-      "target_charge_control": { "name": "Charge cible" },
-      "boost_charge_simple": { "name": "Boost eau chaude" },
-      "cleansing_temperature_control": { "name": "Température de purification" },
-      "pv_cut_in_threshold": { "name": "Seuil d'activation PV" },
-      "pv_charge_limit": { "name": "Limite de charge PV" },
-      "pv_target_current": { "name": "Courant cible PV" },
-      "pv_over_temperature": { "name": "Limite de surtempérature PV" }
+      "target_temperature_control": {
+        "name": "Température cible"
+      },
+      "target_charge_control": {
+        "name": "Charge cible"
+      },
+      "boost_charge_simple": {
+        "name": "Boost eau chaude"
+      },
+      "cleansing_temperature_control": {
+        "name": "Température de purification"
+      },
+      "pv_cut_in_threshold": {
+        "name": "Seuil d'activation PV"
+      },
+      "pv_charge_limit": {
+        "name": "Limite de charge PV"
+      },
+      "pv_target_current": {
+        "name": "Courant cible PV"
+      },
+      "pv_over_temperature": {
+        "name": "Limite de surtempérature PV"
+      }
     },
     "select": {
       "default_heat_source_select": {
@@ -134,7 +207,9 @@
       }
     },
     "button": {
-      "clear_holiday": { "name": "Effacer les dates de vacances" }
+      "clear_holiday": {
+        "name": "Effacer les dates de vacances"
+      }
     }
   },
   "exceptions": {

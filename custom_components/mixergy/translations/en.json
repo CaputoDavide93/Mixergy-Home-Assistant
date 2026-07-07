@@ -75,6 +75,9 @@
           "electric_rate": "Used to compute the electricity cost sensor. Leave at 0 to disable it."
         }
       }
+    },
+    "error": {
+      "no_water_threshold_too_high": "The 'no hot water' threshold must be lower than the 'low hot water' threshold."
     }
   },
   "entity": {

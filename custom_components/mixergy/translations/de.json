@@ -60,21 +60,46 @@
           "update_interval": "Wie häufig Daten von der Mixergy-API abgerufen werden (10–300 Sekunden)."
         }
       }
+    },
+    "error": {
+      "no_water_threshold_too_high": "Der Schwellenwert für 'kein Warmwasser' muss unter dem Schwellenwert für 'wenig Warmwasser' liegen."
     }
   },
   "entity": {
     "sensor": {
-      "hot_water_temperature": { "name": "Warmwassertemperatur" },
-      "coldest_water_temperature": { "name": "Kälteste Wassertemperatur" },
-      "target_temperature": { "name": "Zieltemperatur" },
-      "cleansing_temperature": { "name": "Reinigungstemperatur" },
-      "charge": { "name": "Aktueller Ladezustand" },
-      "target_charge": { "name": "Zielladezustand" },
-      "electric_power": { "name": "Elektrische Heizleistung" },
-      "electric_energy": { "name": "Elektrische Heizenergie" },
-      "pv_power": { "name": "PV-Leistung" },
-      "pv_energy": { "name": "PV-Energie" },
-      "clamp_power": { "name": "Clamp-Leistung" },
+      "hot_water_temperature": {
+        "name": "Warmwassertemperatur"
+      },
+      "coldest_water_temperature": {
+        "name": "Kälteste Wassertemperatur"
+      },
+      "target_temperature": {
+        "name": "Zieltemperatur"
+      },
+      "cleansing_temperature": {
+        "name": "Reinigungstemperatur"
+      },
+      "charge": {
+        "name": "Aktueller Ladezustand"
+      },
+      "target_charge": {
+        "name": "Zielladezustand"
+      },
+      "electric_power": {
+        "name": "Elektrische Heizleistung"
+      },
+      "electric_energy": {
+        "name": "Elektrische Heizenergie"
+      },
+      "pv_power": {
+        "name": "PV-Leistung"
+      },
+      "pv_energy": {
+        "name": "PV-Energie"
+      },
+      "clamp_power": {
+        "name": "Clamp-Leistung"
+      },
       "active_heat_source": {
         "name": "Aktive Wärmequelle",
         "state": {
@@ -92,36 +117,84 @@
           "heat_pump": "Wärmepumpe"
         }
       },
-      "holiday_start": { "name": "Urlaubsbeginn" },
-      "holiday_end": { "name": "Urlaubsende" },
-      "firmware_version": { "name": "Firmware-Version" },
-      "model": { "name": "Modell" },
-      "last_update": { "name": "Letztes erfolgreiches Update" }
+      "holiday_start": {
+        "name": "Urlaubsbeginn"
+      },
+      "holiday_end": {
+        "name": "Urlaubsende"
+      },
+      "firmware_version": {
+        "name": "Firmware-Version"
+      },
+      "model": {
+        "name": "Modell"
+      },
+      "last_update": {
+        "name": "Letztes erfolgreiches Update"
+      }
     },
     "binary_sensor": {
-      "electric_heat": { "name": "Elektrische Heizung aktiv" },
-      "indirect_heat": { "name": "Indirekte Heizung aktiv" },
-      "heatpump_heat": { "name": "Wärmepumpe aktiv" },
-      "is_heating": { "name": "Heizt gerade" },
-      "low_hot_water": { "name": "Wenig Warmwasser" },
-      "no_hot_water": { "name": "Kein Warmwasser" },
-      "holiday_mode": { "name": "Urlaubsmodus" }
+      "electric_heat": {
+        "name": "Elektrische Heizung aktiv"
+      },
+      "indirect_heat": {
+        "name": "Indirekte Heizung aktiv"
+      },
+      "heatpump_heat": {
+        "name": "Wärmepumpe aktiv"
+      },
+      "is_heating": {
+        "name": "Heizt gerade"
+      },
+      "low_hot_water": {
+        "name": "Wenig Warmwasser"
+      },
+      "no_hot_water": {
+        "name": "Kein Warmwasser"
+      },
+      "holiday_mode": {
+        "name": "Urlaubsmodus"
+      }
     },
     "switch": {
-      "dsr_enabled": { "name": "Netzunterstützung (DSR)" },
-      "frost_protection": { "name": "Frostschutz" },
-      "distributed_computing": { "name": "Medizinische Forschungsspende" },
-      "pv_divert": { "name": "PV-Export-Umleitung" }
+      "dsr_enabled": {
+        "name": "Netzunterstützung (DSR)"
+      },
+      "frost_protection": {
+        "name": "Frostschutz"
+      },
+      "distributed_computing": {
+        "name": "Medizinische Forschungsspende"
+      },
+      "pv_divert": {
+        "name": "PV-Export-Umleitung"
+      }
     },
     "number": {
-      "target_temperature_control": { "name": "Zieltemperatur" },
-      "target_charge_control": { "name": "Zielladezustand" },
-      "boost_charge_simple": { "name": "Warmwasser aufheizen" },
-      "cleansing_temperature_control": { "name": "Reinigungstemperatur" },
-      "pv_cut_in_threshold": { "name": "PV-Einschaltschwelle" },
-      "pv_charge_limit": { "name": "PV-Ladelimit" },
-      "pv_target_current": { "name": "PV-Zielstrom" },
-      "pv_over_temperature": { "name": "PV-Übertemperaturlimit" }
+      "target_temperature_control": {
+        "name": "Zieltemperatur"
+      },
+      "target_charge_control": {
+        "name": "Zielladezustand"
+      },
+      "boost_charge_simple": {
+        "name": "Warmwasser aufheizen"
+      },
+      "cleansing_temperature_control": {
+        "name": "Reinigungstemperatur"
+      },
+      "pv_cut_in_threshold": {
+        "name": "PV-Einschaltschwelle"
+      },
+      "pv_charge_limit": {
+        "name": "PV-Ladelimit"
+      },
+      "pv_target_current": {
+        "name": "PV-Zielstrom"
+      },
+      "pv_over_temperature": {
+        "name": "PV-Übertemperaturlimit"
+      }
     },
     "select": {
       "default_heat_source_select": {
@@ -134,7 +207,9 @@
       }
     },
     "button": {
-      "clear_holiday": { "name": "Urlaubsdaten löschen" }
+      "clear_holiday": {
+        "name": "Urlaubsdaten löschen"
+      }
     }
   },
   "exceptions": {
