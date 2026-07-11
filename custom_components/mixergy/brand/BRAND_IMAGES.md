@@ -1,14 +1,18 @@
 # Brand Images
 
-Place the following image files in this directory to give the integration a proper icon in the Home Assistant UI and HACS store.
+Image files in this directory give the integration its icon in the Home
+Assistant UI and the HACS store.
 
-## Required files
+## Files in this directory
 
 | File | Size | Format | Usage |
 | ---- | ---- | ------ | ----- |
 | `icon.png` | 256 × 256 px | PNG with transparency | Integration icon shown in HACS and HA integrations page |
-| `icon@2x.png` | 512 × 512 px | PNG with transparency | High-DPI version of the icon (optional but recommended) |
-| `logo.png` | Landscape, min 300 px wide | PNG with transparency | Logo shown on the device card in HA |
+| `icon@2x.png` | 512 × 512 px | PNG with transparency | High-DPI version of the icon |
+
+A separate landscape `logo.png` (min 300 px wide) is **optional** and not
+currently provided — when the logo is absent, Home Assistant falls back to the
+icon on the device card, so nothing is missing in the UI.
 
 ## Design guidelines
 
@@ -17,7 +21,7 @@ Place the following image files in this directory to give the integration a prop
 - Transparent background is required — do not use a white or coloured background
 - PNG format only (no SVG, no JPEG)
 
-## After adding images
+## After changing images
 
 No code changes are needed — Home Assistant automatically picks up images from this directory
 when the integration is loaded (HA 2024.6+).
