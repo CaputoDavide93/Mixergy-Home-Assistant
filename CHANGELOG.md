@@ -4,6 +4,33 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+Documentation and tooling only — no functional changes to the integration.
+
+### Added
+- `tools/gen_entity_docs.py` — generates the README sensor / binary-sensor /
+  controls / services tables from the integration source (`strings.json`,
+  platform modules, `services.yaml`). The tables now live between
+  `<!-- AUTOGEN:entities:* -->` markers; the script's `--check` mode runs in
+  the Tests workflow so CI fails when the docs drift from the code.
+- Tests workflow badge in the README.
+
+### Changed
+- All repository URLs (README badges, HACS custom-repository instructions,
+  release/issues links, `manifest.json` `documentation` / `issue_tracker`)
+  updated from the old `Mixergy_HomeAssistant_Integration` name to
+  **Mixergy-HA**.
+- HACS badge corrected from "Default" to "Custom" — this integration is
+  installed as a HACS custom repository (the HACS default store lists a
+  different Mixergy integration).
+- README restyled to the house format: centered header with tagline, emoji
+  section headings, and a Mermaid architecture diagram (config flow →
+  coordinator → cloud API → entities) near the end of the file.
+- `brand/BRAND_IMAGES.md` now reflects the shipped files: `icon.png` and
+  `icon@2x.png` are present, `logo.png` is optional (HA falls back to the
+  icon when it is absent).
+
 ## [1.3.1] - 2026-07-06
 
 Hardening release from a dual-AI (Claude + Codex) adversarial review focused on
