@@ -1,43 +1,46 @@
-# Mixergy — Home Assistant Integration
+<div align="center">
 
-<p align="center">
-  <img src="custom_components/mixergy/brand/icon@2x.png" alt="Mixergy" width="400">
-</p>
+<img src="custom_components/mixergy/brand/icon@2x.png" alt="Mixergy" width="300">
 
-[![HACS](https://img.shields.io/badge/HACS-Default-41BDF5.svg)](https://hacs.xyz)
-[![GitHub Release](https://img.shields.io/github/v/release/CaputoDavide93/Mixergy_HomeAssistant_Integration)](https://github.com/CaputoDavide93/Mixergy_HomeAssistant_Integration/releases)
-[![HACS Validation](https://img.shields.io/github/actions/workflow/status/CaputoDavide93/Mixergy_HomeAssistant_Integration/validate.yaml?label=HACS%20validation)](https://github.com/CaputoDavide93/Mixergy_HomeAssistant_Integration/actions/workflows/validate.yaml)
-[![Hassfest](https://img.shields.io/github/actions/workflow/status/CaputoDavide93/Mixergy_HomeAssistant_Integration/hassfest.yaml?label=Hassfest)](https://github.com/CaputoDavide93/Mixergy_HomeAssistant_Integration/actions/workflows/hassfest.yaml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+# ♨️ Mixergy-HA
+
+**Monitor and control your [Mixergy](https://www.mixergy.io/) smart hot water tank from Home Assistant — live temperatures and charge, boost, PV diverter settings, and holiday scheduling.**
+
+[![HACS](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://hacs.xyz)
+[![GitHub Release](https://img.shields.io/github/v/release/CaputoDavide93/Mixergy-HA)](https://github.com/CaputoDavide93/Mixergy-HA/releases)
 [![HA Version](https://img.shields.io/badge/HA-2024.4%2B-blue)](https://www.home-assistant.io/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Hassfest](https://github.com/CaputoDavide93/Mixergy-HA/actions/workflows/hassfest.yaml/badge.svg)](https://github.com/CaputoDavide93/Mixergy-HA/actions/workflows/hassfest.yaml)
+[![HACS Validation](https://github.com/CaputoDavide93/Mixergy-HA/actions/workflows/validate.yaml/badge.svg)](https://github.com/CaputoDavide93/Mixergy-HA/actions/workflows/validate.yaml)
+[![Tests](https://github.com/CaputoDavide93/Mixergy-HA/actions/workflows/tests.yaml/badge.svg)](https://github.com/CaputoDavide93/Mixergy-HA/actions/workflows/tests.yaml)
 
-Monitor your [Mixergy](https://www.mixergy.io/) smart hot water tank in real time, control temperature and charge levels, manage PV diverter settings, and schedule holiday mode — all from Home Assistant.
+</div>
 
 ---
 
-## Installation
+## 🚀 Installation
 
 ### Via HACS (Recommended)
 
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=CaputoDavide93&repository=Mixergy_HomeAssistant_Integration&category=integration)
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=CaputoDavide93&repository=Mixergy-HA&category=integration)
 
 Or add manually in HACS:
 
 1. Open [HACS](https://hacs.xyz/) in Home Assistant
 2. Go to **Integrations** → click the 3-dots menu → **Custom repositories**
-3. Add `https://github.com/CaputoDavide93/Mixergy_HomeAssistant_Integration` with category **Integration**
+3. Add `https://github.com/CaputoDavide93/Mixergy-HA` with category **Integration**
 4. Search for **Mixergy** and install it
 5. Restart Home Assistant
 
 ### Manual Installation
 
-1. Download the [latest release](https://github.com/CaputoDavide93/Mixergy_HomeAssistant_Integration/releases)
+1. Download the [latest release](https://github.com/CaputoDavide93/Mixergy-HA/releases)
 2. Copy `custom_components/mixergy/` into your HA `config/custom_components/` directory
 3. Restart Home Assistant
 
 ---
 
-## Setup
+## ⚙️ Setup
 
 1. Go to **Settings** → **Devices & Services** → **Add Integration**
 2. Search for **Mixergy**
@@ -57,10 +60,11 @@ You can switch modes at any time via **Settings → Devices & Services → Mixer
 
 ---
 
-## Features
+## ✨ Features
 
 ### Sensors
 
+<!-- AUTOGEN:entities:sensors -->
 | Sensor | Unit | Description |
 | ------ | ---- | ----------- |
 | Hot water temperature | °C | Current top-of-tank temperature |
@@ -76,14 +80,17 @@ You can switch modes at any time via **Settings → Devices & Services → Mixer
 | Clamp power | W | CT clamp power reading *(PV diverter only)* |
 | Active heat source | — | Currently active heat source |
 | Default heat source | — | Configured default heat source |
-| Holiday start / end | Timestamp | Holiday mode dates |
+| Holiday start date | Timestamp | Holiday mode start date |
+| Holiday end date | Timestamp | Holiday mode end date |
 | Electric heating cost | currency | Cumulative cost *(only when a tariff rate is set in options)* |
 | Firmware version | — | Tank firmware *(diagnostic, disabled by default)* |
 | Model | — | Tank model code *(diagnostic, disabled by default)* |
 | Last successful update | Timestamp | Time of the last API refresh *(diagnostic, disabled by default)* |
+<!-- /AUTOGEN:entities:sensors -->
 
 ### Binary Sensors
 
+<!-- AUTOGEN:entities:binary-sensors -->
 | Sensor | Description |
 | ------ | ----------- |
 | Electric heat active | Electric immersion heater is currently on |
@@ -93,6 +100,7 @@ You can switch modes at any time via **Settings → Devices & Services → Mixer
 | Low hot water | Charge is below the low threshold (default 5%, configurable) |
 | No hot water | Charge is below the no-water threshold (default 0.5%, configurable) |
 | Holiday mode | Tank is currently in holiday mode |
+<!-- /AUTOGEN:entities:binary-sensors -->
 
 ### Water heater
 
@@ -106,16 +114,20 @@ voice assistants, and `water_heater.*` services.
 
 #### Simple mode
 
+<!-- AUTOGEN:entities:controls-simple -->
 | Entity | Type | Description |
 | ------ | ---- | ----------- |
 | Hot water boost | Number (0–100 %) | Set how full you want the tank right now |
+<!-- /AUTOGEN:entities:controls-simple -->
 
 #### Advanced mode only
 
+<!-- AUTOGEN:entities:controls-advanced -->
 | Entity | Type | Description |
 | ------ | ---- | ----------- |
 | Water heater | Water heater | Temperature, operation mode & away in one card |
-| Holiday start / end | DateTime | Set holiday window from a date/time picker |
+| Holiday start | DateTime | Set the holiday start from a date/time picker |
+| Holiday end | DateTime | Set the holiday end from a date/time picker |
 | Target temperature | Number (45–70 °C) | Set the desired water temperature |
 | Target charge | Number (0–100 %) | Set the desired charge level |
 | Cleansing temperature | Number (51–55 °C) | Set anti-legionella temperature |
@@ -124,19 +136,26 @@ voice assistants, and `water_heater.*` services.
 | Frost protection | Switch | Enable/disable frost protection |
 | Medical research donation | Switch | Enable/disable distributed computing |
 | PV export divert | Switch | Enable/disable PV divert *(PV diverter only)* |
-| PV cut-in threshold | Number (0–500 W) | PV diverter cut-in threshold *(PV diverter only)* |
+| PV cut-in threshold | Number (0–500) | PV diverter cut-in threshold, in watts *(PV diverter only)* |
 | PV charge limit | Number (0–100 %) | Maximum charge from PV *(PV diverter only)* |
 | PV target current | Number (−1–0) | PV target current *(PV diverter only)* |
-| PV over-temperature | Number (45–60 °C) | Maximum PV heating temperature *(PV diverter only)* |
+| PV over-temperature limit | Number (45–60 °C) | Maximum PV heating temperature *(PV diverter only)* |
 | Clear holiday dates | Button | Clear holiday mode immediately |
+<!-- /AUTOGEN:entities:controls-advanced -->
 
 ### Services
 
+<!-- AUTOGEN:entities:services -->
 | Service | Description |
 | ------- | ----------- |
-| `mixergy.set_holiday_dates` | Set holiday start and end dates |
-| `mixergy.clear_holiday_dates` | Clear holiday mode immediately |
-| `mixergy.boost_charge` | Instantly boost the tank to 100 % charge |
+| `mixergy.set_holiday_dates` | Set the holiday start and end dates for the Mixergy tank. |
+| `mixergy.clear_holiday_dates` | Clear the holiday mode dates for the Mixergy tank. |
+| `mixergy.boost_charge` | Boost the hot water to 100% charge immediately. |
+<!-- /AUTOGEN:entities:services -->
+
+> The tables above are generated from the integration source by
+> [`tools/gen_entity_docs.py`](tools/gen_entity_docs.py) — run it after adding
+> or changing entities (CI fails when they drift).
 
 #### Targeting a specific tank
 
@@ -187,7 +206,7 @@ Mixergy tanks expose device **triggers** you can pick straight from the
 Automations UI: *hot water low*, *heating started*, *heating stopped*,
 *holiday started*, and *holiday ended*.
 
-## Supported Devices
+## 🔌 Supported Devices
 
 | Device | Support |
 | ------ | ------- |
@@ -199,7 +218,7 @@ Automations UI: *hot water low*, *heating started*, *heating stopped*,
 
 ---
 
-## Compatibility
+## 🧩 Compatibility
 
 | Component | Minimum version |
 | --------- | --------------- |
@@ -208,7 +227,7 @@ Automations UI: *hot water low*, *heating started*, *heating stopped*,
 
 ---
 
-## Example Automations
+## 🤖 Example Automations
 
 ### Notify when hot water is low
 
@@ -276,7 +295,7 @@ automation:
 
 ---
 
-## Troubleshooting
+## 🛠️ Troubleshooting
 
 ### "Invalid email address or password" error
 
@@ -287,7 +306,7 @@ automation:
 
 - Check that Home Assistant can reach `https://www.mixergy.io`
 - Increase the update interval in **Settings → Devices & Services → Mixergy → Configure** to reduce API load
-- Check the [HA logs](#debugging) for error details
+- Check the [HA logs](#-debugging) for error details
 
 ### PV diverter sensors not appearing
 
@@ -304,11 +323,11 @@ automation:
 ### Holiday mode not clearing
 
 - Use the `mixergy.clear_holiday_dates` service, or press the **Clear holiday dates** button entity (Advanced mode)
-- If the issue persists, download diagnostics and open an [issue](https://github.com/CaputoDavide93/Mixergy_HomeAssistant_Integration/issues)
+- If the issue persists, download diagnostics and open an [issue](https://github.com/CaputoDavide93/Mixergy-HA/issues)
 
 ---
 
-## Debugging
+## 🐛 Debugging
 
 Enable debug logging by adding this to your `configuration.yaml`:
 
@@ -323,13 +342,23 @@ Then download the integration diagnostics from **Settings → Devices & Services
 
 ---
 
-## Re-authentication
+## 🔑 Re-authentication
 
 If your credentials change or expire, the integration automatically prompts you to re-authenticate through the Home Assistant UI — no manual reconfiguration needed.
 
 ---
 
-## Architecture & Security
+## 🗺️ Architecture
+
+```mermaid
+flowchart LR
+    CF["🔐 Config flow<br/>username · password · serial"] -->|authenticates| API["☁️ Mixergy cloud API<br/>www.mixergy.io"]
+    CO["🔄 DataUpdateCoordinator<br/>one per tank · 30–300 s poll"] <-->|"HTTPS, bearer token<br/>with auto-refresh"| API
+    CO --> ENT["📟 Entities<br/>sensors · binary sensors<br/>controls · water heater"]
+    SVC["🛎️ Services<br/>mixergy.*"] --> CO
+```
+
+### 🔒 Security
 
 - **TLS with certificate verification** on every API call (no `verify_ssl=False`)
 - **30-second request timeout** prevents indefinite hangs
@@ -341,11 +370,11 @@ If your credentials change or expire, the integration automatically prompts you 
 
 ---
 
-## Contributing
+## 🤝 Contributing
 
-Contributions are welcome! Please open an [issue](https://github.com/CaputoDavide93/Mixergy_HomeAssistant_Integration/issues) or pull request.
+Contributions are welcome! Please open an [issue](https://github.com/CaputoDavide93/Mixergy-HA/issues) or pull request.
 
-## License
+## 📄 License
 
 This project is licensed under the [MIT License](LICENSE).
 
