@@ -380,4 +380,4 @@ This project is licensed under the [MIT License](LICENSE).
 
 ---
 
-Made with ❤️ by [Davide Caputo](https://github.com/CaputoDavide93) for the Home Assistant community
+<p align="center"><sub>Made with ❤️ by <a href="https://github.com/CaputoDavide93">Davide Caputo</a> for the Home Assistant community</sub></p>
