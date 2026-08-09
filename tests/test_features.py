@@ -218,6 +218,29 @@ def test_cost_sensor_state_class_is_total() -> None:
     assert sensor.state_class == SensorStateClass.TOTAL
 
 
+def test_percentage_entities_use_ratio_enum() -> None:
+    """HA 2026.7 deprecated PERCENTAGE as a unit; use UnitOfRatio instead."""
+    from homeassistant.const import UnitOfRatio
+
+    from custom_components.mixergy.number import (
+        NUMBER_DESCRIPTIONS,
+        MixergyBoostNumber,
+    )
+    from custom_components.mixergy.sensor import SENSOR_DESCRIPTIONS
+
+    descriptions = (*NUMBER_DESCRIPTIONS, *SENSOR_DESCRIPTIONS)
+    percentage_descriptions = [
+        item
+        for item in descriptions
+        if item.native_unit_of_measurement == UnitOfRatio.PERCENTAGE
+    ]
+    assert len(percentage_descriptions) == 4
+
+    boost = MixergyBoostNumber.__new__(MixergyBoostNumber)
+    assert boost.native_unit_of_measurement == UnitOfRatio.PERCENTAGE
+    assert UnitOfRatio.PERCENTAGE.value == "%"
+
+
 def test_cost_sensor_skips_integration_on_failed_poll() -> None:
     """A failed coordinator poll notifies listeners with STALE data; the
     cost accumulator must not integrate it (phantom cost would be

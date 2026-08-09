@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
 
 import pytest
@@ -24,6 +26,28 @@ from .conftest import MOCK_PASSWORD, MOCK_SERIAL, MOCK_USERNAME
 _CLIENT_PATCH = "custom_components.mixergy.config_flow.MixergyApiClient"
 # Patch target for the aiohttp session helper used in the config flow
 _SESSION_PATCH = "custom_components.mixergy.config_flow.async_get_clientsession"
+
+
+def test_italian_update_interval_copy_matches_selector_bounds() -> None:
+    """User-facing range text must match the options selector limits."""
+    from custom_components.mixergy.const import (
+        MAX_UPDATE_INTERVAL,
+        MIN_UPDATE_INTERVAL,
+    )
+
+    translation_path = (
+        Path(__file__).parents[1]
+        / "custom_components"
+        / "mixergy"
+        / "translations"
+        / "it.json"
+    )
+    translation = json.loads(translation_path.read_text())
+    description = translation["options"]["step"]["init"]["data_description"][
+        CONF_UPDATE_INTERVAL
+    ]
+
+    assert f"({MIN_UPDATE_INTERVAL}–{MAX_UPDATE_INTERVAL} secondi)" in description
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────

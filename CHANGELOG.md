@@ -4,6 +4,16 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- Migrated percentage sensors and controls to `UnitOfRatio.PERCENTAGE`, the
+  Home Assistant 2026.7+ unit API, while preserving the `%` state unit.
+- Diagnostics now return redacted config metadata when an entry failed before
+  its coordinator loaded, instead of raising while users are troubleshooting.
+- Corrected the Italian polling-interval description to the enforced 30–300
+  second range.
+
 ## [1.3.2] - 2026-08-09
 
 Compatibility release for Home Assistant 2026.x: closes upcoming core

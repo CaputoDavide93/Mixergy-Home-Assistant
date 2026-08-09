@@ -18,8 +18,6 @@ async def async_get_config_entry_diagnostics(
     hass: HomeAssistant, entry: MixergyConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
-    coordinator: MixergyCoordinator = entry.runtime_data
-
     # Redact sensitive data from config. Serial number is a stable
     # physical-asset identifier — knowing it doesn't grant access on
     # its own, but it lets a third party correlate diagnostics dumps
@@ -29,6 +27,19 @@ async def async_get_config_entry_diagnostics(
     config_data[CONF_PASSWORD] = REDACTED
     if CONF_SERIAL_NUMBER in config_data:
         config_data[CONF_SERIAL_NUMBER] = REDACTED
+
+    coordinator = getattr(entry, "runtime_data", None)
+    if not isinstance(coordinator, MixergyCoordinator):
+        return {
+            "config": config_data,
+            "options": dict(entry.options),
+            "coordinator": {
+                "loaded": False,
+                "update_interval": None,
+                "last_update_success": None,
+            },
+            "tank_data": None,
+        }
 
     # Convert tank data to dict, redacting identifiers + raw schedule
     tank_data = asdict(coordinator.data)
@@ -48,6 +59,7 @@ async def async_get_config_entry_diagnostics(
         # tariff) and are essential for reproducing a user's setup.
         "options": dict(entry.options),
         "coordinator": {
+            "loaded": True,
             "update_interval": (
                 coordinator.update_interval.total_seconds()
                 if coordinator.update_interval

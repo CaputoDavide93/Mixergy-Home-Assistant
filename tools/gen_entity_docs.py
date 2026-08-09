@@ -104,6 +104,7 @@ UNIT_MAP = {
     ("UnitOfPower", "WATT"): "W",
     ("UnitOfPower", "KILO_WATT"): "kW",
     ("UnitOfEnergy", "KILO_WATT_HOUR"): "kWh",
+    ("UnitOfRatio", "PERCENTAGE"): "%",
 }
 
 
