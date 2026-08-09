@@ -147,9 +147,8 @@ def _device_config_entry_ids(dev: dr.DeviceEntry) -> set[str]:
     HA 2026.8 moved devices to exactly one config entry: the new attribute is
     ``config_entry_id`` and the old ``config_entries`` set is a deprecated
     shim slated for removal in 2027.8. Prefer the new attribute when present
-    so this keeps working on both sides of the change (the same
-    constructor-kwarg whipsaw that broke the upstream Mixergy integration on
-    2026.8 — guard, don't assume).
+    and fall back on older cores, so this keeps working on both sides of the
+    change — guard, don't assume.
     """
     entry_id = getattr(dev, "config_entry_id", None)
     if entry_id is not None:

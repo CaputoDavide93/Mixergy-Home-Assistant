@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="body" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#15505f"/>
+      <stop offset="0.5" stop-color="#0e3e4c"/>
+      <stop offset="1" stop-color="#0a303c"/>
+    </linearGradient>
+    <linearGradient id="hot" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffa040"/>
+      <stop offset="1" stop-color="#f4562a"/>
+    </linearGradient>
+    <clipPath id="tankClip">
+      <rect x="116" y="40" width="280" height="432" rx="112"/>
+    </clipPath>
+  </defs>
+
+  <!-- Tank body -->
+  <rect x="116" y="40" width="280" height="432" rx="112" fill="url(#body)"/>
+
+  <!-- Hot water fill (charge level ~62%) with wave top -->
+  <g clip-path="url(#tankClip)">
+    <path d="M 96 232
+             Q 146 208 196 232
+             T 296 232
+             T 396 232
+             T 496 232
+             L 496 492 L 96 492 Z"
+          fill="url(#hot)"/>
+    <path d="M 96 248
+             Q 146 226 196 248
+             T 296 248
+             T 396 248
+             T 496 248
+             L 496 492 L 96 492 Z"
+          fill="#f4562a" opacity="0.35"/>
+  </g>
+
+  <!-- Left highlight for gentle 3D read -->
+  <rect x="116" y="40" width="280" height="432" rx="112" fill="none"
+        stroke="#ffffff" stroke-opacity="0.14" stroke-width="10"/>
+
+  <!-- Heating bolt (centred in the hot zone) -->
+  <path d="M 292 264 L 210 366 L 252 366 L 224 436 L 306 334 L 264 334 Z"
+        fill="#ffffff"/>
+
+  <!-- Steam: three rising wavy strokes -->
+  <g fill="none" stroke="#8fd3dd" stroke-width="17" stroke-linecap="round" opacity="0.95">
+    <path d="M 196 148 q -14 -18 0 -36 q 14 -18 0 -36"/>
+    <path d="M 256 156 q -14 -18 0 -36 q 14 -18 0 -36"/>
+    <path d="M 316 148 q -14 -18 0 -36 q 14 -18 0 -36"/>
+  </g>
+</svg>

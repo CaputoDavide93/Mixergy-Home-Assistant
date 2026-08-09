@@ -7,9 +7,8 @@ on:
     branches: [main]
   schedule:
     # Weekly against latest published homeassistant (requirements_test.txt is
-    # unpinned on purpose): catches core API churn between our own pushes.
-    # The upstream Mixergy integration shipped broken for 4 days on HA 2026.8
-    # because nothing exercised its entities against a current core.
+    # unpinned on purpose): catches core API churn between our own pushes,
+    # so a new HA release can't break the integration unnoticed.
     - cron: "0 9 * * 1"
 
 jobs:

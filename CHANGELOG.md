@@ -6,12 +6,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [1.3.2] - 2026-08-09
 
-Future-proofing release, prompted by the upstream `homeassistant-mixergy`
-integration breaking on HA 2026.8 (core removed the `hass` kwarg from helper
-entity constructors it subclassed). This integration doesn't subclass helper
-entities so it was never exposed — this release closes the *adjacent* traps.
-Full suite verified green on HA 2026.8.1 / Python 3.14. Also rolls up the
-previously-unreleased documentation and tooling changes.
+Compatibility release for Home Assistant 2026.x: closes upcoming core
+deprecations before they become errors and hardens the CI pipeline so the
+suite always runs against the current HA core. Full suite verified green on
+HA 2026.8.1 / Python 3.14. Also rolls up the previously-unreleased
+documentation and tooling changes.
 
 ### Fixed
 - **Deprecated reload combination (HA 2026.12 hard error)** — the options
@@ -44,8 +43,7 @@ previously-unreleased documentation and tooling changes.
 ### Changed
 - All repository URLs (README badges, HACS custom-repository instructions,
   release/issues links, `manifest.json` `documentation` / `issue_tracker`)
-  updated from the old `Mixergy_HomeAssistant_Integration` name to
-  **Mixergy-HA**.
+  updated to the current repository name.
 - HACS badge corrected from "Default" to "Custom" — this integration is
   installed as a HACS custom repository (the HACS default store lists a
   different Mixergy integration).
@@ -58,8 +56,8 @@ previously-unreleased documentation and tooling changes.
 
 ## [1.3.1] - 2026-07-06
 
-Hardening release from a dual-AI (Claude + Codex) adversarial review focused on
-HA-core compatibility and robustness. Also fixes the hassfest `services.yaml`
+Hardening release from an adversarial code review focused on HA-core
+compatibility and robustness. Also fixes the hassfest `services.yaml`
 schema failures (invalid `area`/`device` target filters).
 
 ### Fixed
@@ -86,7 +84,7 @@ schema failures (invalid `area`/`device` target filters).
 ## [1.3.0] - 2026-06-27
 
 Feature release: a native water-heater entity plus several new entities and
-flows, driven by a dual-AI (Claude + Codex) review for both bugs and features.
+flows, shaped by a full review pass for both bugs and features.
 
 ### Added
 - **Water heater entity** — the tank now appears as a first-class HA
@@ -126,7 +124,7 @@ flows, driven by a dual-AI (Claude + Codex) review for both bugs and features.
 ## [1.2.0] - 2026-06-27
 
 Hardening and security pass across the API client, coordinator, and services,
-plus per-tank service targeting. Driven by a dual-AI (Claude + Codex) review.
+plus per-tank service targeting, driven by a dedicated security review.
 
 ### Added
 - **Per-tank service targeting.** `set_holiday_dates`, `clear_holiday_dates`,

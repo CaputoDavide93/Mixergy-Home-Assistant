@@ -1,0 +1,27 @@
+# Mixergy for Home Assistant
+
+> Home Assistant custom integration for Mixergy smart hot water tanks. Cloud-polling integration for the official Mixergy API (www.mixergy.io): live charge and temperatures, hot water boost, a native water-heater entity, PV diverter monitoring and controls, holiday scheduling, Energy Dashboard support, and per-tank services. Installed through HACS as a custom repository. Requires Home Assistant 2025.8 or newer. MIT licensed.
+
+Key facts:
+- Domain: `mixergy`; one config entry per tank; multiple tanks supported
+- Two experience modes: Simple (monitoring + boost slider) and Advanced (full control surface incl. water heater, heat-source select, PV controls, holiday pickers)
+- Services: `mixergy.set_holiday_dates`, `mixergy.clear_holiday_dates`, `mixergy.boost_charge` — all accept entity/device/area targets
+- Energy: cumulative electric and PV kWh sensors compatible with the HA Energy Dashboard, plus an optional tariff-based cost sensor
+- Alerts: configurable low / no hot water binary sensors and device triggers
+- Cloud polling every 30–300 s (default 30); credentials stay in the HA config entry; TLS-verified requests only
+
+## Docs
+
+- [README](https://github.com/CaputoDavide93/mixergy-home-assistant/blob/main/README.md): overview, feature tables, quick start
+- [Installation](https://github.com/CaputoDavide93/mixergy-home-assistant/blob/main/docs/installation.md): HACS and manual install, updating, uninstalling
+- [Configuration](https://github.com/CaputoDavide93/mixergy-home-assistant/blob/main/docs/configuration.md): setup flow, experience modes, options, reauthentication
+- [Entities](https://github.com/CaputoDavide93/mixergy-home-assistant/blob/main/docs/entities.md): every sensor, binary sensor, and control with behaviour details
+- [Automations](https://github.com/CaputoDavide93/mixergy-home-assistant/blob/main/docs/automations.md): services, device triggers, and a recipe cookbook
+- [Energy](https://github.com/CaputoDavide93/mixergy-home-assistant/blob/main/docs/energy.md): Energy Dashboard setup and cost tracking
+- [Troubleshooting](https://github.com/CaputoDavide93/mixergy-home-assistant/blob/main/docs/troubleshooting.md): symptom-first fixes and FAQ
+- [API client](https://github.com/CaputoDavide93/mixergy-home-assistant/blob/main/docs/api.md): architecture and the standalone Python API client
+
+## Source
+
+- [Repository](https://github.com/CaputoDavide93/mixergy-home-assistant): code, issues, releases
+- [Changelog](https://github.com/CaputoDavide93/mixergy-home-assistant/blob/main/CHANGELOG.md): versioned release history

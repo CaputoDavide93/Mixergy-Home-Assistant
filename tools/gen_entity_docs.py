@@ -374,18 +374,32 @@ def render_blocks(src: dict) -> dict[str, str]:
     }
 
 
-# ── README splicing ─────────────────────────────────────────────────────────
+# ── Document splicing ────────────────────────────────────────────────────────
+
+# Files carrying the AUTOGEN markers. README.md is mandatory; docs/entities.md
+# is spliced too when present so the deep-dive reference can never drift from
+# the tables the README shows.
+TARGETS = [README, ROOT / "docs" / "entities.md"]
 
 
-def splice(readme: str, blocks: dict[str, str]) -> str:
+def splice(
+    text: str, blocks: dict[str, str], name_for_errors: str, *, strict: bool = True
+) -> str:
+    """Replace each marked block. Strict targets (README) must carry every
+    marker pair; lenient targets may carry a subset — only the pairs present
+    are refreshed."""
     for name, table in blocks.items():
         start = f"<!-- AUTOGEN:entities:{name} -->"
         end = f"<!-- /AUTOGEN:entities:{name} -->"
-        if start not in readme or end not in readme:
-            raise SystemExit(f"README.md is missing the {start} … {end} markers")
+        if start not in text or end not in text:
+            if strict:
+                raise SystemExit(
+                    f"{name_for_errors} is missing the {start} … {end} markers"
+                )
+            continue
         pattern = re.compile(re.escape(start) + r".*?" + re.escape(end), re.DOTALL)
-        readme = pattern.sub(f"{start}\n{table}\n{end}", readme)
-    return readme
+        text = pattern.sub(f"{start}\n{table}\n{end}", text)
+    return text
 
 
 def main() -> int:
@@ -393,7 +407,7 @@ def main() -> int:
     parser.add_argument(
         "--check",
         action="store_true",
-        help="verify the README tables are up to date; exit 1 if stale",
+        help="verify the generated tables are up to date; exit 1 if stale",
     )
     args = parser.parse_args()
 
@@ -405,25 +419,36 @@ def main() -> int:
         print(f"Update the maps in {Path(__file__).name} to match.", file=sys.stderr)
         return 2
 
-    current = README.read_text(encoding="utf-8")
-    updated = splice(current, render_blocks(src))
+    blocks = render_blocks(src)
+    stale: list[str] = []
+    for target in TARGETS:
+        if not target.exists():
+            if target == README:
+                raise SystemExit("README.md not found")
+            continue
+        rel = target.relative_to(ROOT)
+        current = target.read_text(encoding="utf-8")
+        updated = splice(current, blocks, str(rel), strict=target == README)
+        if updated == current:
+            continue
+        if args.check:
+            stale.append(str(rel))
+        else:
+            target.write_text(updated, encoding="utf-8")
+            print(f"{rel} entity tables regenerated.")
 
     if args.check:
-        if updated != current:
+        if stale:
             print(
-                "README.md entity tables are stale. "
+                f"Entity tables are stale in: {', '.join(stale)}. "
                 "Run: python tools/gen_entity_docs.py",
                 file=sys.stderr,
             )
             return 1
-        print("README.md entity tables are up to date.")
+        print("Entity tables are up to date.")
         return 0
 
-    if updated != current:
-        README.write_text(updated, encoding="utf-8")
-        print("README.md entity tables regenerated.")
-    else:
-        print("README.md entity tables already up to date.")
+    print("Entity tables are up to date." if not stale else "")
     return 0
 
 

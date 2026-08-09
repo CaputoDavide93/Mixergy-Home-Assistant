@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640" width="1280" height="640">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0c3540"/>
+      <stop offset="1" stop-color="#082129"/>
+    </linearGradient>
+    <linearGradient id="body" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#15505f"/>
+      <stop offset="0.5" stop-color="#0e3e4c"/>
+      <stop offset="1" stop-color="#0a303c"/>
+    </linearGradient>
+    <linearGradient id="hot" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffa040"/>
+      <stop offset="1" stop-color="#f4562a"/>
+    </linearGradient>
+    <clipPath id="tankClip">
+      <rect x="116" y="40" width="280" height="432" rx="112"/>
+    </clipPath>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1280" height="640" fill="url(#bg)"/>
+  <!-- soft accent glow behind the tank -->
+  <circle cx="301" cy="295" r="250" fill="#f4562a" opacity="0.08"/>
+  <circle cx="301" cy="295" r="175" fill="#8fd3dd" opacity="0.05"/>
+
+  <!-- Tank icon, scaled and placed left -->
+  <g transform="translate(140,130) scale(0.63)">
+    <rect x="116" y="40" width="280" height="432" rx="112" fill="url(#body)"/>
+    <g clip-path="url(#tankClip)">
+      <path d="M 96 232 Q 146 208 196 232 T 296 232 T 396 232 T 496 232 L 496 492 L 96 492 Z" fill="url(#hot)"/>
+      <path d="M 96 248 Q 146 226 196 248 T 296 248 T 396 248 T 496 248 L 496 492 L 96 492 Z" fill="#f4562a" opacity="0.35"/>
+    </g>
+    <rect x="116" y="40" width="280" height="432" rx="112" fill="none" stroke="#ffffff" stroke-opacity="0.14" stroke-width="10"/>
+    <path d="M 292 264 L 210 366 L 252 366 L 224 436 L 306 334 L 264 334 Z" fill="#ffffff"/>
+    <g fill="none" stroke="#8fd3dd" stroke-width="17" stroke-linecap="round" opacity="0.95">
+      <path d="M 196 148 q -14 -18 0 -36 q 14 -18 0 -36"/>
+      <path d="M 256 156 q -14 -18 0 -36 q 14 -18 0 -36"/>
+      <path d="M 316 148 q -14 -18 0 -36 q 14 -18 0 -36"/>
+    </g>
+  </g>
+
+  <!-- Wordmark + tagline -->
+  <g font-family="Helvetica, Arial, sans-serif">
+    <text x="520" y="256" font-size="86" font-weight="700" fill="#ffffff">Mixergy-HA</text>
+    <text x="522" y="316" font-size="34" fill="#8fd3dd">Mixergy smart hot water tanks</text>
+    <text x="522" y="360" font-size="34" fill="#8fd3dd">in Home Assistant</text>
+
+    <!-- Feature chips -->
+    <g font-size="24" font-weight="600">
+      <rect x="522" y="404" rx="19" width="280" height="46" fill="#114552"/>
+      <text x="546" y="435" fill="#cdeef3">Live charge &amp; temps</text>
+
+      <rect x="818" y="404" rx="19" width="256" height="46" fill="#114552"/>
+      <text x="842" y="435" fill="#cdeef3">Energy Dashboard</text>
+
+      <rect x="522" y="464" rx="19" width="180" height="46" fill="#114552"/>
+      <text x="546" y="495" fill="#cdeef3">PV diverter</text>
+
+      <rect x="718" y="464" rx="19" width="200" height="46" fill="#114552"/>
+      <text x="742" y="495" fill="#cdeef3">Holiday mode</text>
+
+      <rect x="934" y="464" rx="19" width="120" height="46" fill="#b23f1e"/>
+      <text x="958" y="495" fill="#ffe1d2">HACS</text>
+    </g>
+  </g>
+</svg>
