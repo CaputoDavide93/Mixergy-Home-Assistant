@@ -4,9 +4,34 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.3.2] - 2026-08-09
 
-Documentation and tooling only — no functional changes to the integration.
+Future-proofing release, prompted by the upstream `homeassistant-mixergy`
+integration breaking on HA 2026.8 (core removed the `hass` kwarg from helper
+entity constructors it subclassed). This integration doesn't subclass helper
+entities so it was never exposed — this release closes the *adjacent* traps.
+Full suite verified green on HA 2026.8.1 / Python 3.14. Also rolls up the
+previously-unreleased documentation and tooling changes.
+
+### Fixed
+- **Deprecated reload combination (HA 2026.12 hard error)** — the options
+  update listener registered in `async_setup_entry` combined with the
+  reloading flow methods used by reauth/reconfigure
+  (`async_update_reload_and_abort`) is deprecated since HA 2026.6 and becomes
+  an error in 2026.12 (double-reload race). The options flow now subclasses
+  `OptionsFlowWithReload` and the listener is gone.
+- **Device registry single-config-entry migration (HA 2027.8 removal)** —
+  service target resolution read `DeviceEntry.config_entries`, deprecated in
+  HA 2026.8. New `_device_config_entry_ids()` prefers `config_entry_id` and
+  falls back on older cores.
+- **Untruthful HACS minimum version** — `hacs.json` claimed `2024.4.0` while
+  the code already used `_get_reauth_entry()` (2024.11+) and the coordinator
+  `config_entry` kwarg (2024.8+); on an old core that's a hard setup crash.
+  Now `2025.8.0`, the floor `OptionsFlowWithReload` actually needs.
+- **CI tested a stale core** — the workflow pinned Python 3.12, so
+  `pip install homeassistant` silently resolved an old release (HA 2026.8
+  needs ≥3.14.2). CI now runs Python 3.14 and the test job gained a weekly
+  schedule so core API churn is caught between pushes.
 
 ### Added
 - `tools/gen_entity_docs.py` — generates the README sensor / binary-sensor /

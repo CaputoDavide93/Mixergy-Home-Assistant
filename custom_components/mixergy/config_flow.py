@@ -9,7 +9,11 @@ from typing import Any
 import aiohttp
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult, OptionsFlow
+from homeassistant.config_entries import (
+    ConfigFlow,
+    ConfigFlowResult,
+    OptionsFlowWithReload,
+)
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import callback
 from homeassistant.helpers import selector
@@ -368,8 +372,16 @@ class MixergyConfigFlow(ConfigFlow, domain=DOMAIN):
 # ── Options flow ──────────────────────────────────────────────────────────────
 
 
-class MixergyOptionsFlow(OptionsFlow):
-    """Handle Mixergy integration options (experience mode + poll interval)."""
+class MixergyOptionsFlow(OptionsFlowWithReload):
+    """Handle Mixergy integration options (experience mode + poll interval).
+
+    OptionsFlowWithReload (HA 2025.8+) reloads the entry automatically after
+    the options change. This replaces the old add_update_listener(reload)
+    pattern in __init__ — combining that listener with the reloading flow
+    methods used by reauth/reconfigure (async_update_reload_and_abort) is
+    deprecated since HA 2026.6 and becomes an error in 2026.12 (double-reload
+    race).
+    """
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None

@@ -97,23 +97,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: MixergyConfigEntry) -> b
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
-    # Reload on options change. Without this, editing the poll interval or
-    # experience mode in the options flow has no effect until a manual
-    # reload — the interval is read only in coordinator __init__ and the
-    # per-mode entity set is decided only during platform setup.
-    entry.async_on_unload(entry.add_update_listener(_async_update_listener))
+    # Options-change reload is handled by MixergyOptionsFlow subclassing
+    # OptionsFlowWithReload (config_flow.py). Do NOT re-add an
+    # add_update_listener(reload) here: combined with the reloading flow
+    # methods (async_update_reload_and_abort in reauth/reconfigure) it is
+    # deprecated since HA 2026.6 and an ERROR from 2026.12.
 
     # Register services (only once per domain)
     _register_services(hass)
 
     return True
-
-
-async def _async_update_listener(
-    hass: HomeAssistant, entry: MixergyConfigEntry
-) -> None:
-    """Reload the config entry when its options change."""
-    await hass.config_entries.async_reload(entry.entry_id)
 
 
 async def async_unload_entry(
@@ -148,6 +141,22 @@ def _coordinator_by_entry(
     }
 
 
+def _device_config_entry_ids(dev: dr.DeviceEntry) -> set[str]:
+    """Config-entry ids for a device, across the HA 2026.8 registry change.
+
+    HA 2026.8 moved devices to exactly one config entry: the new attribute is
+    ``config_entry_id`` and the old ``config_entries`` set is a deprecated
+    shim slated for removal in 2027.8. Prefer the new attribute when present
+    so this keeps working on both sides of the change (the same
+    constructor-kwarg whipsaw that broke the upstream Mixergy integration on
+    2026.8 — guard, don't assume).
+    """
+    entry_id = getattr(dev, "config_entry_id", None)
+    if entry_id is not None:
+        return {entry_id}
+    return set(dev.config_entries)
+
+
 def _resolve_target_entry_ids(
     hass: HomeAssistant, call: ServiceCall
 ) -> set[str] | None:
@@ -173,10 +182,10 @@ def _resolve_target_entry_ids(
     for device_id in device_ids:
         dev = dev_reg.async_get(device_id)
         if dev:
-            entry_ids.update(dev.config_entries)
+            entry_ids.update(_device_config_entry_ids(dev))
     for area_id in area_ids:
         for dev in dr.async_entries_for_area(dev_reg, area_id):
-            entry_ids.update(dev.config_entries)
+            entry_ids.update(_device_config_entry_ids(dev))
         for ent in er.async_entries_for_area(ent_reg, area_id):
             if ent.config_entry_id:
                 entry_ids.add(ent.config_entry_id)

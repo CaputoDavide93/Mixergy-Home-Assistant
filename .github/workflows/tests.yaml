@@ -5,6 +5,12 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  schedule:
+    # Weekly against latest published homeassistant (requirements_test.txt is
+    # unpinned on purpose): catches core API churn between our own pushes.
+    # The upstream Mixergy integration shipped broken for 4 days on HA 2026.8
+    # because nothing exercised its entities against a current core.
+    - cron: "0 9 * * 1"
 
 jobs:
   tests:
@@ -17,7 +23,10 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          # Must track HA core's floor (2026.8 needs >=3.14.2). On an older
+          # python, pip silently resolves an OLD homeassistant and the suite
+          # goes green against a core nobody runs any more.
+          python-version: "3.14"
           cache: pip
           cache-dependency-path: requirements_test.txt
 
