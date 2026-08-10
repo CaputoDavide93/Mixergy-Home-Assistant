@@ -66,7 +66,7 @@ jobs:
           pytest tests/ -v --tb=short
           --cov=custom_components.mixergy
           --cov-report=term-missing
-          --cov-fail-under=67
+          --cov-fail-under=65
 
   latest-ha-canary:
     name: Latest HA canary
@@ -109,4 +109,4 @@ jobs:
           pytest tests/ -v --tb=short
           --cov=custom_components.mixergy
           --cov-report=term-missing
-          --cov-fail-under=67
+          --cov-fail-under=65

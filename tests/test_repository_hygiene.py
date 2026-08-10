@@ -39,6 +39,10 @@ def test_workflows_pin_actions_and_use_read_only_permissions() -> None:
                 )
             for step in job.get("steps", []):
                 if uses := step.get("uses"):
+                    # Local composite actions ("./.github/actions/x") are
+                    # pinned by the repo commit itself and cannot carry @sha.
+                    if uses.startswith("./"):
+                        continue
                     assert action_ref.fullmatch(uses), f"{path}: {uses}"
 
 

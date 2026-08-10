@@ -231,7 +231,14 @@ def test_cost_sensor_state_class_is_total() -> None:
 
 
 def test_percentage_entities_use_ratio_enum() -> None:
-    """HA 2026.7 deprecated PERCENTAGE as a unit; use UnitOfRatio instead."""
+    """Percentage entities standardise on the UnitOfRatio enum.
+
+    HA 2026.7 introduced ``UnitOfRatio`` as the canonical spelling; the
+    legacy ``PERCENTAGE`` constant is NOT deprecated (verified against
+    2026.8.1 const.py — unlike the CONCENTRATION_* constants it has no
+    ``_DEPRECATED_`` wrapper), but the integration standardises on the enum
+    with a value-identical fallback on the 2025.8 floor.
+    """
     from homeassistant import const as ha_const
 
     from custom_components.mixergy.const import PERCENTAGE_UNIT
@@ -247,7 +254,14 @@ def test_percentage_entities_use_ratio_enum() -> None:
         for item in descriptions
         if item.native_unit_of_measurement == PERCENTAGE_UNIT
     ]
-    assert len(percentage_descriptions) == 4
+    # Named keys, not a bare count — a failure should say WHICH entity
+    # gained or lost the unit, not force archaeology on a magic number.
+    assert sorted(item.key for item in percentage_descriptions) == [
+        "charge",
+        "pv_charge_limit",
+        "target_charge",
+        "target_charge_control",
+    ]
 
     boost = MixergyBoostNumber.__new__(MixergyBoostNumber)
     assert boost.native_unit_of_measurement == PERCENTAGE_UNIT
