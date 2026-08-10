@@ -10,10 +10,14 @@ CDN, so their icon must also be updated in `home-assistant/brands`.
 | ---- | ---- | ------ | ----- |
 | `icon.png` | 256 × 256 px | PNG with transparency | Integration icon shown in Home Assistant |
 | `icon@2x.png` | 512 × 512 px | PNG with transparency | High-DPI version of the icon |
+| `logo.png` | 1000 × 256 px | PNG with transparency | Light-theme landscape logo |
+| `logo@2x.png` | 2000 × 512 px | PNG with transparency | High-DPI light-theme logo |
+| `dark_logo.png` | 1000 × 256 px | PNG with transparency | Dark-theme landscape logo |
+| `dark_logo@2x.png` | 2000 × 512 px | PNG with transparency | High-DPI dark-theme logo |
 
-A separate landscape `logo.png` (min 300 px wide) is **optional** and not
-currently provided — when the logo is absent, Home Assistant falls back to the
-icon on the device card, so nothing is missing in the UI.
+The square icon works on both light and dark themes, so separate dark icon
+files are deliberately omitted. Home Assistant falls back to `icon.png` and
+`icon@2x.png` for the dark icon endpoints.
 
 ## Vector sources
 
@@ -22,7 +26,9 @@ every asset can be regenerated at any size without quality loss:
 
 | Source | Renders to |
 | ------ | ---------- |
-| [`assets/icon.svg`](../../../assets/icon.svg) | `icon.png`, `icon@2x.png`, repo-root `icon.png` |
+| [`assets/icon.svg`](../../../assets/icon.svg) | `icon.png`, `icon@2x.png` |
+| [`assets/logo.svg`](../../../assets/logo.svg) | `logo.png`, `logo@2x.png` |
+| [`assets/dark_logo.svg`](../../../assets/dark_logo.svg) | `dark_logo.png`, `dark_logo@2x.png` |
 | [`assets/banner.svg`](../../../assets/banner.svg) | `assets/banner.png` (1280 × 640, README hero + GitHub social preview) |
 
 Re-render with any SVG rasteriser, for example:
@@ -32,6 +38,10 @@ pip install cairosvg
 python -c "import cairosvg; cairosvg.svg2png(url='assets/icon.svg', write_to='custom_components/mixergy/brand/icon@2x.png', output_width=512, output_height=512)"
 ```
 
+After re-rendering, update `assets/brand-manifest.json`. Repository tests verify
+the reviewed SHA-256 of every vector source and raster output, so a stale PNG or
+an unreviewed source edit cannot pass silently.
+
 ## Design
 
 - Capsule tank silhouette on a transparent background
@@ -39,6 +49,8 @@ python -c "import cairosvg; cairosvg.svg2png(url='assets/icon.svg', write_to='cu
   (`#ffa040` → `#f4562a`) with a wave meniscus at ~62% charge
 - White heating bolt centred in the hot zone; three steam strokes above
 - Reads clearly from 512 px down to 32 px — no text inside the icon
+- Landscape logo pairs the same tank with the **Mixergy Home Assistant**
+  wordmark; the light and dark versions differ only where contrast requires it
 
 ## GitHub social preview
 
