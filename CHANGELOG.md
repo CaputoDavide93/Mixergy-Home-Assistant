@@ -4,6 +4,17 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.5] - 2026-08-10
+
+### Changed
+
+- Replaced the fixed-width README banner and badge wall with a compact header
+  that renders cleanly in HACS on desktop and mobile.
+- Regenerated the packaged standard and high-DPI integration icons from the
+  repository's vector source.
+- Clarified the boundary between packaged Home Assistant brand images and the
+  separate CDN-backed icon used by HACS repository listings.
+
 ## [1.3.4] - 2026-08-10
 
 Post-release correctness fixes from a deep review of `v1.3.3`.

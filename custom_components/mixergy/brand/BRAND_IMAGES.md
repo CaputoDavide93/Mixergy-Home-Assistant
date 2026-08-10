@@ -1,7 +1,8 @@
 # Brand Images
 
 Image files in this directory give the integration its icon in the Home
-Assistant UI and the HACS store.
+Assistant UI. HACS repository listings use the separate Home Assistant brands
+CDN, so their icon must also be updated in `home-assistant/brands`.
 
 ## Files in this directory
 
@@ -48,9 +49,9 @@ python -c "import cairosvg; cairosvg.svg2png(url='assets/icon.svg', write_to='cu
 ## After changing images
 
 No code changes are needed — Home Assistant automatically picks up images from
-this directory when the integration is loaded (HA 2024.6+).
+this directory when the integration is loaded (HA 2026.3+).
 
-If you want the icon to also appear on the HACS default store listing, submit
-it to the [home-assistant/brands](https://github.com/home-assistant/brands)
-repository following their contribution guide. That repository uses the same
-file names and size requirements.
+For the icon to appear in HACS repository listings, submit it to the
+[home-assistant/brands](https://github.com/home-assistant/brands) repository
+following its contribution guide. That repository uses the same file names and
+size requirements.

@@ -1,17 +1,15 @@
 <div align="center">
 
-<img src="assets/banner.png" alt="Mixergy for Home Assistant — live charge and temperatures, Energy Dashboard, PV diverter, holiday mode" width="820">
+<img src="custom_components/mixergy/brand/icon.png" alt="Mixergy for Home Assistant" width="104" height="104">
 
-# ♨️ Mixergy for Home Assistant
+# Mixergy for Home Assistant
 
-**Monitor and control your [Mixergy](https://www.mixergy.io/) smart hot water tank from Home Assistant — live temperatures and charge, one-tap boost, a native water-heater entity, PV diverter control, holiday scheduling, and full Energy Dashboard support.**
+Monitor and control your [Mixergy](https://www.mixergy.io/) smart hot water tank from Home Assistant.
+
+Live charge and temperatures, one-tap boost, Energy Dashboard support, PV diverter controls, and holiday scheduling.
 
 [![HACS](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://hacs.xyz)
 [![GitHub Release](https://img.shields.io/github/v/release/CaputoDavide93/Mixergy-Home-Assistant)](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/releases)
-[![HA Version](https://img.shields.io/badge/HA-2025.8%2B-blue)](https://www.home-assistant.io/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Hassfest](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/actions/workflows/hassfest.yaml/badge.svg)](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/actions/workflows/hassfest.yaml)
-[![HACS Validation](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/actions/workflows/validate.yaml/badge.svg)](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/actions/workflows/validate.yaml)
 [![Tests](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/actions/workflows/tests.yaml/badge.svg)](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/actions/workflows/tests.yaml)
 
 </div>
