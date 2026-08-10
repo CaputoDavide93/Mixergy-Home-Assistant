@@ -12,16 +12,16 @@ Key facts:
 
 ## Docs
 
-- [README](https://github.com/CaputoDavide93/mixergy-home-assistant/blob/main/README.md): overview, feature tables, quick start
-- [Installation](https://github.com/CaputoDavide93/mixergy-home-assistant/blob/main/docs/installation.md): HACS and manual install, updating, uninstalling
-- [Configuration](https://github.com/CaputoDavide93/mixergy-home-assistant/blob/main/docs/configuration.md): setup flow, experience modes, options, reauthentication
-- [Entities](https://github.com/CaputoDavide93/mixergy-home-assistant/blob/main/docs/entities.md): every sensor, binary sensor, and control with behaviour details
-- [Automations](https://github.com/CaputoDavide93/mixergy-home-assistant/blob/main/docs/automations.md): services, device triggers, and a recipe cookbook
-- [Energy](https://github.com/CaputoDavide93/mixergy-home-assistant/blob/main/docs/energy.md): Energy Dashboard setup and cost tracking
-- [Troubleshooting](https://github.com/CaputoDavide93/mixergy-home-assistant/blob/main/docs/troubleshooting.md): symptom-first fixes and FAQ
-- [API client](https://github.com/CaputoDavide93/mixergy-home-assistant/blob/main/docs/api.md): architecture and the standalone Python API client
+- [README](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/blob/main/README.md): overview, feature tables, quick start
+- [Installation](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/blob/main/docs/installation.md): HACS and manual install, updating, uninstalling
+- [Configuration](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/blob/main/docs/configuration.md): setup flow, experience modes, options, reauthentication
+- [Entities](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/blob/main/docs/entities.md): every sensor, binary sensor, and control with behaviour details
+- [Automations](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/blob/main/docs/automations.md): services, device triggers, and a recipe cookbook
+- [Energy](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/blob/main/docs/energy.md): Energy Dashboard setup and cost tracking
+- [Troubleshooting](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/blob/main/docs/troubleshooting.md): symptom-first fixes and FAQ
+- [API client](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/blob/main/docs/api.md): architecture and the standalone Python API client
 
 ## Source
 
-- [Repository](https://github.com/CaputoDavide93/mixergy-home-assistant): code, issues, releases
-- [Changelog](https://github.com/CaputoDavide93/mixergy-home-assistant/blob/main/CHANGELOG.md): versioned release history
+- [Repository](https://github.com/CaputoDavide93/Mixergy-Home-Assistant): code, issues, releases
+- [Changelog](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/blob/main/CHANGELOG.md): versioned release history
