@@ -34,7 +34,7 @@ home-assistant_v2.db
 home-assistant_v2.db-wal
 home-assistant_v2.db-shm
 
-# Claude Code
+# Local development tooling state (never commit)
 .claude/
 
 # Source icon (high-res original; brand/ contains the correctly-sized copies)
