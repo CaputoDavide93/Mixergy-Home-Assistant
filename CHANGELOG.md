@@ -4,7 +4,12 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.3.3] - 2026-08-10
+
+Hardening release: exact-origin API-link validation, a public-release CI
+pipeline with minimum/current/latest Home Assistant coverage, and the fixes
+from an adversarial review of the hardening itself. Also carries the refreshed
+brand assets and the repository's canonical name.
 
 ### Fixed
 
@@ -13,27 +18,42 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   2025.8 floor.
 - Diagnostics now return redacted config metadata when an entry failed before
   its coordinator loaded, instead of raising while users are troubleshooting.
-- Corrected the Italian polling-interval description to the enforced 30–300
-  second range.
+- Corrected the polling-interval description to the enforced 30–300 second
+  range in **every** locale (it/de/fr); the guard test is parametrised over
+  all translation files so a locale can no longer drift alone.
 - API discovery, login, and authenticated calls no longer follow redirects;
   HATEOAS links are restricted to the exact verified `www.mixergy.io:443`
   origin, and invalid heat-source writes fail before any network request.
+- A malformed discovered URL now raises a clean `MixergyConnectionError`
+  instead of letting `urlparse`'s own `ValueError` escape the error taxonomy.
+- A permanent redirect on a cached endpoint clears the discovery cache (like
+  404/410), so an endpoint rotation signalled via 3xx self-heals on the next
+  poll instead of failing forever.
 - Removed the private-home assumption that every tank belongs in Utility Room.
 
 ### Security
 
 - GitHub Actions are pinned to immutable commits with explicit read-only token
-  permissions and timeouts.
+  permissions and timeouts; the repository-hygiene test covers both workflow
+  extensions and rejects job-level permission widening.
 - Added a security policy backed by GitHub private vulnerability reporting;
   Dependabot alerts and automated security updates are enabled.
 
 ### Testing
 
 - CI now tests the advertised minimum HA 2025.8.0 and current HA 2026.8.1 on
-  every change, with a separate scheduled latest-HA canary.
-- Test-tool versions are pinned and the measured 67% coverage floor is enforced
-  to prevent regression. The inaccurate `quality_scale: silver` claim was
-  removed until coverage exceeds Home Assistant's required 95% threshold.
+  every change, with a separate scheduled latest-HA canary that asserts it
+  really resolved the latest core release.
+- Test-tool versions are pinned and a 65% coverage floor is enforced (measured
+  68%, with headroom so unrelated changes don't flip CI red). The inaccurate
+  `quality_scale: silver` claim was removed until coverage exceeds Home
+  Assistant's required 95% threshold.
+
+### Changed
+
+- Banner wordmark updated to **Mixergy Home Assistant**; all badges, links,
+  and the HACS redirect use the canonical repository name
+  `Mixergy-Home-Assistant`.
 
 ## [1.3.2] - 2026-08-09
 

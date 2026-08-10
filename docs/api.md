@@ -148,7 +148,7 @@ One subtlety: `fetch_all()` gathers three sub-fetches concurrently, so a `404` h
 
 ## 🐍 Using the client outside Home Assistant
 
-The client needs nothing from HA — an `aiohttp.ClientSession` and your Mixergy credentials are enough. Clone [github.com/CaputoDavide93/mixergy-home-assistant](https://github.com/CaputoDavide93/mixergy-home-assistant) and import from `custom_components/mixergy/api.py` (the module imports only `aiohttp` and the standard library).
+The client needs nothing from HA — an `aiohttp.ClientSession` and your Mixergy credentials are enough. Clone [github.com/CaputoDavide93/Mixergy-Home-Assistant](https://github.com/CaputoDavide93/Mixergy-Home-Assistant) and import from `custom_components/mixergy/api.py` (the module imports only `aiohttp` and the standard library).
 
 ```python
 import asyncio

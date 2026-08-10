@@ -142,7 +142,7 @@ What remains is what a maintainer needs to reproduce your setup — the integrat
 
 ### Where do I file issues?
 
-File issues at [github.com/CaputoDavide93/mixergy-home-assistant/issues](https://github.com/CaputoDavide93/mixergy-home-assistant/issues). A report the maintainer can act on includes:
+File issues at [github.com/CaputoDavide93/Mixergy-Home-Assistant/issues](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/issues). A report the maintainer can act on includes:
 
 1. What you expected and what happened instead.
 2. Your Home Assistant version and the integration version (Settings → Devices & Services → Mixergy).
@@ -157,7 +157,7 @@ No. This is a cloud-polling integration for the official Mixergy API at `www.mix
 
 ### Is this the Mixergy integration from the HACS default store?
 
-No. This is an independent project, installed as a **HACS custom repository**. Any other Mixergy integration is an unrelated codebase — never run two integrations against the same tank, and file issues for this one at [github.com/CaputoDavide93/mixergy-home-assistant](https://github.com/CaputoDavide93/mixergy-home-assistant/issues).
+No. This is an independent project, installed as a **HACS custom repository**. Any other Mixergy integration is an unrelated codebase — never run two integrations against the same tank, and file issues for this one at [github.com/CaputoDavide93/Mixergy-Home-Assistant](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/issues).
 
 ### How many tanks does it support?
 
