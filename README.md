@@ -7,12 +7,12 @@
 **Monitor and control your [Mixergy](https://www.mixergy.io/) smart hot water tank from Home Assistant — live temperatures and charge, one-tap boost, a native water-heater entity, PV diverter control, holiday scheduling, and full Energy Dashboard support.**
 
 [![HACS](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://hacs.xyz)
-[![GitHub Release](https://img.shields.io/github/v/release/CaputoDavide93/Mixergy-Home-Assistant)](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/releases)
+[![GitHub Release](https://img.shields.io/github/v/release/CaputoDavide93/mixergy-home-assistant)](https://github.com/CaputoDavide93/mixergy-home-assistant/releases)
 [![HA Version](https://img.shields.io/badge/HA-2025.8%2B-blue)](https://www.home-assistant.io/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Hassfest](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/actions/workflows/hassfest.yaml/badge.svg)](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/actions/workflows/hassfest.yaml)
-[![HACS Validation](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/actions/workflows/validate.yaml/badge.svg)](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/actions/workflows/validate.yaml)
-[![Tests](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/actions/workflows/tests.yaml/badge.svg)](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/actions/workflows/tests.yaml)
+[![Hassfest](https://github.com/CaputoDavide93/mixergy-home-assistant/actions/workflows/hassfest.yaml/badge.svg)](https://github.com/CaputoDavide93/mixergy-home-assistant/actions/workflows/hassfest.yaml)
+[![HACS Validation](https://github.com/CaputoDavide93/mixergy-home-assistant/actions/workflows/validate.yaml/badge.svg)](https://github.com/CaputoDavide93/mixergy-home-assistant/actions/workflows/validate.yaml)
+[![Tests](https://github.com/CaputoDavide93/mixergy-home-assistant/actions/workflows/tests.yaml/badge.svg)](https://github.com/CaputoDavide93/mixergy-home-assistant/actions/workflows/tests.yaml)
 
 </div>
 
@@ -20,11 +20,11 @@
 
 ## ⚡ Quick Start
 
-1. **Install via HACS** — add `https://github.com/CaputoDavide93/Mixergy-Home-Assistant` as a custom repository, install **Mixergy**, restart Home Assistant.
+1. **Install via HACS** — add `https://github.com/CaputoDavide93/mixergy-home-assistant` as a custom repository, install **Mixergy**, restart Home Assistant.
 2. **Add the integration** — **Settings → Devices & Services → Add Integration → Mixergy**, sign in with your Mixergy app credentials and pick your tank.
 3. **Choose your mode** — **Simple** for monitoring and boost, **Advanced** for the full control surface. Switch any time from the integration's Configure button.
 
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=CaputoDavide93&repository=Mixergy-Home-Assistant&category=integration)
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=CaputoDavide93&repository=mixergy-home-assistant&category=integration)
 
 ---
 
@@ -46,19 +46,19 @@
 
 ### Via HACS (Recommended)
 
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=CaputoDavide93&repository=Mixergy-Home-Assistant&category=integration)
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=CaputoDavide93&repository=mixergy-home-assistant&category=integration)
 
 Or add manually in HACS:
 
 1. Open [HACS](https://hacs.xyz/) in Home Assistant
 2. Go to **Integrations** → click the 3-dots menu → **Custom repositories**
-3. Add `https://github.com/CaputoDavide93/Mixergy-Home-Assistant` with category **Integration**
+3. Add `https://github.com/CaputoDavide93/mixergy-home-assistant` with category **Integration**
 4. Search for **Mixergy** and install it
 5. Restart Home Assistant
 
 ### Manual Installation
 
-1. Download the [latest release](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/releases)
+1. Download the [latest release](https://github.com/CaputoDavide93/mixergy-home-assistant/releases)
 2. Copy `custom_components/mixergy/` into your HA `config/custom_components/` directory
 3. Restart Home Assistant
 
@@ -372,7 +372,7 @@ logger:
 **Diagnostics** — **Settings → Devices & Services → Mixergy → Download
 diagnostics**. Credentials, tokens, and the tank serial are redacted
 automatically, so the file is safe to attach to an
-[issue](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/issues).
+[issue](https://github.com/CaputoDavide93/mixergy-home-assistant/issues).
 
 ---
 
@@ -415,7 +415,7 @@ standalone Python client — is documented in the [API guide](docs/api.md).
 ## 🤝 Contributing
 
 Contributions are welcome! Please open an
-[issue](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/issues) or
+[issue](https://github.com/CaputoDavide93/mixergy-home-assistant/issues) or
 pull request. The test suite (`pytest tests/`) and the docs generator
 (`python tools/gen_entity_docs.py --check`) both run in CI.
 

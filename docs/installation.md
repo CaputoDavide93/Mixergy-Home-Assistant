@@ -23,15 +23,15 @@ The integration polls the Mixergy cloud API over HTTPS with certificate verifica
 
 ## 📦 Install via HACS (recommended)
 
-This integration is distributed as a HACS **custom repository** — it is not in the HACS default store. Add `https://github.com/CaputoDavide93/Mixergy-Home-Assistant` as a custom repository with category **Integration**, install it, and restart Home Assistant. The badge below opens the repository directly in your instance.
+This integration is distributed as a HACS **custom repository** — it is not in the HACS default store. Add `https://github.com/CaputoDavide93/mixergy-home-assistant` as a custom repository with category **Integration**, install it, and restart Home Assistant. The badge below opens the repository directly in your instance.
 
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=CaputoDavide93&repository=Mixergy-Home-Assistant&category=integration)
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=CaputoDavide93&repository=mixergy-home-assistant&category=integration)
 
 Or add the repository by hand:
 
 1. Open [HACS](https://hacs.xyz/) in Home Assistant
 2. Go to **Integrations** → click the 3-dots menu → **Custom repositories**
-3. Add `https://github.com/CaputoDavide93/Mixergy-Home-Assistant` with category **Integration**
+3. Add `https://github.com/CaputoDavide93/mixergy-home-assistant` with category **Integration**
 4. Search for **Mixergy** and install it
 5. Restart Home Assistant
 
@@ -45,7 +45,7 @@ After the restart, add the integration itself: **Settings** → **Devices & Serv
 
 Manual installation copies the integration files into your Home Assistant configuration directory yourself. It works identically to a HACS install once running, but you take on the job of applying updates by hand — HACS will not know the integration exists.
 
-1. Download the [latest release](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/releases) from GitHub
+1. Download the [latest release](https://github.com/CaputoDavide93/mixergy-home-assistant/releases) from GitHub
 2. Copy `custom_components/mixergy/` into your HA `config/custom_components/` directory
 3. Restart Home Assistant
 4. Add the integration via **Settings** → **Devices & Services** → **Add Integration** → **Mixergy**
@@ -65,7 +65,7 @@ config/
 
 ## 🔄 How do updates arrive?
 
-Updates arrive as GitHub releases on [CaputoDavide93/Mixergy-Home-Assistant](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/releases). If you installed through HACS, new releases appear in the HACS update list and on Home Assistant's **Settings** page like any other update. Manual installs receive nothing automatically — watch the releases page yourself.
+Updates arrive as GitHub releases on [CaputoDavide93/mixergy-home-assistant](https://github.com/CaputoDavide93/mixergy-home-assistant/releases). If you installed through HACS, new releases appear in the HACS update list and on Home Assistant's **Settings** page like any other update. Manual installs receive nothing automatically — watch the releases page yourself.
 
 ---
 
@@ -73,7 +73,7 @@ Updates arrive as GitHub releases on [CaputoDavide93/Mixergy-Home-Assistant](htt
 
 Read the release notes first, take a Home Assistant backup, then apply the update through HACS and restart. Your configuration entry — credentials, serial number, experience mode, and options — survives updates, so you never re-enter anything after upgrading.
 
-1. Open the release notes for the new version on the [releases page](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/releases) and check for breaking changes
+1. Open the release notes for the new version on the [releases page](https://github.com/CaputoDavide93/mixergy-home-assistant/releases) and check for breaking changes
 2. Take a Home Assistant backup (**Settings** → **System** → **Backups**)
 3. In HACS, open **Mixergy** and select **Update** (or use the update entry on the Settings page)
 4. Restart Home Assistant

@@ -3,10 +3,10 @@
   "name": "Mixergy",
   "codeowners": ["@CaputoDavide93"],
   "config_flow": true,
-  "documentation": "https://github.com/CaputoDavide93/Mixergy-Home-Assistant",
+  "documentation": "https://github.com/CaputoDavide93/mixergy-home-assistant",
   "integration_type": "device",
   "iot_class": "cloud_polling",
-  "issue_tracker": "https://github.com/CaputoDavide93/Mixergy-Home-Assistant/issues",
+  "issue_tracker": "https://github.com/CaputoDavide93/mixergy-home-assistant/issues",
   "requirements": [],
   "version": "1.3.2"
 }
