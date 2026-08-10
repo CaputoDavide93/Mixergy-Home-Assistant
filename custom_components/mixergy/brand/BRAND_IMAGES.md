@@ -8,7 +8,7 @@ CDN, so their icon must also be updated in `home-assistant/brands`.
 
 | File | Size | Format | Usage |
 | ---- | ---- | ------ | ----- |
-| `icon.png` | 256 × 256 px | PNG with transparency | Integration icon shown in HACS and HA integrations page |
+| `icon.png` | 256 × 256 px | PNG with transparency | Integration icon shown in Home Assistant |
 | `icon@2x.png` | 512 × 512 px | PNG with transparency | High-DPI version of the icon |
 
 A separate landscape `logo.png` (min 300 px wide) is **optional** and not
@@ -48,8 +48,10 @@ python -c "import cairosvg; cairosvg.svg2png(url='assets/icon.svg', write_to='cu
 
 ## After changing images
 
-No code changes are needed — Home Assistant automatically picks up images from
-this directory when the integration is loaded (HA 2026.3+).
+No code changes are needed. Home Assistant 2026.3+ automatically prefers images
+from this directory when the integration is loaded. Supported older releases
+(HA 2025.8–2026.2) continue using the matching brands-CDN assets instead; this
+does not change the integration's Home Assistant 2025.8 minimum.
 
 For the icon to appear in HACS repository listings, submit it to the
 [home-assistant/brands](https://github.com/home-assistant/brands) repository
