@@ -1,0 +1,17 @@
+{
+  "sources": {
+    "banner.svg": "0f6ef26c2fba63a36ab2d96de33541606f9e8284ca0a56cc81f2e66d5bc746f6",
+    "dark_logo.svg": "06db4fb0a7d49e5c33c6d06f30c8c4a07ec25da7065ae38048b1e9f2eea43972",
+    "icon.svg": "94a44473d61371b084f831ac8b8522e4681eb11bafc7f31fb11b61d818e8e1b2",
+    "logo.svg": "1ee63f9bcf1af491229e9e696f7635e51de2e9e166c4f7aa1581b37bba6aea36"
+  },
+  "outputs": {
+    "assets/banner.png": "1a480747a2ad8c7e3d257916a0cc023be4e25f528ba49b7a9de2432439be00a3",
+    "custom_components/mixergy/brand/dark_logo.png": "ce12dd02ecf4a70d30c6068aa0aa50dc6cdcfbcef84b1d1af514da251160e336",
+    "custom_components/mixergy/brand/dark_logo@2x.png": "1e353127ca3d710ebd91683b1e144485102623523a6e905f9bbf3a2d7f2c826c",
+    "custom_components/mixergy/brand/icon.png": "abeacd540fa3173091425912ec50d80d3d40309a3911da4ff7314b512f3c42bc",
+    "custom_components/mixergy/brand/icon@2x.png": "8108a221f5aadd4927cfb33adb99fe8cc494f64425700732f68ba5b39aaf657d",
+    "custom_components/mixergy/brand/logo.png": "227319bda31a1c28fa21e9d369af58fdeb55de2cccc5212bdfcf38b3c7769cbd",
+    "custom_components/mixergy/brand/logo@2x.png": "911a07390c2061a26cb56045c08f2c4a7f04f39fb5199b8c87cda66efbd5461f"
+  }
+}
