@@ -42,9 +42,9 @@
 
   <!-- Wordmark + tagline -->
   <g font-family="Helvetica, Arial, sans-serif">
-    <text x="520" y="256" font-size="86" font-weight="700" fill="#ffffff">Mixergy-HA</text>
-    <text x="522" y="316" font-size="34" fill="#8fd3dd">Mixergy smart hot water tanks</text>
-    <text x="522" y="360" font-size="34" fill="#8fd3dd">in Home Assistant</text>
+    <text x="520" y="212" font-size="88" font-weight="700" fill="#ffffff">Mixergy</text>
+    <text x="520" y="308" font-size="88" font-weight="700" fill="#ffffff">Home Assistant</text>
+    <text x="522" y="362" font-size="33" fill="#8fd3dd">Monitor and control your smart hot water tank</text>
 
     <!-- Feature chips -->
     <g font-size="24" font-weight="600">
