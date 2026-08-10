@@ -304,9 +304,9 @@ automation:
 one you use in the Mixergy app). This is a cloud-polling integration — the
 tank has no local API.
 
-The UI is fully localised: the config flow, options, entity names, and
-repair messages ship in **English, German, French, and Italian** and follow
-your Home Assistant language setting.
+English covers the complete UI. German, French, and Italian translations are
+included where available, with Home Assistant's English fallback for newer
+options and repair messages while locale parity is completed.
 
 ---
 

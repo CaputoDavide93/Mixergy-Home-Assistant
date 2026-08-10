@@ -4,6 +4,21 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.4] - 2026-08-10
+
+Post-release correctness fixes from a deep review of `v1.3.3`.
+
+### Fixed
+
+- Successful HTTP responses with wrong-shaped JSON now raise typed
+  `MixergyAuthError` or `MixergyConnectionError` instead of leaking raw
+  `AttributeError` / `TypeError` exceptions into config flows and polling.
+- HATEOAS discovery and tank listing validate object, array, entry, and link
+  shapes consistently before reading fields.
+- Holiday windows are rejected before discovery or network I/O unless the
+  start is strictly before the end, protecting services and DateTime entities
+  with one API-level invariant.
+
 ## [1.3.3] - 2026-08-10
 
 Hardening release: exact-origin API-link validation, a public-release CI
