@@ -104,7 +104,6 @@ UNIT_MAP = {
     ("UnitOfPower", "WATT"): "W",
     ("UnitOfPower", "KILO_WATT"): "kW",
     ("UnitOfEnergy", "KILO_WATT_HOUR"): "kWh",
-    ("UnitOfRatio", "PERCENTAGE"): "%",
 }
 
 
@@ -114,7 +113,7 @@ def _unit(node: ast.AST | None) -> str | None:
         return None
     if isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name):
         return UNIT_MAP.get((node.value.id, node.attr))
-    if isinstance(node, ast.Name) and node.id == "PERCENTAGE":
+    if isinstance(node, ast.Name) and node.id in {"PERCENTAGE", "PERCENTAGE_UNIT"}:
         return "%"
     return None
 

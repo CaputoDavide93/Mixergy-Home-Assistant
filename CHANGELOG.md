@@ -7,12 +7,33 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Fixed
-- Migrated percentage sensors and controls to `UnitOfRatio.PERCENTAGE`, the
-  Home Assistant 2026.7+ unit API, while preserving the `%` state unit.
+
+- Percentage sensors and controls now use `UnitOfRatio.PERCENTAGE` on Home
+  Assistant 2026.7+ while retaining the equivalent legacy unit on the supported
+  2025.8 floor.
 - Diagnostics now return redacted config metadata when an entry failed before
   its coordinator loaded, instead of raising while users are troubleshooting.
 - Corrected the Italian polling-interval description to the enforced 30–300
   second range.
+- API discovery, login, and authenticated calls no longer follow redirects;
+  HATEOAS links are restricted to the exact verified `www.mixergy.io:443`
+  origin, and invalid heat-source writes fail before any network request.
+- Removed the private-home assumption that every tank belongs in Utility Room.
+
+### Security
+
+- GitHub Actions are pinned to immutable commits with explicit read-only token
+  permissions and timeouts.
+- Added a security policy backed by GitHub private vulnerability reporting;
+  Dependabot alerts and automated security updates are enabled.
+
+### Testing
+
+- CI now tests the advertised minimum HA 2025.8.0 and current HA 2026.8.1 on
+  every change, with a separate scheduled latest-HA canary.
+- Test-tool versions are pinned and the measured 67% coverage floor is enforced
+  to prevent regression. The inaccurate `quality_scale: silver` claim was
+  removed until coverage exceeds Home Assistant's required 95% threshold.
 
 ## [1.3.2] - 2026-08-09
 

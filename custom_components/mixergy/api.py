@@ -23,11 +23,10 @@ _LOGGER = logging.getLogger(__name__)
 
 API_ROOT = "https://www.mixergy.io/api/v2"
 
-# Hosts we are willing to send the bearer token to. HATEOAS links are
+# Host we are willing to send the bearer token to. HATEOAS links are
 # attacker-influenceable (a compromised/misconfigured upstream could serve
 # off-host or http:// links); restrict to the Mixergy origin.
-_ALLOWED_API_HOST_SUFFIX = ".mixergy.io"
-_ALLOWED_API_HOST = "mixergy.io"
+_ALLOWED_API_HOST = "www.mixergy.io"
 
 # Token refresh buffer — refresh 5 minutes before expiry
 TOKEN_REFRESH_BUFFER = 300
@@ -103,10 +102,25 @@ def _require_safe_link(href: Any, link_name: str) -> str:
             "(refusing to leak bearer token over plaintext)"
         )
     host = parsed.hostname or ""
-    if host != _ALLOWED_API_HOST and not host.endswith(_ALLOWED_API_HOST_SUFFIX):
+    if host != _ALLOWED_API_HOST:
         raise MixergyConnectionError(
             f"API link '{link_name}' points to unexpected host "
             f"'{host}' (refusing to send token off the Mixergy origin)"
+        )
+    if parsed.username is not None or parsed.password is not None:
+        raise MixergyConnectionError(
+            f"API link '{link_name}' contains user information "
+            "(refusing an ambiguous credential-bearing URL)"
+        )
+    try:
+        port = parsed.port
+    except ValueError as err:
+        raise MixergyConnectionError(
+            f"API link '{link_name}' contains an invalid port"
+        ) from err
+    if port not in (None, 443):
+        raise MixergyConnectionError(
+            f"API link '{link_name}' uses unexpected port {port}"
         )
     return href
 
@@ -123,6 +137,12 @@ def _api_to_ha_heat_source(api_value: str) -> str:
 
 def _ha_to_api_heat_source(ha_value: str) -> str:
     """Normalise HA-facing heat-source format back to API format."""
+    if ha_value not in {
+        HeatSource.ELECTRIC.value,
+        HeatSource.INDIRECT.value,
+        HeatSource.HEAT_PUMP.value,
+    }:
+        raise MixergyApiError(f"Unsupported heat source: {ha_value}")
     return "heatpump" if ha_value == "heat_pump" else ha_value
 
 
@@ -266,7 +286,10 @@ class MixergyApiClient:
 
         try:
             async with self._session.get(
-                API_ROOT, ssl=True, timeout=REQUEST_TIMEOUT
+                API_ROOT,
+                ssl=True,
+                timeout=REQUEST_TIMEOUT,
+                allow_redirects=False,
             ) as resp:
                 if resp.status != 200:
                     raise MixergyConnectionError(
@@ -278,7 +301,10 @@ class MixergyApiClient:
                 )
 
             async with self._session.get(
-                account_url, ssl=True, timeout=REQUEST_TIMEOUT
+                account_url,
+                ssl=True,
+                timeout=REQUEST_TIMEOUT,
+                allow_redirects=False,
             ) as resp:
                 if resp.status != 200:
                     raise MixergyConnectionError(
@@ -319,6 +345,7 @@ class MixergyApiClient:
                     json={"username": self._username, "password": self._password},
                     ssl=True,
                     timeout=REQUEST_TIMEOUT,
+                    allow_redirects=False,
                 ) as resp:
                     if resp.status == 401 or resp.status == 403:
                         raise MixergyAuthError("Invalid username or password")
@@ -540,7 +567,7 @@ class MixergyApiClient:
         try:
             resp = await self._session.request(
                 method, url, headers=self._auth_headers, ssl=True,
-                timeout=REQUEST_TIMEOUT, **kwargs
+                timeout=REQUEST_TIMEOUT, allow_redirects=False, **kwargs
             )
         except (aiohttp.ClientError, asyncio.TimeoutError) as err:
             raise MixergyConnectionError(
@@ -555,7 +582,7 @@ class MixergyApiClient:
             try:
                 resp = await self._session.request(
                     method, url, headers=self._auth_headers, ssl=True,
-                    timeout=REQUEST_TIMEOUT, **kwargs
+                    timeout=REQUEST_TIMEOUT, allow_redirects=False, **kwargs
                 )
             except (aiohttp.ClientError, asyncio.TimeoutError) as err:
                 raise MixergyConnectionError(
@@ -969,12 +996,13 @@ class MixergyApiClient:
         Accepts HA-canonical values ("heat_pump") and normalises to the API
         format ("heatpump") before sending. Serialised on _schedule_write_lock.
         """
+        api_heat_source = _ha_to_api_heat_source(heat_source)
         await self._discover_tank()
 
         async with self._schedule_write_lock:
             schedule_data = await self.fetch_schedule()
             raw = schedule_data.raw
-            raw["defaultHeatSource"] = _ha_to_api_heat_source(heat_source)
+            raw["defaultHeatSource"] = api_heat_source
 
             url = self._require_url(self._schedule_url, "schedule")
             async with await self._request_with_reauth(

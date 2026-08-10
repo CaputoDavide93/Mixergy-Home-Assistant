@@ -49,6 +49,18 @@ def _coordinator(
     return coordinator
 
 
+def test_device_metadata_does_not_assume_a_private_home_area(mock_tank_data) -> None:
+    """Public integration devices must not be forced into Utility Room."""
+    from custom_components.mixergy.entity import MixergyEntity
+
+    coordinator = MagicMock()
+    coordinator.data = mock_tank_data
+    entity = MixergyEntity(coordinator)
+
+    assert entity.device_info["manufacturer"] == "Mixergy Ltd"
+    assert "suggested_area" not in entity.device_info
+
+
 # ── water_heater ──────────────────────────────────────────────────────────────
 
 
@@ -220,8 +232,9 @@ def test_cost_sensor_state_class_is_total() -> None:
 
 def test_percentage_entities_use_ratio_enum() -> None:
     """HA 2026.7 deprecated PERCENTAGE as a unit; use UnitOfRatio instead."""
-    from homeassistant.const import UnitOfRatio
+    from homeassistant import const as ha_const
 
+    from custom_components.mixergy.const import PERCENTAGE_UNIT
     from custom_components.mixergy.number import (
         NUMBER_DESCRIPTIONS,
         MixergyBoostNumber,
@@ -232,13 +245,15 @@ def test_percentage_entities_use_ratio_enum() -> None:
     percentage_descriptions = [
         item
         for item in descriptions
-        if item.native_unit_of_measurement == UnitOfRatio.PERCENTAGE
+        if item.native_unit_of_measurement == PERCENTAGE_UNIT
     ]
     assert len(percentage_descriptions) == 4
 
     boost = MixergyBoostNumber.__new__(MixergyBoostNumber)
-    assert boost.native_unit_of_measurement == UnitOfRatio.PERCENTAGE
-    assert UnitOfRatio.PERCENTAGE.value == "%"
+    assert boost.native_unit_of_measurement == PERCENTAGE_UNIT
+    assert PERCENTAGE_UNIT == "%"
+    if unit_of_ratio := getattr(ha_const, "UnitOfRatio", None):
+        assert PERCENTAGE_UNIT is unit_of_ratio.PERCENTAGE
 
 
 def test_cost_sensor_skips_integration_on_failed_poll() -> None:
