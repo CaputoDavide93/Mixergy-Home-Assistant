@@ -7,6 +7,13 @@ from typing import TYPE_CHECKING, Final
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
 
+try:
+    from homeassistant.const import UnitOfRatio
+except ImportError:  # Home Assistant < 2026.7
+    from homeassistant.const import PERCENTAGE as PERCENTAGE_UNIT
+else:
+    PERCENTAGE_UNIT = UnitOfRatio.PERCENTAGE
+
 DOMAIN: Final = "mixergy"
 MANUFACTURER: Final = "Mixergy Ltd"
 

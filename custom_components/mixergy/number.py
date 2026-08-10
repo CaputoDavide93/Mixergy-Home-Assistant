@@ -12,12 +12,12 @@ from homeassistant.components.number import (
     NumberEntityDescription,
     NumberMode,
 )
-from homeassistant.const import PERCENTAGE, EntityCategory, UnitOfTemperature
+from homeassistant.const import EntityCategory, UnitOfTemperature
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .api import MixergyApiClient, TankData
-from .const import is_advanced_mode
+from .const import PERCENTAGE_UNIT, is_advanced_mode
 from .coordinator import MixergyConfigEntry, MixergyCoordinator
 from .entity import MixergyEntity
 
@@ -55,7 +55,7 @@ NUMBER_DESCRIPTIONS: tuple[MixergyNumberEntityDescription, ...] = (
     MixergyNumberEntityDescription(
         key="target_charge_control",
         translation_key="target_charge_control",
-        native_unit_of_measurement=PERCENTAGE,
+        native_unit_of_measurement=PERCENTAGE_UNIT,
         native_min_value=0,
         native_max_value=100,
         native_step=5,
@@ -96,7 +96,7 @@ NUMBER_DESCRIPTIONS: tuple[MixergyNumberEntityDescription, ...] = (
     MixergyNumberEntityDescription(
         key="pv_charge_limit",
         translation_key="pv_charge_limit",
-        native_unit_of_measurement=PERCENTAGE,
+        native_unit_of_measurement=PERCENTAGE_UNIT,
         native_min_value=0,
         native_max_value=100,
         native_step=10,
@@ -204,7 +204,7 @@ class MixergyBoostNumber(MixergyEntity, NumberEntity):
     """
 
     _attr_translation_key = "boost_charge_simple"
-    _attr_native_unit_of_measurement = PERCENTAGE
+    _attr_native_unit_of_measurement = PERCENTAGE_UNIT
     _attr_native_min_value = 0
     _attr_native_max_value = 100
     _attr_native_step = 5

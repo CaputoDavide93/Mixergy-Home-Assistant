@@ -57,7 +57,7 @@
         },
         "data_description": {
           "experience_mode": "Basculer entre Simple (surveillance + boost) et Avancé (contrôle total). L'intégration se rechargera à l'enregistrement.",
-          "update_interval": "À quelle fréquence récupérer les données de l'API Mixergy (10–300 secondes)."
+          "update_interval": "À quelle fréquence récupérer les données de l'API Mixergy (30–300 secondes)."
         }
       }
     },

@@ -49,6 +49,18 @@ def _coordinator(
     return coordinator
 
 
+def test_device_metadata_does_not_assume_a_private_home_area(mock_tank_data) -> None:
+    """Public integration devices must not be forced into Utility Room."""
+    from custom_components.mixergy.entity import MixergyEntity
+
+    coordinator = MagicMock()
+    coordinator.data = mock_tank_data
+    entity = MixergyEntity(coordinator)
+
+    assert entity.device_info["manufacturer"] == "Mixergy Ltd"
+    assert "suggested_area" not in entity.device_info
+
+
 # ── water_heater ──────────────────────────────────────────────────────────────
 
 
@@ -216,6 +228,46 @@ def test_cost_sensor_state_class_is_total() -> None:
     sensor = MixergyElectricCostSensor.__new__(MixergyElectricCostSensor)
     assert sensor._attr_state_class == SensorStateClass.TOTAL
     assert sensor.state_class == SensorStateClass.TOTAL
+
+
+def test_percentage_entities_use_ratio_enum() -> None:
+    """Percentage entities standardise on the UnitOfRatio enum.
+
+    HA 2026.7 introduced ``UnitOfRatio`` as the canonical spelling; the
+    legacy ``PERCENTAGE`` constant is NOT deprecated (verified against
+    2026.8.1 const.py — unlike the CONCENTRATION_* constants it has no
+    ``_DEPRECATED_`` wrapper), but the integration standardises on the enum
+    with a value-identical fallback on the 2025.8 floor.
+    """
+    from homeassistant import const as ha_const
+
+    from custom_components.mixergy.const import PERCENTAGE_UNIT
+    from custom_components.mixergy.number import (
+        NUMBER_DESCRIPTIONS,
+        MixergyBoostNumber,
+    )
+    from custom_components.mixergy.sensor import SENSOR_DESCRIPTIONS
+
+    descriptions = (*NUMBER_DESCRIPTIONS, *SENSOR_DESCRIPTIONS)
+    percentage_descriptions = [
+        item
+        for item in descriptions
+        if item.native_unit_of_measurement == PERCENTAGE_UNIT
+    ]
+    # Named keys, not a bare count — a failure should say WHICH entity
+    # gained or lost the unit, not force archaeology on a magic number.
+    assert sorted(item.key for item in percentage_descriptions) == [
+        "charge",
+        "pv_charge_limit",
+        "target_charge",
+        "target_charge_control",
+    ]
+
+    boost = MixergyBoostNumber.__new__(MixergyBoostNumber)
+    assert boost.native_unit_of_measurement == PERCENTAGE_UNIT
+    assert PERCENTAGE_UNIT == "%"
+    if unit_of_ratio := getattr(ha_const, "UnitOfRatio", None):
+        assert PERCENTAGE_UNIT is unit_of_ratio.PERCENTAGE
 
 
 def test_cost_sensor_skips_integration_on_failed_poll() -> None:

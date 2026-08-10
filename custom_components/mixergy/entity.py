@@ -36,7 +36,6 @@ class MixergyEntity(CoordinatorEntity[MixergyCoordinator]):
             sw_version=coordinator.data.info.firmware_version,
             serial_number=serial,
             configuration_url="https://www.mixergy.io",
-            suggested_area="Utility Room",
         )
 
     async def _async_write_command(

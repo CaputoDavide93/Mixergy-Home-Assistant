@@ -57,7 +57,7 @@
         },
         "data_description": {
           "experience_mode": "Wechsel zwischen Einfach (Überwachung + Aufheizen) und Erweitert (vollständige Kontrolle). Die Integration wird nach dem Speichern neu geladen.",
-          "update_interval": "Wie häufig Daten von der Mixergy-API abgerufen werden (10–300 Sekunden)."
+          "update_interval": "Wie häufig Daten von der Mixergy-API abgerufen werden (30–300 Sekunden)."
         }
       }
     },

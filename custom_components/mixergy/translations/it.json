@@ -57,7 +57,7 @@
         },
         "data_description": {
           "experience_mode": "Passa tra Semplice (monitoraggio + incremento) e Avanzato (controllo completo). L'integrazione si ricaricherà al salvataggio.",
-          "update_interval": "Con quale frequenza recuperare i dati dall'API Mixergy (10–300 secondi)."
+          "update_interval": "Con quale frequenza recuperare i dati dall'API Mixergy (30–300 secondi)."
         }
       }
     },

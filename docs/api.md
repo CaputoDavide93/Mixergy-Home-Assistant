@@ -56,7 +56,7 @@ Both walks are guarded against thundering herds: discovery runs under `_discover
 
 ### Why are discovered links validated?
 
-Discovered links are attacker-influenceable — a compromised or misconfigured upstream could serve `http://` or off-host URLs, and the client would otherwise send its bearer token wherever the response pointed. `_require_safe_link` therefore rejects any link that is not `https://` on `mixergy.io` or a `*.mixergy.io` subdomain, raising `MixergyConnectionError`.
+Discovered links are attacker-influenceable — a compromised or misconfigured upstream could serve `http://` or off-host URLs, and the client would otherwise send its bearer token wherever the response pointed. `_require_safe_link` therefore accepts only the exact API origin — `https://www.mixergy.io` on the default port, with no embedded credentials — and raises `MixergyConnectionError` for anything else. Redirects are never followed (`allow_redirects=False` on every request), so a redirect cannot replay the token elsewhere either; a permanent redirect on a cached endpoint instead clears the discovery cache so the next poll re-discovers.
 
 The two failure modes it closes:
 

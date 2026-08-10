@@ -23,11 +23,10 @@ _LOGGER = logging.getLogger(__name__)
 
 API_ROOT = "https://www.mixergy.io/api/v2"
 
-# Hosts we are willing to send the bearer token to. HATEOAS links are
+# Host we are willing to send the bearer token to. HATEOAS links are
 # attacker-influenceable (a compromised/misconfigured upstream could serve
 # off-host or http:// links); restrict to the Mixergy origin.
-_ALLOWED_API_HOST_SUFFIX = ".mixergy.io"
-_ALLOWED_API_HOST = "mixergy.io"
+_ALLOWED_API_HOST = "www.mixergy.io"
 
 # Token refresh buffer — refresh 5 minutes before expiry
 TOKEN_REFRESH_BUFFER = 300
@@ -96,17 +95,41 @@ def _require_safe_link(href: Any, link_name: str) -> str:
         raise MixergyConnectionError(
             f"Missing required API link '{link_name}'"
         )
-    parsed = urlparse(href)
+    try:
+        parsed = urlparse(href)
+    except ValueError as err:
+        # urlparse itself raises for malformed URLs (e.g. an unclosed IPv6
+        # bracket). Attacker-influenceable input must stay inside the
+        # MixergyApiError taxonomy — an untyped ValueError would escape as a
+        # raw traceback from the coordinator and as "unknown" in the flows.
+        raise MixergyConnectionError(
+            f"API link '{link_name}' is not a parseable URL"
+        ) from err
     if parsed.scheme != "https":
         raise MixergyConnectionError(
             f"API link '{link_name}' is not HTTPS: {href[:60]} "
             "(refusing to leak bearer token over plaintext)"
         )
     host = parsed.hostname or ""
-    if host != _ALLOWED_API_HOST and not host.endswith(_ALLOWED_API_HOST_SUFFIX):
+    if host != _ALLOWED_API_HOST:
         raise MixergyConnectionError(
             f"API link '{link_name}' points to unexpected host "
             f"'{host}' (refusing to send token off the Mixergy origin)"
+        )
+    if parsed.username is not None or parsed.password is not None:
+        raise MixergyConnectionError(
+            f"API link '{link_name}' contains user information "
+            "(refusing an ambiguous credential-bearing URL)"
+        )
+    try:
+        port = parsed.port
+    except ValueError as err:
+        raise MixergyConnectionError(
+            f"API link '{link_name}' contains an invalid port"
+        ) from err
+    if port not in (None, 443):
+        raise MixergyConnectionError(
+            f"API link '{link_name}' uses unexpected port {port}"
         )
     return href
 
@@ -121,8 +144,18 @@ def _api_to_ha_heat_source(api_value: str) -> str:
     return "heat_pump" if api_value == "heatpump" else api_value
 
 
+# The writable heat sources, derived from the enum so a new source added
+# there (and to const.HEAT_SOURCE_OPTIONS for the select) is accepted here
+# without a third hand-typed copy of the list.
+_WRITABLE_HEAT_SOURCES = frozenset(
+    hs.value for hs in HeatSource if hs is not HeatSource.NONE
+)
+
+
 def _ha_to_api_heat_source(ha_value: str) -> str:
     """Normalise HA-facing heat-source format back to API format."""
+    if ha_value not in _WRITABLE_HEAT_SOURCES:
+        raise MixergyApiError(f"Unsupported heat source: {ha_value}")
     return "heatpump" if ha_value == "heat_pump" else ha_value
 
 
@@ -266,7 +299,10 @@ class MixergyApiClient:
 
         try:
             async with self._session.get(
-                API_ROOT, ssl=True, timeout=REQUEST_TIMEOUT
+                API_ROOT,
+                ssl=True,
+                timeout=REQUEST_TIMEOUT,
+                allow_redirects=False,
             ) as resp:
                 if resp.status != 200:
                     raise MixergyConnectionError(
@@ -278,7 +314,10 @@ class MixergyApiClient:
                 )
 
             async with self._session.get(
-                account_url, ssl=True, timeout=REQUEST_TIMEOUT
+                account_url,
+                ssl=True,
+                timeout=REQUEST_TIMEOUT,
+                allow_redirects=False,
             ) as resp:
                 if resp.status != 200:
                     raise MixergyConnectionError(
@@ -319,6 +358,7 @@ class MixergyApiClient:
                     json={"username": self._username, "password": self._password},
                     ssl=True,
                     timeout=REQUEST_TIMEOUT,
+                    allow_redirects=False,
                 ) as resp:
                     if resp.status == 401 or resp.status == 403:
                         raise MixergyAuthError("Invalid username or password")
@@ -540,7 +580,7 @@ class MixergyApiClient:
         try:
             resp = await self._session.request(
                 method, url, headers=self._auth_headers, ssl=True,
-                timeout=REQUEST_TIMEOUT, **kwargs
+                timeout=REQUEST_TIMEOUT, allow_redirects=False, **kwargs
             )
         except (aiohttp.ClientError, asyncio.TimeoutError) as err:
             raise MixergyConnectionError(
@@ -555,7 +595,7 @@ class MixergyApiClient:
             try:
                 resp = await self._session.request(
                     method, url, headers=self._auth_headers, ssl=True,
-                    timeout=REQUEST_TIMEOUT, **kwargs
+                    timeout=REQUEST_TIMEOUT, allow_redirects=False, **kwargs
                 )
             except (aiohttp.ClientError, asyncio.TimeoutError) as err:
                 raise MixergyConnectionError(
@@ -579,7 +619,16 @@ class MixergyApiClient:
         # coordinator kept hitting the dead URL every poll forever, and
         # the only user remedy was to reload the integration. Clear the
         # cached discovery so the NEXT call re-runs _discover_tank().
-        if resp.status in (404, 410):
+        #
+        # 3xx joins the list because redirects are never followed
+        # (allow_redirects=False, so a redirect can't replay the bearer
+        # token elsewhere): a permanent redirect on a cached endpoint is
+        # the same "this URL moved" signal as a 404 — without clearing,
+        # an endpoint rotation signalled via 301/308 would fail every
+        # poll forever, the exact failure mode this guard exists for.
+        # The response still propagates as a non-200 to the caller; the
+        # NEXT poll walks discovery and picks up the new links.
+        if resp.status in (301, 302, 303, 307, 308, 404, 410):
             _LOGGER.warning(
                 "Mixergy URL %s returned %s — clearing cached HATEOAS "
                 "discovery so the next request re-discovers",
@@ -969,12 +1018,13 @@ class MixergyApiClient:
         Accepts HA-canonical values ("heat_pump") and normalises to the API
         format ("heatpump") before sending. Serialised on _schedule_write_lock.
         """
+        api_heat_source = _ha_to_api_heat_source(heat_source)
         await self._discover_tank()
 
         async with self._schedule_write_lock:
             schedule_data = await self.fetch_schedule()
             raw = schedule_data.raw
-            raw["defaultHeatSource"] = _ha_to_api_heat_source(heat_source)
+            raw["defaultHeatSource"] = api_heat_source
 
             url = self._require_url(self._schedule_url, "schedule")
             async with await self._request_with_reauth(

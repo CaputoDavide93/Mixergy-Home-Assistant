@@ -10,8 +10,12 @@ build/
 
 # Virtual environments
 .venv/
+.test_venv/
 venv/
 env/
+.pytest_cache/
+.coverage
+htmlcov/
 
 # IDE
 .vscode/

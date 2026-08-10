@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import time
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -10,6 +11,7 @@ import pytest
 from custom_components.mixergy.api import (
     HeatSource,
     MixergyApiClient,
+    MixergyApiError,
     MixergyAuthError,
     MixergyConnectionError,
     MixergyTankNotFoundError,
@@ -380,6 +382,20 @@ async def test_set_default_heat_source_sends_heatpump_to_api(
     heat_source_calls = [b for b in put_bodies if "defaultHeatSource" in b]
     assert heat_source_calls, "No PUT call contained 'defaultHeatSource'"
     assert heat_source_calls[-1]["defaultHeatSource"] == "heatpump"
+
+
+@pytest.mark.asyncio
+async def test_set_default_heat_source_rejects_invalid_value_before_io(
+    api_client: MixergyApiClient,
+    mock_aiohttp_session: MagicMock,
+) -> None:
+    """Invalid non-UI values must fail closed without touching the API."""
+    with pytest.raises(MixergyApiError, match="Unsupported heat source"):
+        await api_client.set_default_heat_source("solar")
+
+    mock_aiohttp_session.get.assert_not_called()
+    mock_aiohttp_session.post.assert_not_called()
+    mock_aiohttp_session.request.assert_not_awaited()
 
 
 # ── HATEOAS link validation ───────────────────────────────────────────────────
@@ -797,6 +813,53 @@ async def test_off_host_hateoas_link_rejected(
         await client._discover_tank()
 
 
+@pytest.mark.parametrize(
+    ("href", "message"),
+    (
+        ("https://attacker.mixergy.io/api/v2", "unexpected host"),
+        ("https://user:pass@www.mixergy.io/api/v2", "user information"),
+        ("https://www.mixergy.io:8443/api/v2", "unexpected port"),
+        ("https://www.mixergy.io:not-a-port/api/v2", "invalid port"),
+    ),
+)
+def test_ambiguous_mixergy_origins_rejected(href: str, message: str) -> None:
+    """Only the exact public Mixergy API origin may supply HATEOAS links."""
+    from custom_components.mixergy.api import _require_safe_link
+
+    with pytest.raises(MixergyConnectionError, match=message):
+        _require_safe_link(href, "test")
+
+
+@pytest.mark.asyncio
+async def test_all_requests_disable_redirects(
+    mock_aiohttp_session: MagicMock,
+) -> None:
+    """Redirects must not bypass link validation or replay credentials."""
+    client = MixergyApiClient(
+        session=mock_aiohttp_session,
+        username=MOCK_USERNAME,
+        password=MOCK_PASSWORD,
+        serial_number=MOCK_SERIAL,
+    )
+
+    await client.authenticate()
+    client._measurement_url = (
+        f"https://www.mixergy.io/api/v2/tank/{MOCK_SERIAL}/measurement"
+    )
+    response = await client._request_with_reauth("GET", client._measurement_url)
+    response.release()
+
+    assert mock_aiohttp_session.get.call_args_list
+    assert mock_aiohttp_session.post.call_args_list
+    assert mock_aiohttp_session.request.await_args_list
+    for call in mock_aiohttp_session.get.call_args_list:
+        assert call.kwargs["allow_redirects"] is False
+    for call in mock_aiohttp_session.post.call_args_list:
+        assert call.kwargs["allow_redirects"] is False
+    for call in mock_aiohttp_session.request.await_args_list:
+        assert call.kwargs["allow_redirects"] is False
+
+
 @pytest.mark.asyncio
 async def test_network_error_normalised_to_connection_error(
     mock_aiohttp_session: MagicMock,
@@ -903,3 +966,50 @@ def test_require_url_raises_typed_error_when_cache_nulled() -> None:
     assert client._require_url("https://www.mixergy.io/x", "x") == (
         "https://www.mixergy.io/x"
     )
+
+
+def test_malformed_url_rejected_inside_error_taxonomy() -> None:
+    """urlparse failures must surface as MixergyConnectionError, not ValueError.
+
+    An unclosed IPv6 bracket makes urlparse itself raise; attacker-influenced
+    input must never escape the MixergyApiError taxonomy as a raw traceback.
+    """
+    from custom_components.mixergy.api import _require_safe_link
+
+    with pytest.raises(MixergyConnectionError, match="not a parseable URL"):
+        _require_safe_link("https://[www.mixergy.io/api/v2", "test")
+
+
+@pytest.mark.asyncio
+async def test_redirect_clears_cached_discovery(
+    mock_aiohttp_session: MagicMock,
+) -> None:
+    """A 3xx on a cached endpoint must trigger re-discovery, like 404/410.
+
+    Redirects are never followed, so a permanent redirect signalling an
+    endpoint rotation would otherwise fail every poll forever with the
+    cached URL never refreshed.
+    """
+    client = MixergyApiClient(
+        session=mock_aiohttp_session,
+        username=MOCK_USERNAME,
+        password=MOCK_PASSWORD,
+        serial_number=MOCK_SERIAL,
+    )
+    # Prime a valid token and a fully cached discovery.
+    client._token = "token"
+    client._token_expiry = time.time() + 3600
+    stale = f"https://www.mixergy.io/api/v2/tank/{MOCK_SERIAL}/measurement"
+    client._measurement_url = stale
+    client._control_url = stale
+    client._settings_url = stale
+    client._schedule_url = stale
+
+    mock_aiohttp_session.request = AsyncMock(return_value=_make_resp(301))
+
+    resp = await client._request_with_reauth("GET", stale)
+    assert resp.status == 301
+    assert client._measurement_url is None
+    assert client._control_url is None
+    assert client._settings_url is None
+    assert client._schedule_url is None

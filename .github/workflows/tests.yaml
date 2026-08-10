@@ -6,34 +6,107 @@ on:
   pull_request:
     branches: [main]
   schedule:
-    # Weekly against latest published homeassistant (requirements_test.txt is
-    # unpinned on purpose): catches core API churn between our own pushes,
-    # so a new HA release can't break the integration unnoticed.
+    # Weekly latest-HA canary catches core API churn between releases.
     - cron: "0 9 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
-  tests:
-    name: Run pytest
+  compatibility:
+    name: ${{ matrix.name }}
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Minimum HA 2025.8.0
+            python: "3.13"
+            homeassistant: "2025.8.0"
+            minimum: true
+          - name: Current HA 2026.8.1
+            python: "3.14"
+            homeassistant: "2026.8.1"
+            minimum: false
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
-          # Must track HA core's floor (2026.8 needs >=3.14.2). On an older
-          # python, pip silently resolves an OLD homeassistant and the suite
-          # goes green against a core nobody runs any more.
-          python-version: "3.14"
+          python-version: ${{ matrix.python }}
           cache: pip
-          cache-dependency-path: requirements_test.txt
+          # The big dependency (homeassistant==<matrix version>) comes from
+          # the workflow, not requirements_test.txt — include this file in
+          # the key so an HA version bump rotates the cache instead of
+          # leaving it permanently stale for that leg.
+          cache-dependency-path: |
+            requirements_test.txt
+            .github/workflows/tests.yaml
 
       - name: Install dependencies
-        run: pip install -r requirements_test.txt
+        run: |
+          requirements=("homeassistant==${{ matrix.homeassistant }}")
+          if [[ "${{ matrix.minimum }}" == "true" ]]; then
+            # HA 2025.8 pins aiodns 3.5 but not pycares; pycares 5 removed
+            # symbols that aiodns 3.5 imports, so today's resolver otherwise
+            # creates an environment that fails before Home Assistant loads.
+            requirements+=("pycares<5")
+          fi
+          python -m pip install -r requirements_test.txt "${requirements[@]}"
 
       - name: Check generated entity docs are current
         run: python tools/gen_entity_docs.py --check
 
       - name: Run tests
-        run: pytest tests/ -v --tb=short
+        run: >-
+          pytest tests/ -v --tb=short
+          --cov=custom_components.mixergy
+          --cov-report=term-missing
+          --cov-fail-under=65
+
+  latest-ha-canary:
+    name: Latest HA canary
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.14"
+          cache: pip
+          # The big dependency (homeassistant==<matrix version>) comes from
+          # the workflow, not requirements_test.txt — include this file in
+          # the key so an HA version bump rotates the cache instead of
+          # leaving it permanently stale for that leg.
+          cache-dependency-path: |
+            requirements_test.txt
+            .github/workflows/tests.yaml
+      - name: Install latest Home Assistant
+        run: python -m pip install -r requirements_test.txt --upgrade homeassistant
+      - name: Assert the canary actually got the latest release
+        # The canary's whole purpose is testing the CURRENT core. If HA bumps
+        # its Python floor above this job's pinned interpreter, pip silently
+        # resolves an older release and the canary goes green against a core
+        # nobody runs — fail loudly instead.
+        run: |
+          installed=$(python -c "from importlib.metadata import version; print(version('homeassistant'))")
+          latest=$(curl -s https://pypi.org/pypi/homeassistant/json | python -c "import json,sys; print(json.load(sys.stdin)['info']['version'])")
+          echo "installed=$installed latest=$latest"
+          if [[ "$installed" != "$latest" ]]; then
+            echo "::error::Canary resolved homeassistant $installed but PyPI latest is $latest — bump this job's python-version to match HA's floor"
+            exit 1
+          fi
+      - name: Check generated entity docs are current
+        run: python tools/gen_entity_docs.py --check
+      - name: Run latest compatibility suite
+        run: >-
+          pytest tests/ -v --tb=short
+          --cov=custom_components.mixergy
+          --cov-report=term-missing
+          --cov-fail-under=65

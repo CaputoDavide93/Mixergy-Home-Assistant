@@ -17,7 +17,6 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 from homeassistant.const import (
-    PERCENTAGE,
     EntityCategory,
     UnitOfEnergy,
     UnitOfPower,
@@ -27,7 +26,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .api import TankData
-from .const import CONF_ELECTRIC_RATE
+from .const import CONF_ELECTRIC_RATE, PERCENTAGE_UNIT
 from .coordinator import MixergyConfigEntry, MixergyCoordinator
 from .entity import MixergyEntity
 
@@ -105,7 +104,7 @@ SENSOR_DESCRIPTIONS: tuple[MixergySensorEntityDescription, ...] = (
     MixergySensorEntityDescription(
         key="charge",
         translation_key="charge",
-        native_unit_of_measurement=PERCENTAGE,
+        native_unit_of_measurement=PERCENTAGE_UNIT,
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:water-percent",
         suggested_display_precision=0,
@@ -114,7 +113,7 @@ SENSOR_DESCRIPTIONS: tuple[MixergySensorEntityDescription, ...] = (
     MixergySensorEntityDescription(
         key="target_charge",
         translation_key="target_charge",
-        native_unit_of_measurement=PERCENTAGE,
+        native_unit_of_measurement=PERCENTAGE_UNIT,
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:water-percent",
         suggested_display_precision=0,
