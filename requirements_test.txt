@@ -1,3 +1,11 @@
+# Everything the suite imports must be declared here so a fresh clone can run
+# `pip install -r requirements_test.txt && pytest tests/` (the README's
+# Contributing instructions). CI additionally pins the homeassistant version
+# per matrix leg on the pip command line — the unpinned entry below is the
+# local default and is overridden by those pins.
+homeassistant
+aiohttp
+PyYAML
 pytest==9.1.1
 pytest-asyncio==1.4.0
 pytest-cov==7.1.0

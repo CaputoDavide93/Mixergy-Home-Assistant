@@ -28,26 +28,32 @@ _CLIENT_PATCH = "custom_components.mixergy.config_flow.MixergyApiClient"
 _SESSION_PATCH = "custom_components.mixergy.config_flow.async_get_clientsession"
 
 
-def test_italian_update_interval_copy_matches_selector_bounds() -> None:
-    """User-facing range text must match the options selector limits."""
+def test_update_interval_copy_matches_selector_bounds_in_every_locale() -> None:
+    """User-facing range text must match the options selector limits.
+
+    Parametrised over every shipped locale plus strings.json — the original
+    it.json-only check stayed green while de.json and fr.json still carried
+    the stale 10–300 range. The "(MIN–MAX " prefix is language-agnostic; the
+    unit word after it is not asserted.
+    """
     from custom_components.mixergy.const import (
         MAX_UPDATE_INTERVAL,
         MIN_UPDATE_INTERVAL,
     )
 
-    translation_path = (
-        Path(__file__).parents[1]
-        / "custom_components"
-        / "mixergy"
-        / "translations"
-        / "it.json"
-    )
-    translation = json.loads(translation_path.read_text())
-    description = translation["options"]["step"]["init"]["data_description"][
-        CONF_UPDATE_INTERVAL
-    ]
+    component = Path(__file__).parents[1] / "custom_components" / "mixergy"
+    sources = sorted((component / "translations").glob("*.json"))
+    sources.append(component / "strings.json")
+    assert len(sources) >= 5, "expected en/de/fr/it translations + strings.json"
 
-    assert f"({MIN_UPDATE_INTERVAL}–{MAX_UPDATE_INTERVAL} secondi)" in description
+    for source in sources:
+        translation = json.loads(source.read_text())
+        description = translation["options"]["step"]["init"]["data_description"][
+            CONF_UPDATE_INTERVAL
+        ]
+        assert (
+            f"({MIN_UPDATE_INTERVAL}–{MAX_UPDATE_INTERVAL} " in description
+        ), f"{source.name}: stale interval range in {description!r}"
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────

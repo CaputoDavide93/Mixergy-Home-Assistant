@@ -95,7 +95,16 @@ def _require_safe_link(href: Any, link_name: str) -> str:
         raise MixergyConnectionError(
             f"Missing required API link '{link_name}'"
         )
-    parsed = urlparse(href)
+    try:
+        parsed = urlparse(href)
+    except ValueError as err:
+        # urlparse itself raises for malformed URLs (e.g. an unclosed IPv6
+        # bracket). Attacker-influenceable input must stay inside the
+        # MixergyApiError taxonomy — an untyped ValueError would escape as a
+        # raw traceback from the coordinator and as "unknown" in the flows.
+        raise MixergyConnectionError(
+            f"API link '{link_name}' is not a parseable URL"
+        ) from err
     if parsed.scheme != "https":
         raise MixergyConnectionError(
             f"API link '{link_name}' is not HTTPS: {href[:60]} "
@@ -135,13 +144,17 @@ def _api_to_ha_heat_source(api_value: str) -> str:
     return "heat_pump" if api_value == "heatpump" else api_value
 
 
+# The writable heat sources, derived from the enum so a new source added
+# there (and to const.HEAT_SOURCE_OPTIONS for the select) is accepted here
+# without a third hand-typed copy of the list.
+_WRITABLE_HEAT_SOURCES = frozenset(
+    hs.value for hs in HeatSource if hs is not HeatSource.NONE
+)
+
+
 def _ha_to_api_heat_source(ha_value: str) -> str:
     """Normalise HA-facing heat-source format back to API format."""
-    if ha_value not in {
-        HeatSource.ELECTRIC.value,
-        HeatSource.INDIRECT.value,
-        HeatSource.HEAT_PUMP.value,
-    }:
+    if ha_value not in _WRITABLE_HEAT_SOURCES:
         raise MixergyApiError(f"Unsupported heat source: {ha_value}")
     return "heatpump" if ha_value == "heat_pump" else ha_value
 
@@ -606,7 +619,16 @@ class MixergyApiClient:
         # coordinator kept hitting the dead URL every poll forever, and
         # the only user remedy was to reload the integration. Clear the
         # cached discovery so the NEXT call re-runs _discover_tank().
-        if resp.status in (404, 410):
+        #
+        # 3xx joins the list because redirects are never followed
+        # (allow_redirects=False, so a redirect can't replay the bearer
+        # token elsewhere): a permanent redirect on a cached endpoint is
+        # the same "this URL moved" signal as a 404 — without clearing,
+        # an endpoint rotation signalled via 301/308 would fail every
+        # poll forever, the exact failure mode this guard exists for.
+        # The response still propagates as a non-200 to the caller; the
+        # NEXT poll walks discovery and picks up the new links.
+        if resp.status in (301, 302, 303, 307, 308, 404, 410):
             _LOGGER.warning(
                 "Mixergy URL %s returned %s — clearing cached HATEOAS "
                 "discovery so the next request re-discovers",

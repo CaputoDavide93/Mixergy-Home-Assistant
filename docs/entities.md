@@ -225,7 +225,6 @@ The device registers with:
 | Model | The tank's model code, as reported by the cloud |
 | Serial number | Your tank's serial number |
 | Firmware | The tank's firmware version |
-| Suggested area | Utility Room — a suggestion only; assign any area you like |
 | Configuration URL | [mixergy.io](https://www.mixergy.io) — links to the Mixergy site for account management |
 
 ## 🔗 See also

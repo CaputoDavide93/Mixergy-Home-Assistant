@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import time
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -965,3 +966,50 @@ def test_require_url_raises_typed_error_when_cache_nulled() -> None:
     assert client._require_url("https://www.mixergy.io/x", "x") == (
         "https://www.mixergy.io/x"
     )
+
+
+def test_malformed_url_rejected_inside_error_taxonomy() -> None:
+    """urlparse failures must surface as MixergyConnectionError, not ValueError.
+
+    An unclosed IPv6 bracket makes urlparse itself raise; attacker-influenced
+    input must never escape the MixergyApiError taxonomy as a raw traceback.
+    """
+    from custom_components.mixergy.api import _require_safe_link
+
+    with pytest.raises(MixergyConnectionError, match="not a parseable URL"):
+        _require_safe_link("https://[www.mixergy.io/api/v2", "test")
+
+
+@pytest.mark.asyncio
+async def test_redirect_clears_cached_discovery(
+    mock_aiohttp_session: MagicMock,
+) -> None:
+    """A 3xx on a cached endpoint must trigger re-discovery, like 404/410.
+
+    Redirects are never followed, so a permanent redirect signalling an
+    endpoint rotation would otherwise fail every poll forever with the
+    cached URL never refreshed.
+    """
+    client = MixergyApiClient(
+        session=mock_aiohttp_session,
+        username=MOCK_USERNAME,
+        password=MOCK_PASSWORD,
+        serial_number=MOCK_SERIAL,
+    )
+    # Prime a valid token and a fully cached discovery.
+    client._token = "token"
+    client._token_expiry = time.time() + 3600
+    stale = f"https://www.mixergy.io/api/v2/tank/{MOCK_SERIAL}/measurement"
+    client._measurement_url = stale
+    client._control_url = stale
+    client._settings_url = stale
+    client._schedule_url = stale
+
+    mock_aiohttp_session.request = AsyncMock(return_value=_make_resp(301))
+
+    resp = await client._request_with_reauth("GET", stale)
+    assert resp.status == 301
+    assert client._measurement_url is None
+    assert client._control_url is None
+    assert client._settings_url is None
+    assert client._schedule_url is None
