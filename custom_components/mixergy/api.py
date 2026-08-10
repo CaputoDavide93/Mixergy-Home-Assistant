@@ -69,6 +69,23 @@ class PVType(StrEnum):
 
 # ── Format helpers ────────────────────────────────────────────────────────────
 
+def _require_object(
+    value: Any,
+    context: str,
+    error_type: type[MixergyApiError] = MixergyConnectionError,
+) -> dict[str, Any]:
+    """Require a decoded JSON object and keep schema faults typed."""
+    if not isinstance(value, dict):
+        raise error_type(f"{context} was not a JSON object")
+    return value
+
+
+def _require_array(value: Any, context: str) -> list[Any]:
+    """Require a decoded JSON array and keep schema faults typed."""
+    if not isinstance(value, list):
+        raise MixergyConnectionError(f"{context} was not a JSON array")
+    return value
+
 def _as_float(value: Any, default: float = 0.0) -> float:
     """Coerce an API value to a finite float, else return default.
 
@@ -81,6 +98,21 @@ def _as_float(value: Any, default: float = 0.0) -> float:
     except (TypeError, ValueError):
         return default
     return result if math.isfinite(result) else default
+
+
+def _as_bool(value: Any, default: bool = False) -> bool:
+    """Coerce common API boolean encodings without treating "false" as true."""
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)) and value in (0, 1):
+        return bool(value)
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in {"true", "1"}:
+            return True
+        if normalized in {"false", "0"}:
+            return False
+    return default
 
 
 def _require_safe_link(href: Any, link_name: str) -> str:
@@ -134,13 +166,30 @@ def _require_safe_link(href: Any, link_name: str) -> str:
     return href
 
 
-def _api_to_ha_heat_source(api_value: str) -> str:
+def _require_link(links: dict[str, Any], link_name: str) -> str:
+    """Extract and validate one HATEOAS link object."""
+    raw_link = links.get(link_name)
+    if raw_link is None:
+        return _require_safe_link(None, link_name)
+    link = _require_object(raw_link, f"API link '{link_name}'")
+    return _require_safe_link(link.get("href"), link_name)
+
+
+def _api_to_ha_heat_source(api_value: Any) -> str:
     """Normalise API heat-source format to HA-facing format.
 
     The Mixergy API uses "heatpump" (no underscore) for the schedule's
     defaultHeatSource field, but the HA select/sensor entities use "heat_pump"
     (with underscore) to match their translation keys.
     """
+    if not isinstance(api_value, str):
+        raise MixergyConnectionError(
+            "Schedule defaultHeatSource was not a string"
+        )
+    if api_value not in {"electric", "indirect", "heatpump"}:
+        raise MixergyConnectionError(
+            f"Unsupported schedule heat source: {api_value}"
+        )
     return "heat_pump" if api_value == "heatpump" else api_value
 
 
@@ -308,10 +357,9 @@ class MixergyApiClient:
                     raise MixergyConnectionError(
                         f"Root endpoint returned {resp.status}"
                     )
-                root = await resp.json()
-                account_url = _require_safe_link(
-                    root["_links"]["account"]["href"], "account"
-                )
+                root = _require_object(await resp.json(), "Root response")
+                root_links = _require_object(root.get("_links"), "Root links")
+                account_url = _require_link(root_links, "account")
 
             async with self._session.get(
                 account_url,
@@ -323,10 +371,11 @@ class MixergyApiClient:
                     raise MixergyConnectionError(
                         f"Account endpoint returned {resp.status}"
                     )
-                account = await resp.json()
-                self._login_url = _require_safe_link(
-                    account["_links"]["login"]["href"], "login"
+                account = _require_object(await resp.json(), "Account response")
+                account_links = _require_object(
+                    account.get("_links"), "Account links"
                 )
+                self._login_url = _require_link(account_links, "login")
 
         except (aiohttp.ClientError, asyncio.TimeoutError, KeyError,
                 json.JSONDecodeError) as err:
@@ -367,7 +416,11 @@ class MixergyApiClient:
                             f"Authentication failed with status {resp.status}"
                         )
 
-                    data = await resp.json()
+                    data = _require_object(
+                        await resp.json(),
+                        "Authentication response",
+                        MixergyAuthError,
+                    )
                     token = data.get("token")
                     if not isinstance(token, str) or not token:
                         raise MixergyAuthError(
@@ -462,10 +515,9 @@ class MixergyApiClient:
                         raise MixergyConnectionError(
                             f"Root endpoint returned {resp.status}"
                         )
-                    root = await resp.json()
-                    self._tanks_url = _require_safe_link(
-                        root["_links"]["tanks"]["href"], "tanks"
-                    )
+                    root = _require_object(await resp.json(), "Root response")
+                    root_links = _require_object(root.get("_links"), "Root links")
+                    self._tanks_url = _require_link(root_links, "tanks")
 
                 # Get list of tanks
                 async with await self._request_with_reauth(
@@ -475,13 +527,21 @@ class MixergyApiClient:
                         raise MixergyConnectionError(
                             f"Tanks endpoint returned {resp.status}"
                         )
-                    data = await resp.json()
-                    tanks = data["_embedded"]["tankList"]
+                    data = _require_object(await resp.json(), "Tanks response")
+                    embedded = _require_object(
+                        data.get("_embedded"), "Tanks embedded data"
+                    )
+                    tanks = _require_array(embedded.get("tankList"), "Tank list")
 
                 # Find our tank
                 tank = None
-                for t in tanks:
-                    if t["serialNumber"].upper() == self._serial_number:
+                for raw_tank in tanks:
+                    t = _require_object(raw_tank, "Tank list entry")
+                    serial = t.get("serialNumber")
+                    if (
+                        isinstance(serial, str)
+                        and serial.strip().upper() == self._serial_number
+                    ):
                         tank = t
                         break
 
@@ -490,14 +550,15 @@ class MixergyApiClient:
                         f"No tank with serial number {self._serial_number}"
                     )
 
-                self._tank_info.firmware_version = tank.get(
-                    "firmwareVersion", "0.0.0"
-                )
+                firmware_version = tank.get("firmwareVersion", "0.0.0")
+                if not isinstance(firmware_version, str):
+                    firmware_version = "0.0.0"
 
                 # Get detailed tank info
-                tank_url = _require_safe_link(
-                    tank["_links"]["self"]["href"], "tank_self"
+                tank_links = _require_object(
+                    tank.get("_links"), "Tank list entry links"
                 )
+                tank_url = _require_link(tank_links, "self")
                 async with await self._request_with_reauth(
                     "GET", tank_url
                 ) as resp:
@@ -505,35 +566,46 @@ class MixergyApiClient:
                         raise MixergyConnectionError(
                             f"Tank detail endpoint returned {resp.status}"
                         )
-                    detail = await resp.json()
+                    detail = _require_object(
+                        await resp.json(), "Tank detail response"
+                    )
 
                 # Validate every required HATEOAS link (https + Mixergy host)
                 # before we cache it and start sending the bearer token to it.
-                links = detail.get("_links", {})
-                self._measurement_url = _require_safe_link(
-                    links.get("latest_measurement", {}).get("href"),
-                    "latest_measurement",
-                )
-                self._control_url = _require_safe_link(
-                    links.get("control", {}).get("href"), "control"
-                )
-                self._settings_url = _require_safe_link(
-                    links.get("settings", {}).get("href"), "settings"
-                )
-                self._schedule_url = _require_safe_link(
-                    links.get("schedule", {}).get("href"), "schedule"
-                )
+                links = _require_object(detail.get("_links"), "Tank detail links")
+                measurement_url = _require_link(links, "latest_measurement")
+                control_url = _require_link(links, "control")
+                settings_url = _require_link(links, "settings")
+                schedule_url = _require_link(links, "schedule")
 
-                self._tank_info.model_code = detail.get("tankModelCode", "Unknown")
+                model_code = detail.get("tankModelCode", "Unknown")
+                if not isinstance(model_code, str):
+                    model_code = "Unknown"
 
                 # Parse PV diverter presence
                 config_json = detail.get("configuration", "{}")
+                has_pv_diverter = False
                 try:
                     config = json.loads(config_json)
-                    pv_type = config.get("mixergyPvType", "NO_INVERTER")
-                    self._tank_info.has_pv_diverter = pv_type != "NO_INVERTER"
+                    if isinstance(config, dict):
+                        pv_type = config.get("mixergyPvType", "NO_INVERTER")
+                        has_pv_diverter = (
+                            isinstance(pv_type, str)
+                            and pv_type != "NO_INVERTER"
+                        )
                 except (json.JSONDecodeError, TypeError):
-                    self._tank_info.has_pv_diverter = False
+                    pass
+
+                # Publish discovery atomically only after every required link
+                # and metadata field has validated. A failed late link must not
+                # make the measurement-only fast path skip future discovery.
+                self._measurement_url = measurement_url
+                self._control_url = control_url
+                self._settings_url = settings_url
+                self._schedule_url = schedule_url
+                self._tank_info.firmware_version = firmware_version
+                self._tank_info.model_code = model_code
+                self._tank_info.has_pv_diverter = has_pv_diverter
 
                 _LOGGER.debug(
                     "Tank discovered: model=%s, fw=%s, pv=%s",
@@ -654,7 +726,9 @@ class MixergyApiClient:
                     f"Measurement fetch failed: {resp.status}"
                 )
             try:
-                data = await resp.json()
+                data = _require_object(
+                    await resp.json(), "Measurement response"
+                )
             except (aiohttp.ClientError, ValueError) as err:
                 raise MixergyConnectionError(
                     f"Measurement response was not valid JSON: {err}"
@@ -723,7 +797,9 @@ class MixergyApiClient:
             # Settings endpoint returns text/plain content-type
             try:
                 text = await resp.text()
-                data = json.loads(text)
+                data = _require_object(
+                    json.loads(text), "Settings response"
+                )
             except (aiohttp.ClientError, ValueError) as err:
                 raise MixergyConnectionError(
                     f"Settings response was not valid JSON: {err}"
@@ -731,19 +807,19 @@ class MixergyApiClient:
 
         settings = TankSettings(
             target_temperature=_as_float(data.get("max_temp")),
-            dsr_enabled=bool(data.get("dsr_enabled", False)),
-            frost_protection_enabled=bool(
+            dsr_enabled=_as_bool(data.get("dsr_enabled")),
+            frost_protection_enabled=_as_bool(
                 data.get("frost_protection_enabled", False)
             ),
-            distributed_computing_enabled=bool(
+            distributed_computing_enabled=_as_bool(
                 data.get("distributed_computing_enabled", False)
             ),
             cleansing_temperature=_as_float(data.get("cleansing_temperature")),
         )
 
         # PV settings may not exist on all tanks
-        settings.divert_exported_enabled = bool(
-            data.get("divert_exported_enabled", False)
+        settings.divert_exported_enabled = _as_bool(
+            data.get("divert_exported_enabled")
         )
         settings.pv_cut_in_threshold = _as_float(data.get("pv_cut_in_threshold"))
         settings.pv_charge_limit = _as_float(data.get("pv_charge_limit"))
@@ -764,7 +840,9 @@ class MixergyApiClient:
                 )
             try:
                 text = await resp.text()
-                data = json.loads(text)
+                data = _require_object(
+                    json.loads(text), "Schedule response"
+                )
             except (aiohttp.ClientError, ValueError) as err:
                 raise MixergyConnectionError(
                     f"Schedule response was not valid JSON: {err}"
@@ -965,20 +1043,27 @@ class MixergyApiClient:
 
         Serialised on _schedule_write_lock — see __init__.
         """
-        await self._discover_tank()
-
         def _to_utc_epoch_ms(d: datetime) -> int:
             if d.tzinfo is None:
                 d = d.replace(tzinfo=timezone.utc)
             return int(d.astimezone(timezone.utc).timestamp() * 1000)
+
+        start_ms = _to_utc_epoch_ms(start)
+        end_ms = _to_utc_epoch_ms(end)
+        if start_ms >= end_ms:
+            raise MixergyApiError(
+                "Holiday start date must be before the end date"
+            )
+
+        await self._discover_tank()
 
         async with self._schedule_write_lock:
             schedule_data = await self.fetch_schedule()
             raw = schedule_data.raw
 
             raw["holiday"] = {
-                "departDate": _to_utc_epoch_ms(start),
-                "returnDate": _to_utc_epoch_ms(end),
+                "departDate": start_ms,
+                "returnDate": end_ms,
             }
 
             url = self._require_url(self._schedule_url, "schedule")
@@ -1050,31 +1135,39 @@ class MixergyApiClient:
                     raise MixergyConnectionError(
                         f"Root endpoint returned {resp.status}"
                     )
-                root = await resp.json()
-            tanks_url = _require_safe_link(
-                root["_links"]["tanks"]["href"], "tanks"
-            )
+                root = _require_object(await resp.json(), "Root response")
+            root_links = _require_object(root.get("_links"), "Root links")
+            tanks_url = _require_link(root_links, "tanks")
             async with await self._request_with_reauth("GET", tanks_url) as resp:
                 if resp.status != 200:
                     raise MixergyConnectionError(
                         f"Tanks endpoint returned {resp.status}"
                     )
-                data = await resp.json()
-            tanks = data["_embedded"]["tankList"]
+                data = _require_object(await resp.json(), "Tanks response")
+            embedded = _require_object(data.get("_embedded"), "Tanks embedded data")
+            tanks = _require_array(embedded.get("tankList"), "Tank list")
         except (aiohttp.ClientError, asyncio.TimeoutError,
                 json.JSONDecodeError, KeyError, TypeError) as err:
             raise MixergyConnectionError(
                 f"Failed to list tanks: {err}"
             ) from err
 
-        return [
-            {
-                "serial": str(t["serialNumber"]).upper(),
-                "firmware": t.get("firmwareVersion", ""),
-            }
-            for t in tanks
-            if t.get("serialNumber")
-        ]
+        result: list[dict[str, str]] = []
+        for raw_tank in tanks:
+            tank = _require_object(raw_tank, "Tank list entry")
+            serial = tank.get("serialNumber")
+            if not isinstance(serial, str) or not serial.strip():
+                continue
+            firmware = tank.get("firmwareVersion", "")
+            if not isinstance(firmware, str):
+                firmware = ""
+            result.append(
+                {
+                    "serial": serial.strip().upper(),
+                    "firmware": firmware,
+                }
+            )
+        return result
 
     # ── Connection Testing ───────────────────────────────────────────
 

@@ -9,6 +9,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from custom_components.mixergy.api import (
+    API_ROOT,
     HeatSource,
     MixergyApiClient,
     MixergyApiError,
@@ -17,6 +18,7 @@ from custom_components.mixergy.api import (
     MixergyTankNotFoundError,
     TankData,
     TankMeasurement,
+    TankSchedule,
     TankSettings,
 )
 
@@ -85,6 +87,24 @@ async def test_authenticate_invalid_credentials(
 
 
 @pytest.mark.asyncio
+async def test_authenticate_rejects_non_object_json(
+    mock_aiohttp_session: MagicMock,
+) -> None:
+    """A successful HTTP status with an array body stays in auth taxonomy."""
+    mock_aiohttp_session.post = MagicMock(return_value=_make_resp(201, []))
+    client = MixergyApiClient(
+        session=mock_aiohttp_session,
+        username=MOCK_USERNAME,
+        password=MOCK_PASSWORD,
+        serial_number=MOCK_SERIAL,
+    )
+    client._login_url = "https://www.mixergy.io/api/v2/account/login"
+
+    with pytest.raises(MixergyAuthError, match="not a JSON object"):
+        await client.authenticate()
+
+
+@pytest.mark.asyncio
 async def test_token_not_refreshed_when_valid(
     api_client: MixergyApiClient, mock_aiohttp_session: MagicMock
 ) -> None:
@@ -124,6 +144,65 @@ async def test_fetch_measurement_returns_correct_values(
     assert measurement.hot_water_temperature == 65.5
     assert measurement.coldest_water_temperature == 20.3
     assert measurement.charge == 80.0
+
+
+@pytest.mark.asyncio
+async def test_fetch_measurement_rejects_non_object_json(
+    mock_aiohttp_session: MagicMock,
+) -> None:
+    """Malformed successful measurements raise a typed connection error."""
+    mock_aiohttp_session.request = AsyncMock(return_value=_make_resp(200, []))
+    client = MixergyApiClient(
+        session=mock_aiohttp_session,
+        username=MOCK_USERNAME,
+        password=MOCK_PASSWORD,
+        serial_number=MOCK_SERIAL,
+    )
+    client._measurement_url = (
+        f"https://www.mixergy.io/api/v2/tank/{MOCK_SERIAL}/measurement"
+    )
+    client._token = MOCK_TOKEN
+    client._token_expiry = time.time() + 3600
+
+    with pytest.raises(MixergyConnectionError, match="not a JSON object"):
+        await client.fetch_measurement()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("method_name", "url_attr", "url_suffix"),
+    (
+        ("fetch_settings", "_settings_url", "settings"),
+        ("fetch_schedule", "_schedule_url", "schedule"),
+    ),
+)
+async def test_text_endpoints_reject_non_object_json(
+    mock_aiohttp_session: MagicMock,
+    method_name: str,
+    url_attr: str,
+    url_suffix: str,
+) -> None:
+    """Settings and schedule arrays cannot escape as AttributeError."""
+    mock_aiohttp_session.request = AsyncMock(
+        return_value=_make_resp(200, None, "[]")
+    )
+    client = MixergyApiClient(
+        session=mock_aiohttp_session,
+        username=MOCK_USERNAME,
+        password=MOCK_PASSWORD,
+        serial_number=MOCK_SERIAL,
+    )
+    setattr(
+        client,
+        url_attr,
+        f"https://www.mixergy.io/api/v2/tank/{MOCK_SERIAL}/{url_suffix}",
+    )
+    client._measurement_url = "discovery-complete"
+    client._token = MOCK_TOKEN
+    client._token_expiry = time.time() + 3600
+
+    with pytest.raises(MixergyConnectionError, match="not a JSON object"):
+        await getattr(client, method_name)()
 
 
 @pytest.mark.asyncio
@@ -360,6 +439,68 @@ async def test_fetch_schedule_normalises_heatpump_to_heat_pump(
 
 
 @pytest.mark.asyncio
+async def test_schedule_rejects_non_string_heat_source(
+    mock_aiohttp_session: MagicMock,
+) -> None:
+    """Wrong-shaped schedule modes stay inside the connection taxonomy."""
+    mock_aiohttp_session.request = AsyncMock(
+        return_value=_make_resp(200, None, '{"defaultHeatSource": []}')
+    )
+    client = MixergyApiClient(
+        session=mock_aiohttp_session,
+        username=MOCK_USERNAME,
+        password=MOCK_PASSWORD,
+        serial_number=MOCK_SERIAL,
+    )
+    client._measurement_url = "discovery-complete"
+    client._schedule_url = (
+        f"https://www.mixergy.io/api/v2/tank/{MOCK_SERIAL}/schedule"
+    )
+    client._token = MOCK_TOKEN
+    client._token_expiry = time.time() + 3600
+
+    with pytest.raises(MixergyConnectionError, match="not a string"):
+        await client.fetch_schedule()
+
+
+@pytest.mark.asyncio
+async def test_settings_parse_string_booleans(
+    mock_aiohttp_session: MagicMock,
+) -> None:
+    """String false/zero values must not turn switches on by truthiness."""
+    body = json.dumps(
+        {
+            "dsr_enabled": "false",
+            "frost_protection_enabled": "0",
+            "distributed_computing_enabled": "true",
+            "divert_exported_enabled": "1",
+        }
+    )
+    mock_aiohttp_session.request = AsyncMock(
+        return_value=_make_resp(200, None, body)
+    )
+    client = MixergyApiClient(
+        session=mock_aiohttp_session,
+        username=MOCK_USERNAME,
+        password=MOCK_PASSWORD,
+        serial_number=MOCK_SERIAL,
+    )
+    client._measurement_url = "discovery-complete"
+    client._settings_url = (
+        f"https://www.mixergy.io/api/v2/tank/{MOCK_SERIAL}/settings"
+    )
+    client._token = MOCK_TOKEN
+    client._token_expiry = time.time() + 3600
+
+    settings = await client.fetch_settings()
+
+    assert settings.dsr_enabled is False
+    assert settings.frost_protection_enabled is False
+    assert settings.distributed_computing_enabled is True
+    assert settings.divert_exported_enabled is True
+
+
+@pytest.mark.asyncio
 async def test_set_default_heat_source_sends_heatpump_to_api(
     api_client: MixergyApiClient, mock_aiohttp_session: MagicMock
 ) -> None:
@@ -396,6 +537,55 @@ async def test_set_default_heat_source_rejects_invalid_value_before_io(
     mock_aiohttp_session.get.assert_not_called()
     mock_aiohttp_session.post.assert_not_called()
     mock_aiohttp_session.request.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_set_holiday_dates_rejects_inverted_window_before_io(
+    api_client: MixergyApiClient,
+    mock_aiohttp_session: MagicMock,
+) -> None:
+    """Every holiday caller shares the start-before-end invariant."""
+    from datetime import datetime, timezone
+
+    start = datetime(2026, 8, 10, tzinfo=timezone.utc)
+    end = datetime(2020, 1, 1, tzinfo=timezone.utc)
+
+    with pytest.raises(MixergyApiError, match="start date must be before"):
+        await api_client.set_holiday_dates(start, end)
+
+    mock_aiohttp_session.get.assert_not_called()
+    mock_aiohttp_session.post.assert_not_called()
+    mock_aiohttp_session.request.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_set_holiday_dates_interprets_naive_values_as_utc(
+    api_client: MixergyApiClient,
+    mock_aiohttp_session: MagicMock,
+) -> None:
+    """Direct client callers get deterministic UTC semantics for naive dates."""
+    from datetime import datetime, timezone
+
+    start = datetime(2026, 8, 10, 9, 0)
+    end = datetime(2026, 8, 17, 9, 0)
+    api_client._measurement_url = "discovery-complete"
+    api_client._schedule_url = (
+        f"https://www.mixergy.io/api/v2/tank/{MOCK_SERIAL}/schedule"
+    )
+    api_client._token = MOCK_TOKEN
+    api_client._token_expiry = time.time() + 3600
+    api_client.fetch_schedule = AsyncMock(return_value=TankSchedule(raw={}))
+    mock_aiohttp_session.request = AsyncMock(return_value=_make_resp(200))
+
+    await api_client.set_holiday_dates(start, end)
+
+    payload = mock_aiohttp_session.request.await_args.kwargs["json"]["holiday"]
+    assert payload["departDate"] == int(
+        start.replace(tzinfo=timezone.utc).timestamp() * 1000
+    )
+    assert payload["returnDate"] == int(
+        end.replace(tzinfo=timezone.utc).timestamp() * 1000
+    )
 
 
 # ── HATEOAS link validation ───────────────────────────────────────────────────
@@ -447,6 +637,63 @@ async def test_missing_hateoas_link_raises_connection_error(
     )
     with pytest.raises(MixergyConnectionError, match="Missing required API link"):
         await client._discover_tank()
+
+
+@pytest.mark.asyncio
+async def test_late_discovery_failure_does_not_publish_partial_cache(
+    mock_aiohttp_session: MagicMock,
+) -> None:
+    """A missing late link must leave the discovery fast-path unarmed."""
+    from .conftest import (
+        MOCK_ACCOUNT_RESPONSE,
+        MOCK_ROOT_RESPONSE,
+        MOCK_SERIAL,
+        MOCK_TANKS_RESPONSE,
+    )
+
+    broken_detail = {
+        "tankModelCode": "MIXERGY-180",
+        "configuration": "{}",
+        "_links": {
+            "latest_measurement": {
+                "href": f"https://www.mixergy.io/api/v2/tank/{MOCK_SERIAL}/measurement"
+            },
+            "control": {
+                "href": f"https://www.mixergy.io/api/v2/tank/{MOCK_SERIAL}/control"
+            },
+            "settings": {
+                "href": f"https://www.mixergy.io/api/v2/tank/{MOCK_SERIAL}/settings"
+            },
+        },
+    }
+
+    def get_side_effect(url, **kwargs):
+        if url.endswith("/api/v2"):
+            return _make_resp(200, MOCK_ROOT_RESPONSE)
+        if url.endswith("/account"):
+            return _make_resp(200, MOCK_ACCOUNT_RESPONSE)
+        if url.endswith("/tanks"):
+            return _make_resp(200, MOCK_TANKS_RESPONSE)
+        if url.endswith(MOCK_SERIAL):
+            return _make_resp(200, broken_detail)
+        return _make_resp(404)
+
+    mock_aiohttp_session.get = MagicMock(side_effect=get_side_effect)
+    mock_aiohttp_session.post = MagicMock(side_effect=_make_login_post())
+    client = MixergyApiClient(
+        session=mock_aiohttp_session,
+        username=MOCK_USERNAME,
+        password=MOCK_PASSWORD,
+        serial_number=MOCK_SERIAL,
+    )
+
+    with pytest.raises(MixergyConnectionError, match="schedule"):
+        await client._discover_tank()
+
+    assert client._measurement_url is None
+    assert client._control_url is None
+    assert client._settings_url is None
+    assert client._schedule_url is None
 
 
 # ── Timeout ───────────────────────────────────────────────────────────────────
@@ -942,6 +1189,63 @@ async def test_async_list_tanks_returns_serials(
 
     tanks = await client.async_list_tanks()
     assert tanks == [{"serial": MOCK_SERIAL, "firmware": "2.1.0"}]
+
+
+@pytest.mark.asyncio
+async def test_async_list_tanks_rejects_non_object_root(
+    mock_aiohttp_session: MagicMock,
+) -> None:
+    """Tank-picker discovery does not leak raw shape errors into config flow."""
+    mock_aiohttp_session.request = AsyncMock(return_value=_make_resp(200, []))
+    client = MixergyApiClient(
+        session=mock_aiohttp_session,
+        username=MOCK_USERNAME,
+        password=MOCK_PASSWORD,
+        serial_number=MOCK_SERIAL,
+    )
+    client._token = MOCK_TOKEN
+    client._token_expiry = time.time() + 3600
+
+    with pytest.raises(MixergyConnectionError, match="not a JSON object"):
+        await client.async_list_tanks()
+
+
+@pytest.mark.asyncio
+async def test_async_list_tanks_skips_non_string_serials(
+    mock_aiohttp_session: MagicMock,
+) -> None:
+    """Malformed serials cannot become garbage config-flow picker values."""
+    root = {
+        "_links": {
+            "tanks": {"href": "https://www.mixergy.io/api/v2/tanks"}
+        }
+    }
+    tank_list = {
+        "_embedded": {
+            "tankList": [
+                {"serialNumber": ["bad"], "firmwareVersion": "1"},
+                {"serialNumber": 123, "firmwareVersion": "2"},
+                {"serialNumber": " good1 ", "firmwareVersion": []},
+            ]
+        }
+    }
+
+    async def request_side_effect(method, url, **kwargs):
+        return _make_resp(200, root if url == API_ROOT else tank_list)
+
+    mock_aiohttp_session.request = AsyncMock(side_effect=request_side_effect)
+    client = MixergyApiClient(
+        session=mock_aiohttp_session,
+        username=MOCK_USERNAME,
+        password=MOCK_PASSWORD,
+        serial_number=MOCK_SERIAL,
+    )
+    client._token = MOCK_TOKEN
+    client._token_expiry = time.time() + 3600
+
+    tanks = await client.async_list_tanks()
+
+    assert tanks == [{"serial": "GOOD1", "firmware": ""}]
 
 
 # ── _require_url: nulled HATEOAS cache raises typed error, not AssertionError ──
