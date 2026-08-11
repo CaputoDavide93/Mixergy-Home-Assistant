@@ -201,3 +201,52 @@ def test_percentage_unit_falls_back_on_home_assistant_below_2026_7() -> None:
         spec.loader.exec_module(module)
 
     assert module.PERCENTAGE_UNIT == real.PERCENTAGE
+
+
+def test_quality_scale_file_is_parseable_and_uses_valid_statuses() -> None:
+    """quality_scale.yaml is a public claim; keep it machine-checkable."""
+    from pathlib import Path
+
+    import yaml
+
+    path = (
+        Path(__file__).parents[1]
+        / "custom_components"
+        / "mixergy_tank"
+        / "quality_scale.yaml"
+    )
+    rules = yaml.safe_load(path.read_text())["rules"]
+
+    assert len(rules) >= 50, "rules disappeared from the self-assessment"
+    for name, entry in rules.items():
+        assert entry["status"] in {"done", "exempt", "todo"}, (
+            f"{name}: invalid status {entry['status']!r}"
+        )
+        if entry["status"] != "done":
+            assert entry.get("comment"), (
+                f"{name} is not done and must say why"
+            )
+
+
+def test_no_tier_is_claimed_while_any_rule_is_unmet() -> None:
+    """The manifest must not assert a tier the assessment contradicts.
+
+    Nothing validates a custom integration's quality_scale key — hassfest
+    returns early for non-core integrations — so this is the only thing
+    standing between the file and an unverifiable claim. `brands` can never be
+    satisfied by a custom integration, so this should stay red on purpose.
+    """
+    import json
+    from pathlib import Path
+
+    import yaml
+
+    component = Path(__file__).parents[1] / "custom_components" / "mixergy_tank"
+    rules = yaml.safe_load((component / "quality_scale.yaml").read_text())["rules"]
+    manifest = json.loads((component / "manifest.json").read_text())
+
+    unmet = [name for name, entry in rules.items() if entry["status"] == "todo"]
+    if unmet:
+        assert "quality_scale" not in manifest, (
+            f"manifest claims a tier while these rules are unmet: {unmet}"
+        )
