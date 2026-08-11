@@ -5,11 +5,10 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-from pathlib import Path
 import struct
+from pathlib import Path
 
 import yaml
-
 
 ROOT = Path(__file__).parents[1]
 WORKFLOWS = ROOT / ".github" / "workflows"

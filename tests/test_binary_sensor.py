@@ -210,7 +210,6 @@ async def test_threshold_sensors_follow_configured_options() -> None:
     that changes them only takes effect on reload — this pins that the
     configured value is what the entity actually compares against.
     """
-    from custom_components.mixergy_tank.binary_sensor import MixergyBinarySensor
     from custom_components.mixergy_tank.const import (
         CONF_LOW_WATER_THRESHOLD,
         CONF_NO_WATER_THRESHOLD,

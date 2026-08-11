@@ -2,13 +2,11 @@
 
 from __future__ import annotations
 
-import asyncio
 import logging
 from typing import Any
 
 import aiohttp
 import voluptuous as vol
-
 from homeassistant.config_entries import (
     ConfigFlow,
     ConfigFlowResult,
@@ -68,7 +66,9 @@ STEP_TANK_SCHEMA = vol.Schema(
 
 STEP_EXPERIENCE_SCHEMA = vol.Schema(
     {
-        vol.Required(CONF_EXPERIENCE_MODE, default=MODE_SIMPLE): selector.SelectSelector(
+        vol.Required(
+            CONF_EXPERIENCE_MODE, default=MODE_SIMPLE
+        ): selector.SelectSelector(
             selector.SelectSelectorConfig(
                 options=[MODE_SIMPLE, MODE_ADVANCED],
                 translation_key="experience_mode",
@@ -134,8 +134,8 @@ class MixergyConfigFlow(ConfigFlow, domain=DOMAIN):
                 errors["base"] = "invalid_auth"
             except MixergyConnectionError:
                 errors["base"] = "cannot_connect"
-            except (asyncio.TimeoutError, aiohttp.ClientError, OSError) as err:
-                _LOGGER.exception("Unexpected error during authentication: %s", err)
+            except (TimeoutError, aiohttp.ClientError, OSError):
+                _LOGGER.exception("Unexpected error during authentication")
                 errors["base"] = "unknown"
             else:
                 self._username = username
@@ -182,8 +182,8 @@ class MixergyConfigFlow(ConfigFlow, domain=DOMAIN):
                 errors[CONF_SERIAL_NUMBER] = "tank_not_found"
             except MixergyConnectionError:
                 errors["base"] = "cannot_connect"
-            except (asyncio.TimeoutError, aiohttp.ClientError, OSError) as err:
-                _LOGGER.exception("Unexpected error during tank lookup: %s", err)
+            except (TimeoutError, aiohttp.ClientError, OSError):
+                _LOGGER.exception("Unexpected error during tank lookup")
                 errors["base"] = "unknown"
             else:
                 self._serial = serial
@@ -283,8 +283,8 @@ class MixergyConfigFlow(ConfigFlow, domain=DOMAIN):
                 errors["base"] = "tank_not_found"
             except MixergyConnectionError:
                 errors["base"] = "cannot_connect"
-            except (asyncio.TimeoutError, aiohttp.ClientError, OSError) as err:
-                _LOGGER.exception("Unexpected error during re-authentication: %s", err)
+            except (TimeoutError, aiohttp.ClientError, OSError):
+                _LOGGER.exception("Unexpected error during re-authentication")
                 errors["base"] = "unknown"
             else:
                 return self.async_update_reload_and_abort(
@@ -341,8 +341,8 @@ class MixergyConfigFlow(ConfigFlow, domain=DOMAIN):
                 errors["base"] = "tank_not_found"
             except MixergyConnectionError:
                 errors["base"] = "cannot_connect"
-            except (asyncio.TimeoutError, aiohttp.ClientError, OSError) as err:
-                _LOGGER.exception("Unexpected error during reconfigure: %s", err)
+            except (TimeoutError, aiohttp.ClientError, OSError):
+                _LOGGER.exception("Unexpected error during reconfigure")
                 errors["base"] = "unknown"
             else:
                 return self.async_update_reload_and_abort(

@@ -14,6 +14,42 @@ permissions:
   contents: read
 
 jobs:
+  lint:
+    name: Lint and type check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          # The supported floor. Type-checking against the OLDEST supported
+          # Home Assistant is the stricter direction — it catches use of APIs
+          # that do not exist there yet — and it keeps mypy's python_version
+          # (3.13, see pyproject) consistent with the interpreter and with the
+          # HA source it has to parse. Checking against 2026.8.1 instead fails
+          # before reaching our code: that release contains 3.14-only syntax,
+          # which mypy cannot parse while targeting 3.13.
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: |
+            requirements_test.txt
+            .github/workflows/tests.yaml
+
+      - name: Install dependencies
+        # mypy needs Home Assistant present to resolve its types. pycares<5 is
+        # the same pin the minimum matrix leg uses: HA 2025.8 pins aiodns 3.5
+        # but not pycares, and pycares 5 removed symbols aiodns 3.5 imports.
+        run: >-
+          python -m pip install -r requirements_test.txt
+          homeassistant==2025.8.0 "pycares<5"
+
+      - name: ruff
+        run: ruff check .
+
+      - name: mypy
+        run: mypy custom_components/mixergy_tank
+
   compatibility:
     name: ${{ matrix.name }}
     runs-on: ubuntu-latest
@@ -66,7 +102,7 @@ jobs:
           pytest tests/ -v --tb=short
           --cov=custom_components.mixergy_tank
           --cov-report=term-missing
-          --cov-fail-under=65
+          --cov-fail-under=90
 
   latest-ha-canary:
     name: Latest HA canary
@@ -109,4 +145,4 @@ jobs:
           pytest tests/ -v --tb=short
           --cov=custom_components.mixergy_tank
           --cov-report=term-missing
-          --cov-fail-under=65
+          --cov-fail-under=90

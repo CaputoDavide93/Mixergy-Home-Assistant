@@ -1,0 +1,57 @@
+[tool.ruff]
+# Match the Home Assistant core target so idioms flagged here are the same
+# ones core would flag; the repo's manifest floor is HA 2025.8 (Python 3.13).
+target-version = "py313"
+line-length = 88
+
+[tool.ruff.lint]
+# A deliberately small, high-signal set rather than everything ruff offers:
+# correctness (E/F/W), import hygiene (I), modern syntax (UP), real bug
+# patterns (B, RUF), and the try/except discipline that matters in an
+# integration where a swallowed error becomes a silent unavailable entity (TRY).
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "RET", "C4", "RUF", "TRY"]
+ignore = [
+    # The API client raises long, specific messages; splitting them into
+    # variables to satisfy TRY003 would make them harder to read, not safer.
+    "TRY003",
+    # This codebase uses en dashes and box-drawing characters deliberately
+    # (range copy like "30–300 seconds", "── section ──" rules). Every hit is
+    # intentional typography, so these rules are pure noise here.
+    "RUF001",
+    "RUF002",
+    "RUF003",
+    # `raise ... from err` is used where the cause adds information; the bare
+    # re-raise inside the coordinator's ladder is deliberate.
+    "TRY300",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests construct deliberately malformed payloads and long parametrise tables.
+"tests/*" = [
+    "E501",     # long parametrise tables read better unwrapped
+    "B011",     # assert False is meaningful in tests
+    "SIM117",   # nested `with patch(...)` is clearer than a combined form
+    "B023",     # loop-variable closures are intentional in parametrised helpers
+    "F811",     # re-imported fixtures//helpers inside test functions
+]
+"tools/*" = ["E501"]
+
+[tool.mypy]
+python_version = "3.13"
+# Deliberately not --strict: Home Assistant's own helpers are only partially
+# typed, so strict mode would drown real findings in library noise. This level
+# catches the mistakes that actually bite here — wrong argument types and
+# unchecked Optionals crossing the API/entity boundary.
+ignore_missing_imports = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+no_implicit_optional = true
+check_untyped_defs = true
+
+[[tool.mypy.overrides]]
+# The 2026.7 UnitOfRatio shim intentionally rebinds a name that mypy sees as
+# Final on older cores; the runtime guard is what makes it correct.
+# There is no custom_components/__init__.py, so mypy sees this as
+# mixergy_tank.const rather than a fully-qualified path.
+module = "mixergy_tank.const"
+ignore_errors = true

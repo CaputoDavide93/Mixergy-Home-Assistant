@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import time
+from datetime import UTC
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -33,7 +34,6 @@ from .conftest import (
     MOCK_USERNAME,
     attach_body,
 )
-
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -558,10 +558,10 @@ async def test_set_holiday_dates_rejects_inverted_window_before_io(
     mock_aiohttp_session: MagicMock,
 ) -> None:
     """Every holiday caller shares the start-before-end invariant."""
-    from datetime import datetime, timezone
+    from datetime import datetime
 
-    start = datetime(2026, 8, 10, tzinfo=timezone.utc)
-    end = datetime(2020, 1, 1, tzinfo=timezone.utc)
+    start = datetime(2026, 8, 10, tzinfo=UTC)
+    end = datetime(2020, 1, 1, tzinfo=UTC)
 
     with pytest.raises(MixergyApiError, match="start date must be before"):
         await api_client.set_holiday_dates(start, end)
@@ -577,7 +577,7 @@ async def test_set_holiday_dates_interprets_naive_values_as_utc(
     mock_aiohttp_session: MagicMock,
 ) -> None:
     """Direct client callers get deterministic UTC semantics for naive dates."""
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     start = datetime(2026, 8, 10, 9, 0)
     end = datetime(2026, 8, 17, 9, 0)
@@ -594,10 +594,10 @@ async def test_set_holiday_dates_interprets_naive_values_as_utc(
 
     payload = mock_aiohttp_session.request.await_args.kwargs["json"]["holiday"]
     assert payload["departDate"] == int(
-        start.replace(tzinfo=timezone.utc).timestamp() * 1000
+        start.replace(tzinfo=UTC).timestamp() * 1000
     )
     assert payload["returnDate"] == int(
-        end.replace(tzinfo=timezone.utc).timestamp() * 1000
+        end.replace(tzinfo=UTC).timestamp() * 1000
     )
 
 
@@ -743,6 +743,7 @@ async def test_concurrent_authenticate_calls_share_one_login(
     races two coroutines and asserts only ONE login POST hit the wire.
     """
     import asyncio
+
     from .conftest import MOCK_ACCOUNT_RESPONSE, MOCK_ROOT_RESPONSE
 
     client = MixergyApiClient(
@@ -780,10 +781,11 @@ async def test_concurrent_discover_tank_walks_hateoas_once(
     and then short-circuits on the now-set ``_measurement_url``.
     """
     import asyncio
+
     from .conftest import (
         MOCK_ROOT_RESPONSE,
-        MOCK_TANKS_RESPONSE,
         MOCK_TANK_DETAIL_RESPONSE,
+        MOCK_TANKS_RESPONSE,
     )
 
     client = MixergyApiClient(
@@ -910,6 +912,7 @@ async def test_energy_restore_writes_state_immediately():
     losing all accumulated kWh stats.
     """
     from unittest.mock import AsyncMock, MagicMock
+
     from custom_components.mixergy_tank.sensor import MixergyEnergySensor
 
     coordinator = MagicMock()
