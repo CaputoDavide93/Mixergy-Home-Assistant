@@ -54,6 +54,11 @@ Or add manually in HACS:
 4. Search for **Mixergy** and install it
 5. Restart Home Assistant
 
+> **Upgrading from 1.x?** Version 2.0.0 changed the integration domain. The
+> old `custom_components/mixergy/` directory must be removed before restarting;
+> HACS installs `mixergy_tank/` but does not remove the former domain directory.
+> Follow the complete [1.x → 2.x migration](docs/installation.md#upgrading-from-1x-to-2x).
+
 ### Manual Installation
 
 1. Download the [latest release](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/releases)
