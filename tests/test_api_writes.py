@@ -804,3 +804,140 @@ async def test_test_connection_forces_tank_rediscovery(
 
     assert await client.test_connection() is True
     assert called == ["discover"]
+
+
+# ── fetch_all: partial-failure resilience ─────────────────────────────────────
+#
+# Settings and schedule change slowly, so a brief upstream hiccup should not
+# blank the whole device card — they fall back to the last good values while
+# the measurement, which is the live signal, propagates its failure. Getting
+# this backwards either hides a real outage or makes the device flap on every
+# transient error.
+
+
+def _primed_client(session: MagicMock) -> MixergyApiClient:
+    client = _write_client(session)
+    client._discover_tank = AsyncMock()
+    return client
+
+
+async def test_fetch_all_assembles_every_part(
+    mock_aiohttp_session: MagicMock,
+) -> None:
+    """The happy path combines all three fetches into one TankData."""
+    from custom_components.mixergy_tank.api import (
+        TankMeasurement,
+        TankSchedule,
+        TankSettings,
+    )
+
+    client = _primed_client(mock_aiohttp_session)
+    client.fetch_measurement = AsyncMock(
+        return_value=TankMeasurement(charge=61.0)
+    )
+    client.fetch_settings = AsyncMock(
+        return_value=TankSettings(target_temperature=59.0)
+    )
+    client.fetch_schedule = AsyncMock(
+        return_value=TankSchedule(raw={}, default_heat_source="electric")
+    )
+
+    data = await client.fetch_all()
+
+    assert data.measurement.charge == 61.0
+    assert data.settings.target_temperature == 59.0
+    assert data.schedule.default_heat_source == "electric"
+    assert data.info.serial_number == MOCK_SERIAL
+
+
+async def test_measurement_failure_propagates(
+    mock_aiohttp_session: MagicMock,
+) -> None:
+    """The live reading is the primary signal — its failure must surface."""
+    from custom_components.mixergy_tank.api import (
+        MixergyConnectionError,
+        TankSchedule,
+        TankSettings,
+    )
+
+    client = _primed_client(mock_aiohttp_session)
+    client.fetch_measurement = AsyncMock(
+        side_effect=MixergyConnectionError("down")
+    )
+    client.fetch_settings = AsyncMock(return_value=TankSettings())
+    client.fetch_schedule = AsyncMock(return_value=TankSchedule(raw={}))
+
+    with pytest.raises(MixergyConnectionError):
+        await client.fetch_all()
+
+
+@pytest.mark.parametrize("failing", ("settings", "schedule"))
+async def test_slow_changing_data_falls_back_to_the_last_good_value(
+    mock_aiohttp_session: MagicMock, failing: str
+) -> None:
+    """A transient settings/schedule failure must reuse the cached value.
+
+    Blanking the device on one failed sub-fetch would flap every entity for a
+    cycle over data that changes on the order of days.
+    """
+    from custom_components.mixergy_tank.api import (
+        MixergyConnectionError,
+        TankMeasurement,
+        TankSchedule,
+        TankSettings,
+    )
+
+    client = _primed_client(mock_aiohttp_session)
+    client.fetch_measurement = AsyncMock(
+        return_value=TankMeasurement(charge=40.0)
+    )
+    client.fetch_settings = AsyncMock(
+        return_value=TankSettings(target_temperature=57.0)
+    )
+    client.fetch_schedule = AsyncMock(
+        return_value=TankSchedule(raw={}, default_heat_source="indirect")
+    )
+
+    # First cycle succeeds and populates the cache.
+    await client.fetch_all()
+
+    # Second cycle: one sub-fetch fails.
+    getattr(client, f"fetch_{failing}").side_effect = MixergyConnectionError("blip")
+    getattr(client, f"fetch_{failing}").return_value = None
+
+    data = await client.fetch_all()
+
+    assert data.measurement.charge == 40.0
+    if failing == "settings":
+        assert data.settings.target_temperature == 57.0
+    else:
+        assert data.schedule.default_heat_source == "indirect"
+
+
+@pytest.mark.parametrize("failing", ("settings", "schedule"))
+async def test_failure_with_no_cached_value_propagates(
+    mock_aiohttp_session: MagicMock, failing: str
+) -> None:
+    """Falling back requires something to fall back TO.
+
+    On the very first refresh there is no prior good value, so the failure
+    must propagate rather than constructing TankData around a None.
+    """
+    from custom_components.mixergy_tank.api import (
+        MixergyConnectionError,
+        TankMeasurement,
+        TankSchedule,
+        TankSettings,
+    )
+
+    client = _primed_client(mock_aiohttp_session)
+    client.fetch_measurement = AsyncMock(
+        return_value=TankMeasurement(charge=40.0)
+    )
+    client.fetch_settings = AsyncMock(return_value=TankSettings())
+    client.fetch_schedule = AsyncMock(return_value=TankSchedule(raw={}))
+    getattr(client, f"fetch_{failing}").side_effect = MixergyConnectionError("first")
+    getattr(client, f"fetch_{failing}").return_value = None
+
+    with pytest.raises(MixergyConnectionError):
+        await client.fetch_all()
