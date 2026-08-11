@@ -10,7 +10,12 @@ if TYPE_CHECKING:
 try:
     from homeassistant.const import UnitOfRatio
 except ImportError:  # Home Assistant < 2026.7
-    from homeassistant.const import PERCENTAGE as PERCENTAGE_UNIT
+    from homeassistant.const import PERCENTAGE
+
+    # Assigned rather than imported-as: `from x import y as PERCENTAGE_UNIT`
+    # is an implicit re-export, which strict type checking rejects for
+    # downstream modules importing it from here.
+    PERCENTAGE_UNIT: str = PERCENTAGE
 else:
     PERCENTAGE_UNIT = UnitOfRatio.PERCENTAGE
 
@@ -55,4 +60,6 @@ def is_advanced_mode(entry: ConfigEntry) -> bool:
     default (config_flow STEP_EXPERIENCE_SCHEMA) so an entry missing the
     option never silently exposes the full advanced control surface.
     """
-    return entry.options.get(CONF_EXPERIENCE_MODE, MODE_SIMPLE) == MODE_ADVANCED
+    return bool(
+        entry.options.get(CONF_EXPERIENCE_MODE, MODE_SIMPLE) == MODE_ADVANCED
+    )

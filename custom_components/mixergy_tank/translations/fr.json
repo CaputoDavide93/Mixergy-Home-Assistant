@@ -265,6 +265,24 @@
     },
     "holiday_start_after_end": {
       "message": "Le début des vacances doit précéder la fin."
+    },
+    "write_auth_failed": {
+      "message": "Échec de {action} : Mixergy a refusé les identifiants enregistrés. Une nouvelle authentification est nécessaire."
+    },
+    "write_failed": {
+      "message": "Échec de {action} : {error}"
+    },
+    "service_auth_failed": {
+      "message": "Mixergy a refusé les identifiants enregistrés pour le ballon {serial}. Une nouvelle authentification est nécessaire."
+    },
+    "service_failed": {
+      "message": "Impossible d'effectuer {action} pour le ballon {serial} : {error}"
+    },
+    "service_unexpected_error": {
+      "message": "Erreur inattendue lors de la communication avec le ballon {serial} : {error}"
+    },
+    "tank_not_found_setup": {
+      "message": "Le ballon {serial} n'est plus présent dans votre compte Mixergy."
     }
   },
   "services": {

@@ -305,8 +305,10 @@ async def test_write_failure_raises_home_assistant_error() -> None:
     )
     button = MixergyClearHolidayButton(coordinator)
 
-    with pytest.raises(HomeAssistantError, match="Failed to clear holiday dates"):
+    with pytest.raises(HomeAssistantError) as err:
         await button.async_press()
+    assert err.value.translation_key == "write_failed"
+    assert err.value.translation_placeholders["action"] == "Clearing the holiday dates"
 
     coordinator.async_request_refresh.assert_not_awaited()
 
@@ -322,8 +324,9 @@ async def test_write_auth_failure_starts_reauth() -> None:
     button = MixergyClearHolidayButton(coordinator)
     button.hass = MagicMock()
 
-    with pytest.raises(HomeAssistantError, match="re-authentication required"):
+    with pytest.raises(HomeAssistantError) as err:
         await button.async_press()
+    assert err.value.translation_key == "write_auth_failed"
 
     coordinator.config_entry.async_start_reauth.assert_called_once()
 
@@ -341,8 +344,9 @@ async def test_switch_write_failure_reports_the_failing_switch() -> None:
         side_effect=MixergyApiError("nope")
     )
 
-    with pytest.raises(HomeAssistantError, match="dsr_enabled"):
+    with pytest.raises(HomeAssistantError) as err:
         await MixergySwitch(coordinator, description).async_turn_on()
+    assert "dsr_enabled" in err.value.translation_placeholders["action"]
 
 
 # ── Availability follows the coordinator ──────────────────────────────────────

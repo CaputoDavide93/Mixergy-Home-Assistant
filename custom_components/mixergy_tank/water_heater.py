@@ -115,7 +115,7 @@ class MixergyWaterHeater(MixergyEntity, WaterHeaterEntity):
             return
         await self._async_write_command(
             self.coordinator.client.set_target_temperature(int(temperature)),
-            "Failed to set target temperature",
+            "Setting the target temperature",
         )
 
     async def async_set_operation_mode(self, operation_mode: str) -> None:
@@ -125,7 +125,7 @@ class MixergyWaterHeater(MixergyEntity, WaterHeaterEntity):
             return
         await self._async_write_command(
             self.coordinator.client.set_default_heat_source(heat_source),
-            "Failed to set operation mode",
+            "Setting the operation mode",
         )
 
     async def async_turn_away_mode_on(self) -> None:
@@ -133,12 +133,12 @@ class MixergyWaterHeater(MixergyEntity, WaterHeaterEntity):
         now = dt_util.utcnow()
         await self._async_write_command(
             self.coordinator.client.set_holiday_dates(now, now + _AWAY_HOLIDAY),
-            "Failed to enable away mode",
+            "Enabling away mode",
         )
 
     async def async_turn_away_mode_off(self) -> None:
         """Disable away mode by clearing the holiday window."""
         await self._async_write_command(
             self.coordinator.client.clear_holiday_dates(),
-            "Failed to disable away mode",
+            "Disabling away mode",
         )

@@ -296,8 +296,9 @@ async def test_number_write_failure_names_the_control() -> None:
     coordinator.client = _RecordingClient(error=MixergyApiError("rejected"))
 
     entity = MixergyNumber(coordinator, description)
-    with pytest.raises(HomeAssistantError, match=description.key):
+    with pytest.raises(HomeAssistantError) as err:
         await entity.async_set_native_value(entity.native_min_value)
+    assert description.key in err.value.translation_placeholders["action"]
 
 
 # ── Accumulating sensors ──────────────────────────────────────────────────────

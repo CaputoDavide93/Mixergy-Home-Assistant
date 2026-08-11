@@ -83,5 +83,5 @@ class MixergyHolidayDateTime(MixergyEntity, DateTimeEntity):
 
         await self._async_write_command(
             self.coordinator.client.set_holiday_dates(start, end),
-            "Failed to set holiday dates",
+            "Setting the holiday dates",
         )

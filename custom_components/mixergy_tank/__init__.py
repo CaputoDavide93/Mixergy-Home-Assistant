@@ -322,19 +322,28 @@ async def _run_on_targets(
             # the MixergyApiError branch — it is a subclass.)
             coordinator.config_entry.async_start_reauth(hass)
             raise HomeAssistantError(
-                f"Authentication failed for tank {serial}; "
-                "re-authentication required."
+                translation_domain=DOMAIN,
+                translation_key="service_auth_failed",
+                translation_placeholders={"serial": serial},
             ) from err
         except MixergyApiError as err:
             raise HomeAssistantError(
-                f"Failed to {action_desc} for tank {serial}: {err}"
+                translation_domain=DOMAIN,
+                translation_key="service_failed",
+                translation_placeholders={
+                    "action": action_desc,
+                    "serial": serial,
+                    "error": str(err),
+                },
             ) from err
         except (OSError, TimeoutError) as err:
             _LOGGER.exception(
                 "Unexpected error during '%s' for tank %s", action_desc, serial
             )
             raise HomeAssistantError(
-                f"Unexpected error for tank {serial}: {err}"
+                translation_domain=DOMAIN,
+                translation_key="service_unexpected_error",
+                translation_placeholders={"serial": serial, "error": str(err)},
             ) from err
 
 

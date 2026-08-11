@@ -38,20 +38,13 @@ ignore = [
 
 [tool.mypy]
 python_version = "3.13"
-# Deliberately not --strict: Home Assistant's own helpers are only partially
-# typed, so strict mode would drown real findings in library noise. This level
-# catches the mistakes that actually bite here — wrong argument types and
-# unchecked Optionals crossing the API/entity boundary.
+# Strict, which the strict-typing quality rule asks for. It was previously
+# relaxed on the assumption that Home Assistant's partially-typed helpers
+# would drown out real findings; in practice strict produced only two
+# genuine errors, both from the UnitOfRatio compatibility shim, and both
+# are now fixed at the source rather than silenced.
+#
+# ignore_missing_imports stays: some HA dependencies genuinely ship no stubs,
+# and that is not something this repo can fix.
+strict = true
 ignore_missing_imports = true
-warn_unused_ignores = true
-warn_redundant_casts = true
-no_implicit_optional = true
-check_untyped_defs = true
-
-[[tool.mypy.overrides]]
-# The 2026.7 UnitOfRatio shim intentionally rebinds a name that mypy sees as
-# Final on older cores; the runtime guard is what makes it correct.
-# There is no custom_components/__init__.py, so mypy sees this as
-# mixergy_tank.const rather than a fully-qualified path.
-module = "mixergy_tank.const"
-ignore_errors = true

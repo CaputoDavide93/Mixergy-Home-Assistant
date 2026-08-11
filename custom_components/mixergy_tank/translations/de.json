@@ -265,6 +265,24 @@
     },
     "holiday_start_after_end": {
       "message": "Der Urlaubsbeginn muss vor dem Ende liegen."
+    },
+    "write_auth_failed": {
+      "message": "{action} fehlgeschlagen: Mixergy hat die gespeicherten Zugangsdaten abgelehnt. Eine erneute Anmeldung ist erforderlich."
+    },
+    "write_failed": {
+      "message": "{action} fehlgeschlagen: {error}"
+    },
+    "service_auth_failed": {
+      "message": "Mixergy hat die gespeicherten Zugangsdaten für Tank {serial} abgelehnt. Eine erneute Anmeldung ist erforderlich."
+    },
+    "service_failed": {
+      "message": "{action} für Tank {serial} nicht möglich: {error}"
+    },
+    "service_unexpected_error": {
+      "message": "Unerwarteter Fehler bei der Verbindung zu Tank {serial}: {error}"
+    },
+    "tank_not_found_setup": {
+      "message": "Tank {serial} ist in deinem Mixergy-Konto nicht mehr vorhanden."
     }
   },
   "services": {
