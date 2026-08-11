@@ -125,12 +125,12 @@ class MixergySwitch(MixergyEntity, SwitchEntity):
         """Turn the switch on."""
         await self._async_write_command(
             self.entity_description.turn_on_fn(self.coordinator.client),
-            f"Failed to turn on {self.entity_description.key}",
+            f"Turning on {self.entity_description.key}",
         )
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the switch off."""
         await self._async_write_command(
             self.entity_description.turn_off_fn(self.coordinator.client),
-            f"Failed to turn off {self.entity_description.key}",
+            f"Turning off {self.entity_description.key}",
         )

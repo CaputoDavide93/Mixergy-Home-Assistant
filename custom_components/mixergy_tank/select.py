@@ -51,5 +51,5 @@ class MixergyDefaultHeatSourceSelect(MixergyEntity, SelectEntity):
         """Set the default heat source."""
         await self._async_write_command(
             self.coordinator.client.set_default_heat_source(option),
-            "Failed to set default heat source",
+            "Setting the default heat source",
         )

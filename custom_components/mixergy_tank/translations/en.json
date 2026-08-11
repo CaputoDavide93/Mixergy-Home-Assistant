@@ -265,6 +265,24 @@
     },
     "holiday_start_after_end": {
       "message": "The holiday start must be before the end."
+    },
+    "write_auth_failed": {
+      "message": "{action} failed: Mixergy rejected the stored credentials. Re-authentication is required."
+    },
+    "write_failed": {
+      "message": "{action} failed: {error}"
+    },
+    "service_auth_failed": {
+      "message": "Mixergy rejected the stored credentials for tank {serial}. Re-authentication is required."
+    },
+    "service_failed": {
+      "message": "Could not {action} for tank {serial}: {error}"
+    },
+    "service_unexpected_error": {
+      "message": "Unexpected error while contacting tank {serial}: {error}"
+    },
+    "tank_not_found_setup": {
+      "message": "Tank {serial} is no longer present in your Mixergy account."
     }
   },
   "services": {

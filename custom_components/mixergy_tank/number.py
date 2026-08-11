@@ -185,7 +185,7 @@ class MixergyNumber(MixergyEntity, NumberEntity):
         """Set the value."""
         await self._async_write_command(
             self.entity_description.set_value_fn(self.coordinator.client, value),
-            f"Failed to set {self.entity_description.key}",
+            f"Setting {self.entity_description.key}",
         )
 
 
@@ -221,5 +221,5 @@ class MixergyBoostNumber(MixergyEntity, NumberEntity):
         """Boost hot water to the selected percentage."""
         await self._async_write_command(
             self.coordinator.client.set_target_charge(int(value)),
-            "Failed to set boost charge",
+            "Setting the hot water boost",
         )

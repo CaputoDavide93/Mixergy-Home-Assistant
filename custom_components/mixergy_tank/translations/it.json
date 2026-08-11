@@ -265,6 +265,24 @@
     },
     "holiday_start_after_end": {
       "message": "L'inizio della vacanza deve precedere la fine."
+    },
+    "write_auth_failed": {
+      "message": "{action} non riuscita: Mixergy ha rifiutato le credenziali salvate. È necessaria una nuova autenticazione."
+    },
+    "write_failed": {
+      "message": "{action} non riuscita: {error}"
+    },
+    "service_auth_failed": {
+      "message": "Mixergy ha rifiutato le credenziali salvate per il serbatoio {serial}. È necessaria una nuova autenticazione."
+    },
+    "service_failed": {
+      "message": "Impossibile eseguire {action} per il serbatoio {serial}: {error}"
+    },
+    "service_unexpected_error": {
+      "message": "Errore imprevisto durante la comunicazione con il serbatoio {serial}: {error}"
+    },
+    "tank_not_found_setup": {
+      "message": "Il serbatoio {serial} non è più presente nel tuo account Mixergy."
     }
   },
   "services": {

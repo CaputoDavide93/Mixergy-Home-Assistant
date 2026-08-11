@@ -92,7 +92,11 @@ class MixergyCoordinator(DataUpdateCoordinator[TankData]):
                 },
             )
             raise ConfigEntryError(
-                f"Mixergy tank not found in account: {err}"
+                translation_domain=DOMAIN,
+                translation_key="tank_not_found_setup",
+                translation_placeholders={
+                    "serial": self.client.tank_info.serial_number
+                },
             ) from err
         except MixergyConnectionError as err:
             raise UpdateFailed(

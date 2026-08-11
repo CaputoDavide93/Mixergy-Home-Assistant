@@ -39,7 +39,7 @@ class MixergyEntity(CoordinatorEntity[MixergyCoordinator]):
         )
 
     async def _async_write_command(
-        self, command: Awaitable[None], error_prefix: str
+        self, command: Awaitable[None], action: str
     ) -> None:
         """Run a write command, then refresh — with uniform error handling.
 
@@ -54,8 +54,13 @@ class MixergyEntity(CoordinatorEntity[MixergyCoordinator]):
         except MixergyAuthError as err:
             self.coordinator.config_entry.async_start_reauth(self.hass)
             raise HomeAssistantError(
-                f"{error_prefix}: authentication failed, re-authentication "
-                "required."
+                translation_domain=DOMAIN,
+                translation_key="write_auth_failed",
+                translation_placeholders={"action": action},
             ) from err
         except MixergyApiError as err:
-            raise HomeAssistantError(f"{error_prefix}: {err}") from err
+            raise HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key="write_failed",
+                translation_placeholders={"action": action, "error": str(err)},
+            ) from err

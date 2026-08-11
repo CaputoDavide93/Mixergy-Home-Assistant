@@ -70,8 +70,9 @@ async def test_tank_not_found_raises_config_entry_error_with_repair_issue() -> N
     coordinator = _coordinator_under_test(MixergyTankNotFoundError("gone"))
 
     with patch(f"{_MODULE}.ir") as issue_registry:
-        with pytest.raises(ConfigEntryError, match="tank not found"):
+        with pytest.raises(ConfigEntryError) as err:
             await coordinator._async_update_data()
+        assert err.value.translation_key == "tank_not_found_setup"
 
     issue_registry.async_create_issue.assert_called_once()
     _, kwargs = issue_registry.async_create_issue.call_args
@@ -400,9 +401,10 @@ async def test_service_auth_failure_starts_reauth_and_names_the_tank() -> None:
         "custom_components.mixergy_tank._target_coordinators",
         AsyncMock(return_value=[coordinator]),
     ):
-        with pytest.raises(HomeAssistantError, match="re-authentication required"):
+        with pytest.raises(HomeAssistantError) as err:
             await _run_on_targets(
                 MagicMock(), MagicMock(), boom, "boost charge"
             )
+        assert err.value.translation_key == "service_auth_failed"
 
     coordinator.config_entry.async_start_reauth.assert_called_once()

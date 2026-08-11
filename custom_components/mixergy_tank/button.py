@@ -45,5 +45,5 @@ class MixergyClearHolidayButton(MixergyEntity, ButtonEntity):
         """Clear the holiday dates."""
         await self._async_write_command(
             self.coordinator.client.clear_holiday_dates(),
-            "Failed to clear holiday dates",
+            "Clearing the holiday dates",
         )
