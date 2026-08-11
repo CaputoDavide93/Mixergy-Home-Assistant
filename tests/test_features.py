@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -126,11 +126,11 @@ async def test_water_heater_away_mode_on_off() -> None:
 async def test_holiday_datetime_set_start_preserves_end() -> None:
     from custom_components.mixergy_tank.datetime import MixergyHolidayDateTime
 
-    end = datetime(2026, 8, 20, 12, 0, tzinfo=timezone.utc)
+    end = datetime(2026, 8, 20, 12, 0, tzinfo=UTC)
     coordinator = _coordinator(holiday_end=end)
     ent = MixergyHolidayDateTime(coordinator, is_start=True)
 
-    start = datetime(2026, 8, 10, 9, 0, tzinfo=timezone.utc)
+    start = datetime(2026, 8, 10, 9, 0, tzinfo=UTC)
     await ent.async_set_value(start)
     coordinator.client.set_holiday_dates.assert_awaited_once_with(start, end)
 
@@ -141,7 +141,7 @@ async def test_holiday_datetime_set_start_defaults_end_when_unset() -> None:
 
     coordinator = _coordinator()  # no existing holiday_end
     ent = MixergyHolidayDateTime(coordinator, is_start=True)
-    start = datetime(2026, 8, 10, 9, 0, tzinfo=timezone.utc)
+    start = datetime(2026, 8, 10, 9, 0, tzinfo=UTC)
     await ent.async_set_value(start)
     args = coordinator.client.set_holiday_dates.await_args.args
     assert args[0] == start
@@ -151,7 +151,7 @@ async def test_holiday_datetime_set_start_defaults_end_when_unset() -> None:
 def test_holiday_datetime_native_value() -> None:
     from custom_components.mixergy_tank.datetime import MixergyHolidayDateTime
 
-    start = datetime(2026, 8, 1, tzinfo=timezone.utc)
+    start = datetime(2026, 8, 1, tzinfo=UTC)
     coordinator = _coordinator(holiday_start=start)
     ent = MixergyHolidayDateTime(coordinator, is_start=True)
     assert ent.native_value == start

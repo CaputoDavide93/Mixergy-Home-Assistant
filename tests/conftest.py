@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import AsyncIterator, Generator
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import aiohttp
 import pytest
@@ -17,6 +17,7 @@ from custom_components.mixergy_tank.api import (
     TankSchedule,
     TankSettings,
 )
+
 
 def attach_body(
     resp,
@@ -126,7 +127,7 @@ MOCK_SCHEDULE_RESPONSE = (
 
 
 @pytest.fixture
-def mock_aiohttp_session() -> Generator[MagicMock, None, None]:
+def mock_aiohttp_session() -> Generator[MagicMock]:
     """Return a mock aiohttp ClientSession.
 
     All HTTP methods (get, post, put, request) are AsyncMock so that

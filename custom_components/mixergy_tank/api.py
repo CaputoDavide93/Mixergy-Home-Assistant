@@ -12,7 +12,7 @@ import logging
 import math
 import time
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Any
 from urllib.parse import urlparse
@@ -432,7 +432,10 @@ class MixergyApiClient:
                     raise MixergyConnectionError(
                         f"Root endpoint returned {resp.status}"
                     )
-                root = _require_object(await _read_capped_json(resp, "Root response"), "Root response")
+                root = _require_object(
+                        await _read_capped_json(resp, "Root response"),
+                        "Root response",
+                    )
                 root_links = _require_object(root.get("_links"), "Root links")
                 account_url = _require_link(root_links, "account")
 
@@ -446,14 +449,21 @@ class MixergyApiClient:
                     raise MixergyConnectionError(
                         f"Account endpoint returned {resp.status}"
                     )
-                account = _require_object(await _read_capped_json(resp, "Account response"), "Account response")
+                account = _require_object(
+                    await _read_capped_json(resp, "Account response"),
+                    "Account response",
+                )
                 account_links = _require_object(
                     account.get("_links"), "Account links"
                 )
                 self._login_url = _require_link(account_links, "login")
 
-        except (aiohttp.ClientError, asyncio.TimeoutError, KeyError,
-                json.JSONDecodeError) as err:
+        except (
+            TimeoutError,
+            aiohttp.ClientError,
+            KeyError,
+            json.JSONDecodeError,
+        ) as err:
             raise MixergyConnectionError(
                 f"Failed to discover login URL: {err}"
             ) from err
@@ -528,7 +538,7 @@ class MixergyApiClient:
                     _LOGGER.debug("Authenticated successfully, token TTL=%s", ttl)
                     return True
 
-            except (aiohttp.ClientError, asyncio.TimeoutError) as err:
+            except (TimeoutError, aiohttp.ClientError) as err:
                 raise MixergyConnectionError(
                     f"Authentication request failed: {err}"
                 ) from err
@@ -601,7 +611,10 @@ class MixergyApiClient:
                         raise MixergyConnectionError(
                             f"Root endpoint returned {resp.status}"
                         )
-                    root = _require_object(await _read_capped_json(resp, "Root response"), "Root response")
+                    root = _require_object(
+                        await _read_capped_json(resp, "Root response"),
+                        "Root response",
+                    )
                     root_links = _require_object(root.get("_links"), "Root links")
                     self._tanks_url = _require_link(root_links, "tanks")
 
@@ -613,7 +626,10 @@ class MixergyApiClient:
                         raise MixergyConnectionError(
                             f"Tanks endpoint returned {resp.status}"
                         )
-                    data = _require_object(await _read_capped_json(resp, "Tanks response"), "Tanks response")
+                    data = _require_object(
+                        await _read_capped_json(resp, "Tanks response"),
+                        "Tanks response",
+                    )
                     embedded = _require_object(
                         data.get("_embedded"), "Tanks embedded data"
                     )
@@ -701,8 +717,12 @@ class MixergyApiClient:
                     self._tank_info.has_pv_diverter,
                 )
 
-            except (aiohttp.ClientError, asyncio.TimeoutError,
-                    json.JSONDecodeError, KeyError) as err:
+            except (
+                TimeoutError,
+                aiohttp.ClientError,
+                json.JSONDecodeError,
+                KeyError,
+            ) as err:
                 raise MixergyConnectionError(
                     f"Failed to discover tank: {err}"
                 ) from err
@@ -741,7 +761,7 @@ class MixergyApiClient:
                 method, url, headers=self._auth_headers, ssl=True,
                 timeout=REQUEST_TIMEOUT, allow_redirects=False, **kwargs
             )
-        except (aiohttp.ClientError, asyncio.TimeoutError) as err:
+        except (TimeoutError, aiohttp.ClientError) as err:
             raise MixergyConnectionError(
                 f"Request to {url} failed: {err}"
             ) from err
@@ -756,7 +776,7 @@ class MixergyApiClient:
                     method, url, headers=self._auth_headers, ssl=True,
                     timeout=REQUEST_TIMEOUT, allow_redirects=False, **kwargs
                 )
-            except (aiohttp.ClientError, asyncio.TimeoutError) as err:
+            except (TimeoutError, aiohttp.ClientError) as err:
                 raise MixergyConnectionError(
                     f"Request to {url} failed after re-auth: {err}"
                 ) from err
@@ -952,11 +972,11 @@ class MixergyApiClient:
                 ret = holiday.get("returnDate")
                 if depart:
                     schedule.holiday_start = datetime.fromtimestamp(
-                        depart / 1000, tz=timezone.utc
+                        depart / 1000, tz=UTC
                     )
                 if ret:
                     schedule.holiday_end = datetime.fromtimestamp(
-                        ret / 1000, tz=timezone.utc
+                        ret / 1000, tz=UTC
                     )
             except (TypeError, ValueError, OSError):
                 pass
@@ -983,32 +1003,43 @@ class MixergyApiClient:
             self.fetch_schedule(),
             return_exceptions=True,
         )
-        measurement, settings, schedule = results
+        # Each result is `T | BaseException`. Narrow into separately-named
+        # values rather than rebinding: rebinding hides which branch produced
+        # the value, and leaves the declared type as `T | BaseException` all
+        # the way into the TankData construction below.
+        measurement_result, settings_result, schedule_result = results
 
         # Measurement is the primary signal — bubble up if it failed.
-        if isinstance(measurement, BaseException):
-            raise measurement
+        if isinstance(measurement_result, BaseException):
+            raise measurement_result
+        measurement = measurement_result
 
         # Settings / schedule: fall back to previous values on failure.
-        if isinstance(settings, BaseException):
+        settings: TankSettings
+        if isinstance(settings_result, BaseException):
             _LOGGER.warning(
-                "Mixergy settings fetch failed (using cached): %s", settings
+                "Mixergy settings fetch failed (using cached): %s",
+                settings_result,
             )
-            settings = self._last_settings
-            if settings is None:
+            if self._last_settings is None:
                 # No prior good fetch — let it propagate.
-                raise results[1]
+                raise settings_result
+            settings = self._last_settings
         else:
+            settings = settings_result
             self._last_settings = settings
 
-        if isinstance(schedule, BaseException):
+        schedule: TankSchedule
+        if isinstance(schedule_result, BaseException):
             _LOGGER.warning(
-                "Mixergy schedule fetch failed (using cached): %s", schedule
+                "Mixergy schedule fetch failed (using cached): %s",
+                schedule_result,
             )
+            if self._last_schedule is None:
+                raise schedule_result
             schedule = self._last_schedule
-            if schedule is None:
-                raise results[2]
         else:
+            schedule = schedule_result
             self._last_schedule = schedule
 
         return TankData(
@@ -1133,8 +1164,8 @@ class MixergyApiClient:
         """
         def _to_utc_epoch_ms(d: datetime) -> int:
             if d.tzinfo is None:
-                d = d.replace(tzinfo=timezone.utc)
-            return int(d.astimezone(timezone.utc).timestamp() * 1000)
+                d = d.replace(tzinfo=UTC)
+            return int(d.astimezone(UTC).timestamp() * 1000)
 
         start_ms = _to_utc_epoch_ms(start)
         end_ms = _to_utc_epoch_ms(end)
@@ -1223,7 +1254,10 @@ class MixergyApiClient:
                     raise MixergyConnectionError(
                         f"Root endpoint returned {resp.status}"
                     )
-                root = _require_object(await _read_capped_json(resp, "Root response"), "Root response")
+                root = _require_object(
+                        await _read_capped_json(resp, "Root response"),
+                        "Root response",
+                    )
             root_links = _require_object(root.get("_links"), "Root links")
             tanks_url = _require_link(root_links, "tanks")
             async with await self._request_with_reauth("GET", tanks_url) as resp:
@@ -1231,11 +1265,19 @@ class MixergyApiClient:
                     raise MixergyConnectionError(
                         f"Tanks endpoint returned {resp.status}"
                     )
-                data = _require_object(await _read_capped_json(resp, "Tanks response"), "Tanks response")
+                data = _require_object(
+                        await _read_capped_json(resp, "Tanks response"),
+                        "Tanks response",
+                    )
             embedded = _require_object(data.get("_embedded"), "Tanks embedded data")
             tanks = _require_array(embedded.get("tankList"), "Tank list")
-        except (aiohttp.ClientError, asyncio.TimeoutError,
-                json.JSONDecodeError, KeyError, TypeError) as err:
+        except (
+            TimeoutError,
+            aiohttp.ClientError,
+            json.JSONDecodeError,
+            KeyError,
+            TypeError,
+        ) as err:
             raise MixergyConnectionError(
                 f"Failed to list tanks: {err}"
             ) from err

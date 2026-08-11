@@ -7,8 +7,8 @@ from collections.abc import Callable, Coroutine
 from datetime import datetime
 from typing import Any
 
+import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
-
 from homeassistant.auth.permissions.const import CAT_ENTITIES, POLICY_CONTROL
 from homeassistant.const import (
     ATTR_AREA_ID,
@@ -20,9 +20,9 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import HomeAssistantError, Unauthorized, UnknownUser
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-import homeassistant.helpers.config_validation as cv
 from homeassistant.util import dt as dt_util
 
 from .api import MixergyApiClient, MixergyApiError, MixergyAuthError
@@ -61,7 +61,9 @@ ATTR_SERIAL_NUMBER = "serial_number"
 # resolve to nothing, and silently fall through to "all tanks" (acting far
 # broader than intended). Restricting the schema makes such a target fail
 # closed with a clear "extra keys not allowed" error instead.
-_TARGET_FIELDS = {
+# Annotated so mypy can infer the key type when this is splatted into a
+# larger vol.Schema mapping below.
+_TARGET_FIELDS: dict[Any, Any] = {
     vol.Optional(ATTR_ENTITY_ID): cv.entity_ids,
     vol.Optional(ATTR_DEVICE_ID): vol.All(cv.ensure_list, [cv.string]),
     vol.Optional(ATTR_AREA_ID): vol.All(cv.ensure_list, [cv.string]),

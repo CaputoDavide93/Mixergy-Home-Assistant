@@ -11,11 +11,8 @@ from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
-
 from custom_components.mixergy_tank.const import (
     CONF_EXPERIENCE_MODE,
-    DOMAIN,
     MODE_ADVANCED,
     MODE_SIMPLE,
 )

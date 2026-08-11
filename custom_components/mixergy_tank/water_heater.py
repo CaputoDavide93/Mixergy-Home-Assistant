@@ -65,7 +65,16 @@ class MixergyWaterHeater(MixergyEntity, WaterHeaterEntity):
     _attr_precision = PRECISION_WHOLE
     _attr_min_temp = MIN_TARGET_TEMP
     _attr_max_temp = MAX_TARGET_TEMP
-    _attr_operation_list = [STATE_ELECTRIC, STATE_GAS, STATE_HEAT_PUMP]
+    # RUF012 wants ClassVar here, but WaterHeaterEntity declares
+    # _attr_operation_list as an *instance* variable, so annotating it
+    # ClassVar makes mypy reject the override. The list is never mutated —
+    # HA reads it to build the operation dropdown — so a shared class-level
+    # list is correct and matches how core integrations declare it.
+    _attr_operation_list = [  # noqa: RUF012
+        STATE_ELECTRIC,
+        STATE_GAS,
+        STATE_HEAT_PUMP,
+    ]
     _attr_supported_features = (
         WaterHeaterEntityFeature.TARGET_TEMPERATURE
         | WaterHeaterEntityFeature.OPERATION_MODE

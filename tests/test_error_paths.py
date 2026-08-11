@@ -14,6 +14,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from homeassistant.exceptions import ConfigEntryError, HomeAssistantError
 from homeassistant.helpers.update_coordinator import UpdateFailed
+from homeassistant.util import dt as dt_util
 
 from custom_components.mixergy_tank.api import (
     MixergyApiError,
@@ -31,8 +32,6 @@ from custom_components.mixergy_tank.const import (
     MODE_ADVANCED,
     MODE_SIMPLE,
 )
-
-from homeassistant.util import dt as dt_util
 
 from .conftest import MOCK_SERIAL
 
@@ -176,6 +175,7 @@ async def test_water_heater_writes_a_known_operation_mode() -> None:
 async def test_water_heater_sets_temperature() -> None:
     """A temperature call forwards an int to the API."""
     from homeassistant.components.water_heater import ATTR_TEMPERATURE
+
     from custom_components.mixergy_tank.water_heater import MixergyWaterHeater
 
     coordinator = _wh_coordinator()

@@ -14,6 +14,32 @@ permissions:
   contents: read
 
 jobs:
+  lint:
+    name: Lint and type check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: |
+            requirements_test.txt
+            .github/workflows/tests.yaml
+
+      - name: Install dependencies
+        # mypy needs Home Assistant present to resolve its types, so this
+        # installs the same version as the "current" test leg.
+        run: python -m pip install -r requirements_test.txt homeassistant==2026.8.1
+
+      - name: ruff
+        run: ruff check .
+
+      - name: mypy
+        run: mypy custom_components/mixergy_tank
+
   compatibility:
     name: ${{ matrix.name }}
     runs-on: ubuntu-latest
@@ -66,7 +92,7 @@ jobs:
           pytest tests/ -v --tb=short
           --cov=custom_components.mixergy_tank
           --cov-report=term-missing
-          --cov-fail-under=65
+          --cov-fail-under=90
 
   latest-ha-canary:
     name: Latest HA canary
@@ -109,4 +135,4 @@ jobs:
           pytest tests/ -v --tb=short
           --cov=custom_components.mixergy_tank
           --cov-report=term-missing
-          --cov-fail-under=65
+          --cov-fail-under=90

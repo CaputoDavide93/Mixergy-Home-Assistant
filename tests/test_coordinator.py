@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import timedelta
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -13,12 +13,11 @@ from custom_components.mixergy_tank.api import (
 )
 from custom_components.mixergy_tank.const import (
     CONF_UPDATE_INTERVAL,
-    DOMAIN,
     UPDATE_INTERVAL,
 )
 from custom_components.mixergy_tank.coordinator import MixergyCoordinator
 
-from .conftest import MOCK_SERIAL, mock_tank_data
+from .conftest import MOCK_SERIAL
 
 
 def _make_config_entry(options: dict | None = None) -> MagicMock:

@@ -17,7 +17,6 @@ from custom_components.mixergy_tank.api import (
 from custom_components.mixergy_tank.const import (
     CONF_SERIAL_NUMBER,
     CONF_UPDATE_INTERVAL,
-    DOMAIN,
     UPDATE_INTERVAL,
 )
 
@@ -565,7 +564,7 @@ async def test_reauth_rejects_an_account_that_lost_the_tank() -> None:
 @pytest.mark.asyncio
 async def test_reconfigure_shows_a_form_before_input() -> None:
     """Opening reconfigure presents the form, pre-filled, without writing."""
-    flow, entry = _reauth_flow()
+    flow, _entry = _reauth_flow()
 
     result = await flow.async_step_reconfigure()
 

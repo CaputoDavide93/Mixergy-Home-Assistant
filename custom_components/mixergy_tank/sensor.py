@@ -51,8 +51,7 @@ def _capped_elapsed_hours(
     total_seconds = getattr(interval, "total_seconds", None)
     if callable(total_seconds):
         cap = (total_seconds() * 2) / 3600
-        if elapsed > cap:
-            elapsed = cap
+        elapsed = min(elapsed, cap)
     return max(0.0, elapsed)
 
 
@@ -341,7 +340,9 @@ class MixergyEnergySensor(MixergyEntity, RestoreSensor):
         await super().async_added_to_hass()
         if (last := await self.async_get_last_sensor_data()) is not None:
             try:
-                self._accumulated_kwh = float(last.native_value or 0)
+                # native_value is typed str|int|float|date|Decimal; the
+                # except below is what makes the narrowing safe at runtime.
+                self._accumulated_kwh = float(last.native_value or 0)  # type: ignore[arg-type]
             except (ValueError, TypeError):
                 self._accumulated_kwh = 0.0
         self._last_update = time.time()
@@ -437,7 +438,8 @@ class MixergyElectricCostSensor(MixergyEntity, RestoreSensor):
         await super().async_added_to_hass()
         if (last := await self.async_get_last_sensor_data()) is not None:
             try:
-                self._accumulated_cost = float(last.native_value or 0)
+                # See the energy sensor: the except clause is the guard.
+                self._accumulated_cost = float(last.native_value or 0)  # type: ignore[arg-type]
             except (ValueError, TypeError):
                 self._accumulated_cost = 0.0
         self._last_update = time.time()

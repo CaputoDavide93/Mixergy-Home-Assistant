@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -140,8 +140,8 @@ async def test_set_holiday_dates_raises_homeassistant_error_on_api_failure() -> 
             if call.args[1] == "set_holiday_dates"
         )
 
-        start = datetime(2026, 3, 15, 12, 0, tzinfo=timezone.utc)
-        end = datetime(2026, 3, 22, 12, 0, tzinfo=timezone.utc)
+        start = datetime(2026, 3, 15, 12, 0, tzinfo=UTC)
+        end = datetime(2026, 3, 22, 12, 0, tzinfo=UTC)
 
         call_mock = _make_call({"start_date": start, "end_date": end})
 

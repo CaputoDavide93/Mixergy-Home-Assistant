@@ -11,7 +11,7 @@ between the eight one-line wrappers would have been invisible.
 from __future__ import annotations
 
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -265,8 +265,8 @@ async def test_set_holiday_dates_raises_on_non_200(
     mock_aiohttp_session.request = AsyncMock(side_effect=request)
     client = _write_client(mock_aiohttp_session)
 
-    start = datetime(2026, 6, 1, 9, 0, tzinfo=timezone.utc)
-    end = datetime(2026, 6, 8, 9, 0, tzinfo=timezone.utc)
+    start = datetime(2026, 6, 1, 9, 0, tzinfo=UTC)
+    end = datetime(2026, 6, 8, 9, 0, tzinfo=UTC)
 
     with pytest.raises(MixergyApiError, match="Set holiday dates"):
         await client.set_holiday_dates(start, end)
@@ -551,3 +551,256 @@ async def test_missing_or_wrong_typed_token_is_rejected(
 
     with pytest.raises(MixergyAuthError, match="valid token"):
         await client.authenticate()
+
+
+# ── Measurement state parsing ─────────────────────────────────────────────────
+#
+# The tank reports which element is selected and whether it is currently drawing
+# power as two separate fields, and the parser fans them out into per-source
+# booleans. Only the electric path had coverage, so a wrong branch for indirect
+# or heat-pump would have shown the wrong element heating on the dashboard.
+
+
+@pytest.mark.parametrize(
+    ("api_source", "expected_attr"),
+    (
+        ("indirect", "indirect_heat_source"),
+        ("electric", "electric_heat_source"),
+        ("heatpump", "heatpump_heat_source"),
+    ),
+)
+@pytest.mark.parametrize("immersion", ("on", "off"))
+async def test_each_heat_source_sets_only_its_own_flag(
+    mock_aiohttp_session: MagicMock,
+    api_source: str,
+    expected_attr: str,
+    immersion: str,
+) -> None:
+    """A selected source must set its own flag and leave the others alone.
+
+    is_heating follows the immersion field, not the selection — a tank can have
+    electric selected while idle, so the two must not be conflated.
+    """
+    import json as _json
+
+    payload = {
+        "topTemperature": 50.0,
+        "bottomTemperature": 15.0,
+        "charge": 40.0,
+        "state": _json.dumps({
+            "current": {
+                "source": "Schedule",
+                "heat_source": api_source,
+                "immersion": immersion,
+            }
+        }),
+    }
+    mock_aiohttp_session.request = AsyncMock(
+        return_value=_make_resp(200, payload)
+    )
+    client = _write_client(mock_aiohttp_session)
+
+    measurement = await client.fetch_measurement()
+    heating = immersion == "on"
+
+    assert getattr(measurement, expected_attr) is heating
+    assert measurement.is_heating is heating
+
+    others = {
+        "indirect_heat_source",
+        "electric_heat_source",
+        "heatpump_heat_source",
+    } - {expected_attr}
+    for attr in others:
+        assert getattr(measurement, attr) is False, f"{attr} leaked"
+
+
+async def test_unknown_heat_source_falls_back_to_none(
+    mock_aiohttp_session: MagicMock,
+) -> None:
+    """An unrecognised source must not leave a stale active source."""
+    import json as _json
+
+    from custom_components.mixergy_tank.api import HeatSource
+
+    payload = {
+        "charge": 40.0,
+        "state": _json.dumps({
+            "current": {"source": "Schedule", "heat_source": "fusion"}
+        }),
+    }
+    mock_aiohttp_session.request = AsyncMock(
+        return_value=_make_resp(200, payload)
+    )
+    client = _write_client(mock_aiohttp_session)
+
+    measurement = await client.fetch_measurement()
+    assert measurement.active_heat_source == HeatSource.NONE
+
+
+async def test_null_heat_source_and_immersion_do_not_crash(
+    mock_aiohttp_session: MagicMock,
+) -> None:
+    """An explicit null must be tolerated, not just an absent key.
+
+    ``.get(key, default)`` only substitutes when the key is *missing*, so a
+    present-but-null value would reach ``.lower()`` and raise. The parser uses
+    ``or`` for exactly this; pin it.
+    """
+    import json as _json
+
+    payload = {
+        "charge": 40.0,
+        "state": _json.dumps({
+            "current": {
+                "source": "Schedule",
+                "heat_source": None,
+                "immersion": None,
+            }
+        }),
+    }
+    mock_aiohttp_session.request = AsyncMock(
+        return_value=_make_resp(200, payload)
+    )
+    client = _write_client(mock_aiohttp_session)
+
+    measurement = await client.fetch_measurement()
+    assert measurement.is_heating is False
+
+
+async def test_vacation_source_marks_holiday_and_skips_heat_parsing(
+    mock_aiohttp_session: MagicMock,
+) -> None:
+    """Holiday mode is reported through the same source field."""
+    import json as _json
+
+    payload = {
+        "charge": 40.0,
+        "state": _json.dumps({
+            "current": {
+                "source": "Vacation",
+                "heat_source": "electric",
+                "immersion": "on",
+            }
+        }),
+    }
+    mock_aiohttp_session.request = AsyncMock(
+        return_value=_make_resp(200, payload)
+    )
+    client = _write_client(mock_aiohttp_session)
+
+    measurement = await client.fetch_measurement()
+    assert measurement.in_holiday_mode is True
+    # Heat parsing is skipped in holiday mode, so no element reports heating.
+    assert measurement.is_heating is False
+
+
+async def test_unparsable_state_json_degrades_without_raising(
+    mock_aiohttp_session: MagicMock,
+) -> None:
+    """A malformed state blob must not fail the whole measurement fetch."""
+    payload = {"charge": 40.0, "topTemperature": 50.0, "state": "not json"}
+    mock_aiohttp_session.request = AsyncMock(
+        return_value=_make_resp(200, payload)
+    )
+    client = _write_client(mock_aiohttp_session)
+
+    measurement = await client.fetch_measurement()
+    assert measurement.charge == 40.0
+
+
+# ── Holiday schedule parsing ──────────────────────────────────────────────────
+
+
+async def test_holiday_dates_parse_from_millisecond_timestamps(
+    mock_aiohttp_session: MagicMock,
+) -> None:
+    """The API sends epoch milliseconds; treating them as seconds is 50k years out."""
+    import json as _json
+
+    depart = 1_780_000_000_000
+    ret = 1_780_600_000_000
+    body = _json.dumps({
+        "defaultHeatSource": "electric",
+        "holiday": {"departDate": depart, "returnDate": ret},
+    })
+    mock_aiohttp_session.request = AsyncMock(
+        return_value=_make_resp(200, None, body)
+    )
+    client = _write_client(mock_aiohttp_session)
+
+    schedule = await client.fetch_schedule()
+
+    assert schedule.holiday_start == datetime.fromtimestamp(
+        depart / 1000, tz=UTC
+    )
+    assert schedule.holiday_end == datetime.fromtimestamp(
+        ret / 1000, tz=UTC
+    )
+
+
+@pytest.mark.parametrize(
+    "holiday",
+    (
+        "a string",                       # schema change
+        ["a", "list"],                    # schema change
+        {"departDate": "not-a-number"},   # wrong type
+        {"departDate": None},             # explicit null
+        {},                               # empty
+    ),
+)
+async def test_malformed_holiday_block_is_tolerated(
+    mock_aiohttp_session: MagicMock, holiday: object
+) -> None:
+    """A schema change in `holiday` must not raise out of the coordinator."""
+    import json as _json
+
+    body = _json.dumps({"defaultHeatSource": "electric", "holiday": holiday})
+    mock_aiohttp_session.request = AsyncMock(
+        return_value=_make_resp(200, None, body)
+    )
+    client = _write_client(mock_aiohttp_session)
+
+    schedule = await client.fetch_schedule()
+    assert schedule.holiday_start is None
+
+
+# ── Connection tests force re-discovery ───────────────────────────────────────
+
+
+async def test_test_credentials_forces_a_fresh_login(
+    mock_aiohttp_session: MagicMock,
+) -> None:
+    """Reauth must not silently pass on a cached token from the old password.
+
+    Without invalidating first, a still-valid token would make any password —
+    including the wrong one — appear to authenticate.
+    """
+    client = _write_client(mock_aiohttp_session)
+    client._login_url = "https://www.mixergy.io/api/v2/login"
+    mock_aiohttp_session.post = MagicMock(
+        return_value=_make_resp(201, {"token": "fresh", "ttl": 3600})
+    )
+
+    assert await client.test_credentials() is True
+    assert client._token == "fresh"
+    mock_aiohttp_session.post.assert_called()
+
+
+async def test_test_connection_forces_tank_rediscovery(
+    mock_aiohttp_session: MagicMock,
+) -> None:
+    """The serial check must re-walk discovery, not trust cached URLs."""
+    client = _write_client(mock_aiohttp_session)
+    assert client._measurement_url is not None
+
+    called: list[str] = []
+
+    async def rediscover():
+        called.append("discover")
+        client._measurement_url = "https://www.mixergy.io/api/v2/x/measurement"
+
+    client._discover_tank = rediscover
+
+    assert await client.test_connection() is True
+    assert called == ["discover"]

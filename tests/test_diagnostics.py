@@ -18,7 +18,9 @@ async def test_diagnostics_handles_entry_that_never_loaded() -> None:
     """Failed setup must still return redacted, actionable diagnostics."""
     from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 
-    from custom_components.mixergy_tank.diagnostics import async_get_config_entry_diagnostics
+    from custom_components.mixergy_tank.diagnostics import (
+        async_get_config_entry_diagnostics,
+    )
 
     entry = SimpleNamespace(
         data={
@@ -52,7 +54,9 @@ async def test_loaded_diagnostics_redacts_tank_identifiers_and_schedule(
     """Loaded diagnostics must not expose customer-correlatable tank data."""
     from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 
-    from custom_components.mixergy_tank.diagnostics import async_get_config_entry_diagnostics
+    from custom_components.mixergy_tank.diagnostics import (
+        async_get_config_entry_diagnostics,
+    )
 
     mock_tank_data.schedule.raw = {"private": "schedule"}
     coordinator = MagicMock(spec=MixergyCoordinator)
