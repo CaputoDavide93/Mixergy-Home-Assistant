@@ -24,6 +24,8 @@ Live charge and temperatures, one-tap boost, Energy Dashboard support, PV divert
 
 [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=CaputoDavide93&repository=Mixergy-Home-Assistant&category=integration)
 
+> **Note — the icon shows as a grey placeholder in HACS.** Nothing is wrong with your install: the icon appears correctly everywhere inside Home Assistant itself. This is a [known HACS limitation](https://github.com/hacs/integration/issues/5171) affecting every custom integration published after February 2026, not an issue with this integration. [More detail](docs/troubleshooting.md#why-is-the-icon-missing-in-hacs).
+
 ---
 
 ## 📚 Documentation

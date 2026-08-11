@@ -151,6 +151,14 @@ File issues at [github.com/CaputoDavide93/Mixergy-Home-Assistant/issues](https:/
 
 ## ❓ FAQ
 
+### Why is the icon missing in HACS?
+
+HACS shows a grey placeholder instead of the Mixergy icon. **Nothing is wrong with your install** — the icon appears correctly everywhere inside Home Assistant itself (Settings → Devices & Services, the device page, and every entity).
+
+It is a known HACS limitation, not an issue with this integration. Since Home Assistant 2026.3 custom integrations ship their brand images inside the integration (this one does — `custom_components/mixergy_tank/brand/`), and `home-assistant/brands` no longer accepts submissions from custom integrations. The HACS dashboard still reads icons from that older brands CDN, so any custom integration published after February 2026 shows a placeholder there.
+
+There is nothing to fix on your side and no effect on functionality. Tracked upstream at [hacs/integration#5171](https://github.com/hacs/integration/issues/5171), with a fix proposed in [hacs/integration#5388](https://github.com/hacs/integration/pull/5388).
+
 ### Does this work without internet, or locally?
 
 No. This is a cloud-polling integration for the official Mixergy API at `www.mixergy.io` — the tank has no supported local API, so every reading and every command goes through Mixergy's cloud. If your internet connection or Mixergy's service is down, entities go unavailable until it recovers.
