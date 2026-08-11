@@ -1,0 +1,250 @@
+# Home Assistant Integration Quality Scale — self-assessment
+#
+# READ THIS FIRST: no tier is claimed, and `quality_scale` is deliberately
+# absent from manifest.json.
+#
+# The quality scale applies to CORE integrations only. Home Assistant's own
+# tooling enforces that — hassfest's validator opens with
+# `if not integration.core: return`, so a tier declared by a custom
+# integration is never validated by anything. Declaring one here would be an
+# unverifiable self-assertion, so this file records the per-rule status
+# instead, and the README states the count rather than a badge.
+#
+# One Bronze rule is also permanently unreachable: `brands` requires an entry
+# in home-assistant/brands, and that repository auto-closes any PR adding a new
+# custom_integrations/ folder (since HA 2026.3, custom integrations ship brand
+# images in-tree instead — which this one does). Because Silver requires all of
+# Bronze, and Gold all of Silver, no tier is attainable by any custom
+# integration created after February 2026, regardless of merit.
+#
+# Status values follow the core format: done | exempt | todo.
+
+rules:
+  # ── Bronze ────────────────────────────────────────────────────────────────
+  action-setup:
+    status: done
+    comment: |
+      Services are registered in async_setup and never removed on unload.
+      They were previously registered per config entry, so a failed setup —
+      the Mixergy cloud being unreachable at Home Assistant start is enough —
+      left the services non-existent and every automation calling them failed
+      validation. Fixed in #21.
+  appropriate-polling:
+    status: todo
+    comment: |
+      Default is 30 s, user-configurable 30–300 s. The integration's own docs
+      state the cloud refreshes tank measurements at roughly 60 s, so the
+      default polls at about twice the rate the data changes, and each cycle
+      issues three requests (measurement + settings + schedule). Writes call
+      async_request_refresh() immediately, so a slower default would not make
+      the UI feel less responsive. Left at 30 s pending an owner decision
+      because it changes behaviour on existing installs.
+  brands:
+    status: todo
+    comment: |
+      STRUCTURALLY IMPOSSIBLE, not merely outstanding. home-assistant/brands
+      auto-closes new custom_integrations submissions. Brand images ship in
+      custom_components/mixergy_tank/brand/ and render correctly everywhere
+      inside Home Assistant; only the HACS dashboard, which still reads the
+      brands CDN, shows a placeholder. Explained to users in the README and
+      the troubleshooting FAQ rather than left as a mystery.
+      Upstream: hacs/integration#5171, fix proposed in hacs/integration#5388.
+  common-modules:
+    status: done
+    comment: Coordinator in coordinator.py, base entity in entity.py.
+  config-flow:
+    status: done
+    comment: |
+      Every field in every step carries a data_description, in all four
+      locales, guarded by a test that walks each field per locale (the
+      key-parity test cannot catch a field undocumented everywhere). #25.
+  config-flow-test-coverage:
+    status: done
+    comment: |
+      config_flow.py is at 100%. The tests drive
+      hass.config_entries.flow.async_init against a real hass, so the
+      duplicate-entry abort is genuinely exercised — previously the uniqueness
+      helpers were stubbed, which meant a duplicate silently created a second
+      entry and no test could detect it. #23, #27.
+  dependency-transparency:
+    status: exempt
+    comment: |
+      manifest.json declares no requirements; the API client is vendored in
+      api.py and uses only aiohttp, which Home Assistant already ships. Note a
+      core reviewer would separately expect a published, CI-built library —
+      that is the dependency-transparency neighbourhood but not this rule.
+  docs-actions:
+    status: done
+  docs-conditions:
+    status: exempt
+    comment: No condition platform.
+  docs-high-level-description:
+    status: done
+  docs-installation-instructions:
+    status: done
+  docs-removal-instructions:
+    status: done
+  docs-triggers:
+    status: done
+    comment: All five device triggers documented in docs/automations.md.
+  entity-event-setup:
+    status: exempt
+    comment: |
+      Polling integration with no external event subscriptions; entities are
+      driven entirely by the coordinator.
+  entity-unique-id:
+    status: done
+  has-entity-name:
+    status: done
+  runtime-data:
+    status: done
+    comment: Typed MixergyConfigEntry = ConfigEntry[MixergyCoordinator].
+  test-before-configure:
+    status: done
+  test-before-setup:
+    status: done
+  unique-config-entry:
+    status: done
+    comment: |
+      Keyed on tank serial. Verified by a real-flow test asserting both the
+      abort AND that a *different* serial is still accepted, so the abort
+      cannot be satisfied by refusing every second tank.
+
+  # ── Silver ────────────────────────────────────────────────────────────────
+  action-exceptions:
+    status: done
+    comment: |
+      User input (reversed holiday dates, unknown serial, unmatched target)
+      raises ServiceValidationError; runtime failures keep HomeAssistantError.
+      Home Assistant renders the first as a validation message and the second
+      as an integration fault, so the distinction decides whether a user goes
+      hunting for a problem that isn't there. #21.
+  config-entry-unloading:
+    status: done
+  docs-configuration-parameters:
+    status: done
+  docs-installation-parameters:
+    status: done
+  entity-unavailable:
+    status: done
+    comment: |
+      Every platform's available property consults super().available, so a
+      failed poll marks entities unavailable rather than serving stale values.
+  integration-owner:
+    status: done
+  log-when-unavailable:
+    status: done
+    comment: Delegated to DataUpdateCoordinator's log-once behaviour.
+  parallel-updates:
+    status: done
+    comment: 0 for read-only platforms, 1 for every platform that writes.
+  reauthentication-flow:
+    status: done
+    comment: |
+      Reauth verifies the new credentials still own the configured tank —
+      without that check a user could reauth with a different valid account
+      and the entry would reload straight into tank-not-found.
+  test-coverage:
+    status: done
+    comment: |
+      98% overall and above 95% for every module, measured on the full suite.
+      An earlier note in this repo claimed const.py's UnitOfRatio fallback was
+      structurally uncoverable because the two branches are mutually exclusive
+      per HA version. That was wrong: re-executing the module against a
+      stand-in homeassistant.const covers the fallback, and const.py is now
+      100%. Corrected in #27.
+
+  # ── Gold ──────────────────────────────────────────────────────────────────
+  devices:
+    status: done
+  diagnostics:
+    status: done
+  discovery:
+    status: exempt
+    comment: Cloud account integration; there is nothing on the network to discover.
+  discovery-update-info:
+    status: exempt
+    comment: As discovery.
+  docs-data-update:
+    status: done
+    comment: |
+      Covered in docs/configuration.md and docs/api.md. Note the Gold docs-*
+      rules formally require pages on home-assistant.io, which a custom
+      integration cannot have; the content exists in docs/ instead.
+  docs-examples:
+    status: done
+    comment: Automation cookbook in docs/automations.md. See docs-data-update.
+  docs-known-limitations:
+    status: done
+    comment: docs/troubleshooting.md FAQ. See docs-data-update.
+  docs-supported-devices:
+    status: done
+    comment: See docs-data-update.
+  docs-supported-functions:
+    status: done
+    comment: docs/entities.md. See docs-data-update.
+  docs-troubleshooting:
+    status: done
+    comment: docs/troubleshooting.md. See docs-data-update.
+  docs-use-cases:
+    status: done
+    comment: See docs-data-update.
+  dynamic-devices:
+    status: exempt
+    comment: One tank per config entry; a new tank is a new entry.
+  entity-category:
+    status: done
+  entity-device-class:
+    status: done
+  entity-disabled-by-default:
+    status: done
+    comment: Diagnostic sensors (firmware, model, last update) start disabled.
+  entity-translations:
+    status: done
+  exception-translations:
+    status: done
+    comment: |
+      Every user-facing raise carries translation_domain/translation_key with
+      placeholders, across all four locales — including the entity write path,
+      which is what a user sees when a switch toggle or boost fails. Guarded by
+      a test asserting each raised key has a matching string. #28.
+  icon-translations:
+    status: done
+    comment: |
+      All 35 icons live in icons.json keyed by translation_key; a guard fails
+      on any mdi: literal left in Python, because a stray _attr_icon silently
+      wins over icons.json with nothing to surface the conflict. #26.
+  reconfiguration-flow:
+    status: done
+  repair-issues:
+    status: done
+    comment: |
+      A tank that has left the account raises a repair issue and
+      ConfigEntryError rather than retrying forever.
+  stale-devices:
+    status: exempt
+    comment: |
+      Device identity is the tank serial and is fixed for the life of the
+      entry; the tank-gone case is handled by repair-issues.
+
+  # ── Platinum ──────────────────────────────────────────────────────────────
+  async-dependency:
+    status: done
+    comment: |
+      Natively async throughout — aiohttp only, no executor jobs, no blocking
+      calls anywhere in the component.
+  inject-websession:
+    status: done
+    comment: |
+      The client takes a session; every construction site passes
+      async_get_clientsession(hass). No ClientSession is created in-component.
+  strict-typing:
+    status: done
+    comment: |
+      py.typed ships and mypy runs strict in CI, clean on both the minimum and
+      current Home Assistant lanes. Strict was previously disabled on the
+      assumption that HA's partially-typed helpers would drown out real
+      findings; it produced two genuine errors, both fixed at source. #28.
+      Caveat: the rule also expects the integration's dependency to be typed.
+      Here the client is vendored rather than published, so the clause has no
+      clean referent — recorded as satisfied on the evidence available.
