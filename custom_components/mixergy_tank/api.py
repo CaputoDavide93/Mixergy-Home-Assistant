@@ -509,7 +509,18 @@ class MixergyApiClient:
                     # the token instantly "expired" — forcing a fresh login on
                     # every request and risking API throttling. Clamp it.
                     ttl = data.get("ttl", DEFAULT_TOKEN_TTL)
-                    if not isinstance(ttl, (int, float)) or ttl <= 0:
+                    if (
+                        not isinstance(ttl, (int, float))
+                        or isinstance(ttl, bool)
+                        or not math.isfinite(ttl)
+                        or ttl <= 0
+                    ):
+                        # NaN survives both the isinstance and the <= 0 check
+                        # (every NaN comparison is False), so it would reach the
+                        # arithmetic below and make _token_expiry NaN. A NaN
+                        # expiry never compares as expired, so the client would
+                        # reuse a dead token forever and 401 on every poll.
+                        # bool is an int subclass; True would become a 1 s TTL.
                         ttl = DEFAULT_TOKEN_TTL
                     ttl = max(ttl, TOKEN_REFRESH_BUFFER * 2)
                     self._token_expiry = time.time() + ttl

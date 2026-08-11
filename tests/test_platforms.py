@@ -343,3 +343,40 @@ async def test_switch_write_failure_reports_the_failing_switch() -> None:
 
     with pytest.raises(HomeAssistantError, match="dsr_enabled"):
         await MixergySwitch(coordinator, description).async_turn_on()
+
+
+# ── Availability follows the coordinator ──────────────────────────────────────
+
+
+def test_entities_go_unavailable_when_the_coordinator_fails() -> None:
+    """A failed poll must mark entities unavailable, not serve stale values.
+
+    CoordinatorEntity supplies this, but each platform overrides `available`
+    to add its own predicate — an override that forgets to consult
+    super().available would keep reporting the last known reading through an
+    outage, which reads as "everything is fine" on the dashboard.
+    """
+    from custom_components.mixergy_tank.binary_sensor import (
+        STATIC_BINARY_SENSOR_DESCRIPTIONS,
+        MixergyBinarySensor,
+    )
+    from custom_components.mixergy_tank.number import (
+        NUMBER_DESCRIPTIONS,
+        MixergyNumber,
+    )
+    from custom_components.mixergy_tank.switch import (
+        SWITCH_DESCRIPTIONS,
+        MixergySwitch,
+    )
+
+    coordinator = _coordinator()
+    coordinator.last_update_success = False
+
+    entities = [
+        MixergyBinarySensor(coordinator, STATIC_BINARY_SENSOR_DESCRIPTIONS[0]),
+        MixergyNumber(coordinator, NUMBER_DESCRIPTIONS[0]),
+        MixergySwitch(coordinator, SWITCH_DESCRIPTIONS[0]),
+    ]
+
+    for entity in entities:
+        assert entity.available is False, type(entity).__name__

@@ -430,3 +430,188 @@ async def test_options_flow_rejects_no_water_at_or_above_low_water() -> None:
         )
         assert result["type"] == "create_entry"
         assert result["data"][CONF_NO_WATER_THRESHOLD] == 5
+
+
+# ── Reauth and reconfigure ────────────────────────────────────────────────────
+#
+# Both flows re-verify credentials AND that the account still owns the
+# configured tank. That second check is the point: without it a user could
+# reauthenticate with a different valid Mixergy account and the entry would
+# reload straight into tank-not-found. These pin every error branch, because a
+# flow that shows the wrong message leaves the user with no way to act.
+
+
+def _reauth_flow(entry_data: dict | None = None):
+    """Return a reauth-ready flow with the HA plumbing stubbed."""
+    from custom_components.mixergy_tank.config_flow import MixergyConfigFlow
+
+    entry = MagicMock()
+    entry.data = entry_data or {
+        CONF_SERIAL_NUMBER: MOCK_SERIAL,
+        "username": MOCK_USERNAME,
+        "password": MOCK_PASSWORD,
+    }
+
+    flow = MixergyConfigFlow()
+    flow.hass = _make_flow_hass()
+    flow._get_reauth_entry = MagicMock(return_value=entry)
+    flow._get_reconfigure_entry = MagicMock(return_value=entry)
+    flow.async_update_reload_and_abort = MagicMock(
+        side_effect=lambda e, **kw: {"type": "abort", "updates": kw}
+    )
+    flow.async_show_form = MagicMock(
+        side_effect=lambda **kw: {
+            "type": "form",
+            "step_id": kw.get("step_id"),
+            "errors": kw.get("errors") or {},
+        }
+    )
+    flow.add_suggested_values_to_schema = MagicMock(
+        side_effect=lambda schema, values: schema
+    )
+    return flow, entry
+
+
+def _client(**side_effects) -> AsyncMock:
+    client = AsyncMock()
+    client.test_credentials = AsyncMock(
+        side_effect=side_effects.get("credentials")
+    )
+    client.test_connection = AsyncMock(
+        side_effect=side_effects.get("connection")
+    )
+    return client
+
+
+@pytest.mark.asyncio
+async def test_reauth_entry_point_shows_the_confirm_form() -> None:
+    """async_step_reauth delegates to the confirm step."""
+    flow, _ = _reauth_flow()
+
+    result = await flow.async_step_reauth({})
+
+    assert result["type"] == "form"
+    assert result["step_id"] == "reauth_confirm"
+
+
+@pytest.mark.asyncio
+async def test_reauth_success_updates_the_entry_credentials() -> None:
+    """Valid new credentials are written back and the entry reloads."""
+    flow, _ = _reauth_flow()
+
+    with patch(_CLIENT_PATCH, return_value=_client()), \
+         patch(_SESSION_PATCH, return_value=MagicMock()):
+        result = await flow.async_step_reauth_confirm({
+            "username": f"  {MOCK_USERNAME}  ",
+            "password": "new-password",
+        })
+
+    assert result["type"] == "abort"
+    updates = result["updates"]["data_updates"]
+    # The username is stripped — a trailing space pasted from a password
+    # manager would otherwise be stored and fail every later login.
+    assert updates["username"] == MOCK_USERNAME
+    assert updates["password"] == "new-password"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("failure", "expected_error"),
+    (
+        (MixergyAuthError("bad"), "invalid_auth"),
+        (MixergyTankNotFoundError("gone"), "tank_not_found"),
+        (MixergyConnectionError("down"), "cannot_connect"),
+        (OSError("socket"), "unknown"),
+    ),
+)
+async def test_reauth_maps_each_failure_to_its_own_message(
+    failure: Exception, expected_error: str
+) -> None:
+    """Every failure mode must produce its own actionable error."""
+    flow, _ = _reauth_flow()
+
+    with patch(_CLIENT_PATCH, return_value=_client(credentials=failure)), \
+         patch(_SESSION_PATCH, return_value=MagicMock()):
+        result = await flow.async_step_reauth_confirm({
+            "username": MOCK_USERNAME,
+            "password": "pw",
+        })
+
+    assert result["type"] == "form"
+    assert result["errors"] == {"base": expected_error}
+
+
+@pytest.mark.asyncio
+async def test_reauth_rejects_an_account_that_lost_the_tank() -> None:
+    """Credentials can be valid while no longer owning the configured tank.
+
+    Without this second check the entry would update, reload, and immediately
+    fail with tank-not-found — with the flow having reported success.
+    """
+    flow, _ = _reauth_flow()
+    client = _client(connection=MixergyTankNotFoundError("not yours"))
+
+    with patch(_CLIENT_PATCH, return_value=client), \
+         patch(_SESSION_PATCH, return_value=MagicMock()):
+        result = await flow.async_step_reauth_confirm({
+            "username": MOCK_USERNAME,
+            "password": "pw",
+        })
+
+    assert result["errors"] == {"base": "tank_not_found"}
+    client.test_connection.assert_awaited()
+
+
+@pytest.mark.asyncio
+async def test_reconfigure_shows_a_form_before_input() -> None:
+    """Opening reconfigure presents the form, pre-filled, without writing."""
+    flow, entry = _reauth_flow()
+
+    result = await flow.async_step_reconfigure()
+
+    assert result["type"] == "form"
+    assert result["step_id"] == "reconfigure"
+    flow.async_update_reload_and_abort.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_reconfigure_success_updates_credentials() -> None:
+    """Valid credentials update the entry without removing it."""
+    flow, _ = _reauth_flow()
+
+    with patch(_CLIENT_PATCH, return_value=_client()), \
+         patch(_SESSION_PATCH, return_value=MagicMock()):
+        result = await flow.async_step_reconfigure({
+            "username": f"{MOCK_USERNAME} ",
+            "password": "rotated",
+        })
+
+    updates = result["updates"]["data_updates"]
+    assert updates["username"] == MOCK_USERNAME
+    assert updates["password"] == "rotated"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("failure", "expected_error"),
+    (
+        (MixergyAuthError("bad"), "invalid_auth"),
+        (MixergyTankNotFoundError("gone"), "tank_not_found"),
+        (MixergyConnectionError("down"), "cannot_connect"),
+        (OSError("socket"), "unknown"),
+    ),
+)
+async def test_reconfigure_maps_each_failure_to_its_own_message(
+    failure: Exception, expected_error: str
+) -> None:
+    """Reconfigure must classify failures the same way reauth does."""
+    flow, _ = _reauth_flow()
+
+    with patch(_CLIENT_PATCH, return_value=_client(credentials=failure)), \
+         patch(_SESSION_PATCH, return_value=MagicMock()):
+        result = await flow.async_step_reconfigure({
+            "username": MOCK_USERNAME,
+            "password": "pw",
+        })
+
+    assert result["errors"] == {"base": expected_error}
