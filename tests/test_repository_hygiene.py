@@ -109,3 +109,50 @@ def test_brand_assets_are_complete_and_distinct() -> None:
     for name, expected_hash in manifest["outputs"].items():
         path = ROOT / name
         assert hashlib.sha256(path.read_bytes()).hexdigest() == expected_hash, name
+
+
+def test_icons_live_in_icons_json_not_in_code() -> None:
+    """Icons belong in icons.json, keyed by translation_key.
+
+    The icon-translations rule exists so an icon can be overridden per state
+    and localised without touching Python. A stray _attr_icon silently wins
+    over icons.json, so the two would disagree with no error anywhere.
+    """
+    from pathlib import Path
+
+    component = Path(__file__).parents[1] / "custom_components" / "mixergy_tank"
+    offenders = [
+        source.name
+        for source in component.glob("*.py")
+        if "mdi:" in source.read_text()
+    ]
+    assert not offenders, f"icons hard-coded in {offenders}; move them to icons.json"
+
+
+def test_every_entity_translation_key_with_an_icon_is_declared_once() -> None:
+    """icons.json keys must match real entity translation keys.
+
+    A typo'd key is silently ignored by Home Assistant — the entity just shows
+    the platform default — so nothing would surface the mistake at runtime.
+    """
+    import json
+    from pathlib import Path
+
+    component = Path(__file__).parents[1] / "custom_components" / "mixergy_tank"
+    icons = json.loads((component / "icons.json").read_text())["entity"]
+    strings = json.loads((component / "strings.json").read_text())["entity"]
+
+    for platform, entries in icons.items():
+        assert platform in strings, f"icons.json has unknown platform {platform}"
+        unknown = set(entries) - set(strings[platform])
+        assert not unknown, (
+            f"icons.json {platform}: keys not in strings.json: {sorted(unknown)}"
+        )
+
+
+def test_py_typed_marker_is_shipped() -> None:
+    """PEP 561 marker: without it, type checkers ignore this package entirely."""
+    from pathlib import Path
+
+    component = Path(__file__).parents[1] / "custom_components" / "mixergy_tank"
+    assert (component / "py.typed").is_file()

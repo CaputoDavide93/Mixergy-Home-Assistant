@@ -1,0 +1,123 @@
+{
+  "entity": {
+    "binary_sensor": {
+      "electric_heat": {
+        "default": "mdi:lightning-bolt"
+      },
+      "heatpump_heat": {
+        "default": "mdi:heat-pump"
+      },
+      "holiday_mode": {
+        "default": "mdi:airplane-takeoff"
+      },
+      "indirect_heat": {
+        "default": "mdi:fire"
+      },
+      "is_heating": {
+        "default": "mdi:water-boiler"
+      },
+      "low_hot_water": {
+        "default": "mdi:water-percent-alert"
+      },
+      "no_hot_water": {
+        "default": "mdi:water-remove-outline"
+      }
+    },
+    "button": {
+      "clear_holiday": {
+        "default": "mdi:airplane-off"
+      }
+    },
+    "datetime": {
+      "holiday_end_set": {
+        "default": "mdi:airplane-landing"
+      },
+      "holiday_start_set": {
+        "default": "mdi:airplane-takeoff"
+      }
+    },
+    "number": {
+      "boost_charge_simple": {
+        "default": "mdi:water-boiler-alert"
+      },
+      "cleansing_temperature_control": {
+        "default": "mdi:thermometer-water"
+      },
+      "pv_charge_limit": {
+        "default": "mdi:solar-power"
+      },
+      "pv_cut_in_threshold": {
+        "default": "mdi:solar-power-variant"
+      },
+      "pv_over_temperature": {
+        "default": "mdi:thermometer-alert"
+      },
+      "pv_target_current": {
+        "default": "mdi:current-ac"
+      },
+      "target_charge_control": {
+        "default": "mdi:water-percent"
+      },
+      "target_temperature_control": {
+        "default": "mdi:thermometer"
+      }
+    },
+    "select": {
+      "default_heat_source_select": {
+        "default": "mdi:fire-circle"
+      }
+    },
+    "sensor": {
+      "active_heat_source": {
+        "default": "mdi:fire"
+      },
+      "charge": {
+        "default": "mdi:water-percent"
+      },
+      "default_heat_source": {
+        "default": "mdi:fire-circle"
+      },
+      "electric_cost": {
+        "default": "mdi:cash"
+      },
+      "electric_energy": {
+        "default": "mdi:lightning-bolt"
+      },
+      "firmware_version": {
+        "default": "mdi:chip"
+      },
+      "holiday_end": {
+        "default": "mdi:airplane-landing"
+      },
+      "holiday_start": {
+        "default": "mdi:airplane-takeoff"
+      },
+      "last_update": {
+        "default": "mdi:clock-check-outline"
+      },
+      "model": {
+        "default": "mdi:water-boiler"
+      },
+      "pv_energy": {
+        "default": "mdi:solar-power"
+      },
+      "target_charge": {
+        "default": "mdi:water-percent"
+      }
+    },
+    "switch": {
+      "distributed_computing": {
+        "default": "mdi:molecule"
+      },
+      "dsr_enabled": {
+        "default": "mdi:transmission-tower"
+      },
+      "frost_protection": {
+        "default": "mdi:snowflake-alert"
+      },
+      "pv_divert": {
+        "default": "mdi:solar-power"
+      }
+    }
+  }
+}

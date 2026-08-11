@@ -32,7 +32,6 @@ class MixergyDefaultHeatSourceSelect(MixergyEntity, SelectEntity):
     """Select entity for the default heat source (Advanced mode)."""
 
     _attr_translation_key = "default_heat_source_select"
-    _attr_icon = "mdi:fire-circle"
     _attr_options = HEAT_SOURCE_OPTIONS
     _attr_entity_category = EntityCategory.CONFIG
 
