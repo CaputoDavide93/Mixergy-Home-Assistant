@@ -241,6 +241,15 @@
   "exceptions": {
     "auth_failed": {
       "message": "Mixergy-Authentifizierung fehlgeschlagen. Bitte gib deine Anmeldedaten erneut ein."
+    },
+    "no_matching_target": {
+      "message": "Keine Mixergy-Tanks passen zum angegebenen Ziel. Der Tank ist möglicherweise nicht eingerichtet, oder das Ziel gehört zu einer anderen Integration."
+    },
+    "unknown_serial_number": {
+      "message": "Kein konfigurierter Mixergy-Tank hat die Seriennummer {serial}."
+    },
+    "holiday_start_after_end": {
+      "message": "Der Urlaubsbeginn muss vor dem Ende liegen."
     }
   },
   "services": {

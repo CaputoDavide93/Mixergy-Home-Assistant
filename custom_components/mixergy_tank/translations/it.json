@@ -241,6 +241,15 @@
   "exceptions": {
     "auth_failed": {
       "message": "Autenticazione Mixergy fallita. Reinserisci le credenziali."
+    },
+    "no_matching_target": {
+      "message": "Nessun serbatoio Mixergy corrisponde al target indicato. Il serbatoio potrebbe non essere configurato, oppure il target appartiene a un'altra integrazione."
+    },
+    "unknown_serial_number": {
+      "message": "Nessun serbatoio Mixergy configurato ha il numero di serie {serial}."
+    },
+    "holiday_start_after_end": {
+      "message": "L'inizio della vacanza deve precedere la fine."
     }
   },
   "services": {

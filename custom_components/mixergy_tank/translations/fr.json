@@ -241,6 +241,15 @@
   "exceptions": {
     "auth_failed": {
       "message": "Échec de l'authentification Mixergy. Veuillez saisir à nouveau vos identifiants."
+    },
+    "no_matching_target": {
+      "message": "Aucun ballon Mixergy ne correspond à la cible indiquée. Le ballon n'est peut-être pas configuré, ou la cible appartient à une autre intégration."
+    },
+    "unknown_serial_number": {
+      "message": "Aucun ballon Mixergy configuré ne porte le numéro de série {serial}."
+    },
+    "holiday_start_after_end": {
+      "message": "Le début des vacances doit précéder la fin."
     }
   },
   "services": {
