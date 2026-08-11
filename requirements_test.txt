@@ -6,7 +6,11 @@
 homeassistant
 aiohttp
 PyYAML
-pytest==9.1.1
+# Pinned to what pytest-homeassistant-custom-component requires (it pins
+# pytest exactly). Holding a newer pytest here makes the current-HA leg
+# unresolvable, and the two must agree for the fixture-backed flow tests to
+# install at all. pytest-asyncio and pytest-cov already match its pins.
+pytest==9.0.3
 pytest-asyncio==1.4.0
 pytest-cov==7.1.0
 
