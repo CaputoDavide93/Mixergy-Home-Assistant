@@ -7,6 +7,10 @@
         "data": {
           "username": "Adresse e-mail",
           "password": "Mot de passe"
+        },
+        "data_description": {
+          "username": "L'adresse e-mail que vous utilisez pour vous connecter à l'application Mixergy.",
+          "password": "Le mot de passe de votre compte Mixergy. Il est stocké uniquement dans Home Assistant et envoyé exclusivement à mixergy.io."
         }
       },
       "tank": {
@@ -24,6 +28,9 @@
         "description": "Votre **{model}** (série : `{serial}`) est connecté !\n\nChoisissez comment vous souhaitez interagir avec l'intégration. Vous pouvez modifier ce choix à tout moment depuis le bouton **Configurer** sur la carte de l'intégration.\n\n---\n\n### 🟢 Simple\nIdéal pour les utilisateurs quotidiens qui souhaitent surveiller leur ballon et augmenter rapidement la température de l'eau chaude.\n\n✅ Températures et niveau de charge en temps réel\n✅ État de chauffage et indicateurs de source de chaleur\n✅ Consommation d'énergie (kWh) pour le tableau de bord Énergie\n✅ État du mode vacances\n✅ **Boost eau chaude** — définissez votre charge cible avec un curseur\n\n❌ Pas de modification des paramètres\n❌ Pas de sélection de source de chaleur\n❌ Pas de planification des vacances\n\n---\n\n### ⚙️ Avancé\nIdéal pour les utilisateurs expérimentés souhaitant un contrôle total du ballon.\n\n✅ Tout ce qui est disponible en Simple\n✅ Régler la température cible et la température de purification\n✅ Changer la source de chaleur par défaut (électrique / indirecte / pompe à chaleur)\n✅ Commandes PV (si installé)\n✅ Interrupteurs protection antigel et DSR\n✅ Planification du mode vacances\n✅ Support complet pour les automatisations",
         "data": {
           "experience_mode": "Mode d'expérience"
+        },
+        "data_description": {
+          "experience_mode": "Simple affiche les températures, la charge et un curseur de boost. Avancé ajoute les commandes de température et de source de chauffage, les réglages du diverteur PV et la planification des vacances. Modifiable par la suite."
         }
       },
       "reauth_confirm": {
@@ -32,6 +39,10 @@
         "data": {
           "username": "Adresse e-mail",
           "password": "Mot de passe"
+        },
+        "data_description": {
+          "username": "L'adresse e-mail que vous utilisez pour vous connecter à l'application Mixergy.",
+          "password": "Le mot de passe actuel de votre compte Mixergy."
         }
       },
       "reconfigure": {
@@ -40,6 +51,10 @@
         "data": {
           "username": "Adresse e-mail",
           "password": "Mot de passe"
+        },
+        "data_description": {
+          "username": "L'adresse e-mail que vous utilisez pour vous connecter à l'application Mixergy.",
+          "password": "Le mot de passe actuel de votre compte Mixergy."
         }
       }
     },

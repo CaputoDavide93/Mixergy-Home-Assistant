@@ -7,6 +7,10 @@
         "data": {
           "username": "Email address",
           "password": "Password"
+        },
+        "data_description": {
+          "username": "The email address you use to sign in to the Mixergy app.",
+          "password": "Your Mixergy account password. It is stored only in Home Assistant and sent solely to mixergy.io."
         }
       },
       "tank": {
@@ -24,6 +28,9 @@
         "description": "Your **{model}** (serial: `{serial}`) is connected!\n\nChoose how you want to interact with the integration. You can change this any time from the **Configure** button on the integration card.\n\n---\n\n### 🟢 Simple\nBest for everyday users who just want to monitor their tank and quickly boost hot water when needed.\n\n✅ Live temperatures & charge level\n✅ Heating status & heat source indicators\n✅ Energy usage (kWh) for the Energy Dashboard\n✅ Holiday mode status\n✅ **Hot water boost** — set your target charge with a slider\n\n❌ No settings editing\n❌ No heat source switching\n❌ No holiday scheduling\n\n---\n\n### ⚙️ Advanced\nBest for power users who want complete control over their tank.\n\n✅ Everything in Simple\n✅ Adjust target temperature and cleansing temperature\n✅ Switch default heat source (electric / indirect / heat pump)\n✅ PV divert controls (if fitted)\n✅ Frost protection & DSR switches\n✅ Holiday mode scheduling\n✅ Full service automation support",
         "data": {
           "experience_mode": "Experience mode"
+        },
+        "data_description": {
+          "experience_mode": "Simple shows temperatures, charge and a boost slider. Advanced adds temperature and heat-source controls, PV diverter settings and holiday scheduling. You can change this later."
         }
       },
       "reauth_confirm": {
@@ -32,6 +39,10 @@
         "data": {
           "username": "Email address",
           "password": "Password"
+        },
+        "data_description": {
+          "username": "The email address you use to sign in to the Mixergy app.",
+          "password": "Your current Mixergy account password."
         }
       },
       "reconfigure": {
@@ -40,6 +51,10 @@
         "data": {
           "username": "Email address",
           "password": "Password"
+        },
+        "data_description": {
+          "username": "The email address you use to sign in to the Mixergy app.",
+          "password": "Your current Mixergy account password."
         }
       }
     },

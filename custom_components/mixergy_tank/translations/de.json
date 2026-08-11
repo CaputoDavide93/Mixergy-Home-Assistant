@@ -7,6 +7,10 @@
         "data": {
           "username": "E-Mail-Adresse",
           "password": "Passwort"
+        },
+        "data_description": {
+          "username": "Die E-Mail-Adresse, mit der du dich in der Mixergy-App anmeldest.",
+          "password": "Dein Mixergy-Kontopasswort. Es wird nur in Home Assistant gespeichert und ausschließlich an mixergy.io gesendet."
         }
       },
       "tank": {
@@ -24,6 +28,9 @@
         "description": "Dein **{model}** (Seriennummer: `{serial}`) ist verbunden!\n\nWähle, wie du mit der Integration interagieren möchtest. Du kannst dies jederzeit über die Schaltfläche **Konfigurieren** auf der Integrationskarte ändern.\n\n---\n\n### 🟢 Einfach\nAm besten für Alltagsnutzer, die ihren Tank überwachen und bei Bedarf schnell Warmwasser aufheizen möchten.\n\n✅ Live-Temperaturen & Ladezustand\n✅ Heizstatus & Wärmequellenanzeigen\n✅ Energieverbrauch (kWh) für das Energie-Dashboard\n✅ Urlaubsmodus-Status\n✅ **Warmwasser aufheizen** — Zielladung per Schieberegler einstellen\n\n❌ Keine Einstellungsänderungen\n❌ Keine Wärmequellenauswahl\n❌ Keine Urlaubsplanung\n\n---\n\n### ⚙️ Erweitert\nAm besten für Power-User, die vollständige Kontrolle über ihren Tank wünschen.\n\n✅ Alles aus Einfach\n✅ Zieltemperatur und Reinigungstemperatur anpassen\n✅ Standard-Wärmequelle wechseln (elektrisch / indirekt / Wärmepumpe)\n✅ PV-Steuerung (falls vorhanden)\n✅ Frostschutz- & DSR-Schalter\n✅ Urlaubsmodus-Planung\n✅ Vollständige Automatisierungsunterstützung",
         "data": {
           "experience_mode": "Erlebnismodus"
+        },
+        "data_description": {
+          "experience_mode": "Einfach zeigt Temperaturen, Ladezustand und einen Aufheiz-Regler. Erweitert ergänzt Temperatur- und Wärmequellensteuerung, PV-Einstellungen und Urlaubsplanung. Du kannst das später ändern."
         }
       },
       "reauth_confirm": {
@@ -32,6 +39,10 @@
         "data": {
           "username": "E-Mail-Adresse",
           "password": "Passwort"
+        },
+        "data_description": {
+          "username": "Die E-Mail-Adresse, mit der du dich in der Mixergy-App anmeldest.",
+          "password": "Dein aktuelles Mixergy-Kontopasswort."
         }
       },
       "reconfigure": {
@@ -40,6 +51,10 @@
         "data": {
           "username": "E-Mail-Adresse",
           "password": "Passwort"
+        },
+        "data_description": {
+          "username": "Die E-Mail-Adresse, mit der du dich in der Mixergy-App anmeldest.",
+          "password": "Dein aktuelles Mixergy-Kontopasswort."
         }
       }
     },
