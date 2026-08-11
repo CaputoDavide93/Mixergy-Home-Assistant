@@ -9,7 +9,11 @@ in a multi-tank account.
 
 from __future__ import annotations
 
+from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+from homeassistant.exceptions import ServiceValidationError
 
 from custom_components.mixergy_tank.const import (
     CONF_EXPERIENCE_MODE,
@@ -109,35 +113,52 @@ async def test_setup_forwards_platforms_and_stores_the_coordinator() -> None:
 # ── Unload ────────────────────────────────────────────────────────────────────
 
 
-async def test_unload_removes_services_only_with_no_entries_left() -> None:
-    """Services are domain-wide: removing them early breaks the other tank."""
-    from custom_components.mixergy_tank import async_unload_entry
+async def test_services_are_registered_by_async_setup_not_per_entry() -> None:
+    """Services must exist as soon as the integration is set up.
+
+    Registering them in async_setup_entry meant that if the entry failed to
+    load — the Mixergy cloud being unreachable at Home Assistant start is
+    enough — the services did not exist at all, and every automation calling
+    mixergy_tank.boost_charge failed validation instead of failing gracefully
+    at call time.
+    """
+    from custom_components.mixergy_tank import async_setup
 
     hass = _hass()
-    hass.config_entries.async_loaded_entries.return_value = [MagicMock()]
+    assert await async_setup(hass, {}) is True
 
-    assert await async_unload_entry(hass, _entry()) is True
-    hass.services.async_remove.assert_not_called()
+    registered = {call.args[1] for call in hass.services.async_register.call_args_list}
+    assert registered == {
+        "set_holiday_dates",
+        "clear_holiday_dates",
+        "boost_charge",
+    }
 
 
-async def test_unload_removes_services_when_the_last_entry_goes() -> None:
-    """The final unload must clean up all three services."""
+async def test_unload_never_removes_services() -> None:
+    """Unloading an entry must leave the domain's services registered.
+
+    Previously the last unload removed them, which is the anti-pattern the
+    action-setup quality rule targets: an automation referencing a service of
+    an installed-but-unloaded integration should still validate. The handlers
+    raise ServiceValidationError at call time when no tank matches, which is
+    the actionable failure.
+    """
     from custom_components.mixergy_tank import async_unload_entry
 
-    hass = _hass()
-    hass.config_entries.async_loaded_entries.return_value = []
+    for loaded in ([], [MagicMock()]):
+        hass = _hass()
+        hass.config_entries.async_loaded_entries.return_value = loaded
+        assert await async_unload_entry(hass, _entry()) is True
+        hass.services.async_remove.assert_not_called()
 
-    assert await async_unload_entry(hass, _entry()) is True
-    assert hass.services.async_remove.call_count == 3
 
-
-async def test_failed_platform_unload_keeps_services_registered() -> None:
-    """If platforms refuse to unload, the entry is still live — keep services."""
+async def test_failed_platform_unload_is_reported() -> None:
+    """A refused platform unload must propagate as False."""
     from custom_components.mixergy_tank import async_unload_entry
 
     hass = _hass()
     hass.config_entries.async_unload_platforms = AsyncMock(return_value=False)
-    hass.config_entries.async_loaded_entries.return_value = []
 
     assert await async_unload_entry(hass, _entry()) is False
     hass.services.async_remove.assert_not_called()
@@ -243,3 +264,116 @@ def test_device_entry_ids_prefer_the_modern_attribute() -> None:
     legacy.config_entry_id = None
     legacy.config_entries = {"old-style", "second"}
     assert _device_config_entry_ids(legacy) == {"old-style", "second"}
+
+
+# ── Service validation errors ─────────────────────────────────────────────────
+#
+# ServiceValidationError vs HomeAssistantError is not cosmetic: HA presents the
+# former as "your input was wrong" and the latter as "the integration failed".
+# Getting it backwards sends a user hunting for a fault that isn't there.
+
+
+async def test_services_survive_an_entry_that_never_loaded() -> None:
+    """The whole point of async_setup registration.
+
+    With no loaded entries the services must still exist and, when called,
+    fail with an actionable validation error rather than not existing.
+    """
+    from custom_components.mixergy_tank import _target_coordinators
+
+    hass = _hass()
+    hass.config_entries.async_loaded_entries.return_value = []
+
+    call = MagicMock()
+    call.data = {"serial_number": "MX999999"}
+
+    with pytest.raises(ServiceValidationError):
+        await _target_coordinators(hass, call)
+
+
+async def test_unknown_serial_raises_validation_error_naming_the_serial() -> None:
+    """A typo'd serial is user input, and the message must identify it."""
+    from custom_components.mixergy_tank import _target_coordinators
+
+    hass = _hass()
+    hass.config_entries.async_loaded_entries.return_value = []
+    call = MagicMock()
+    call.data = {"serial_number": "mx999999"}
+
+    with pytest.raises(ServiceValidationError) as err:
+        await _target_coordinators(hass, call)
+
+    assert err.value.translation_key == "unknown_serial_number"
+    # Normalised to upper case before matching and before being reported.
+    assert err.value.translation_placeholders == {"serial": "MX999999"}
+
+
+async def test_target_matching_nothing_raises_validation_error() -> None:
+    """An entity/device/area target owned by another integration is user error."""
+    from custom_components.mixergy_tank import _target_coordinators
+
+    hass = _hass()
+    hass.config_entries.async_loaded_entries.return_value = []
+    call = MagicMock()
+    call.data = {"entity_id": ["sensor.someone_elses"]}
+
+    with patch("custom_components.mixergy_tank.er") as er_mod, \
+         patch("custom_components.mixergy_tank.dr"):
+        er_mod.async_get.return_value.async_get.return_value = None
+        with pytest.raises(ServiceValidationError) as err:
+            await _target_coordinators(hass, call)
+
+    assert err.value.translation_key == "no_matching_target"
+
+
+async def test_holiday_start_after_end_raises_validation_error() -> None:
+    """Reversed dates are the user's mistake, not a cloud failure."""
+    import custom_components.mixergy_tank as integration
+
+    hass = _hass()
+    registered: dict = {}
+    hass.services.async_register = MagicMock(
+        side_effect=lambda domain, name, handler, **kw: registered.__setitem__(
+            name, handler
+        )
+    )
+    hass.services.has_service = MagicMock(return_value=False)
+
+    await integration.async_setup(hass, {})
+
+    call = MagicMock()
+    call.data = {
+        "start_date": datetime(2026, 6, 8, 9, 0),
+        "end_date": datetime(2026, 6, 1, 9, 0),
+    }
+
+    with pytest.raises(ServiceValidationError) as err:
+        await registered["set_holiday_dates"](call)
+
+    assert err.value.translation_key == "holiday_start_after_end"
+
+
+async def test_every_exception_translation_key_exists_in_strings() -> None:
+    """A raised translation_key with no string renders as a raw key to users."""
+    import json
+    import re
+    from pathlib import Path
+
+    component = Path(__file__).parents[1] / "custom_components" / "mixergy_tank"
+    declared = set(
+        json.loads((component / "strings.json").read_text())
+        .get("exceptions", {})
+    )
+
+    used: set[str] = set()
+    for source in component.glob("*.py"):
+        text = source.read_text()
+        for match in re.finditer(r'translation_key="([^"]+)"', text):
+            # Entity translation keys live in the entity block, not exceptions;
+            # only collect keys raised alongside a translation_domain.
+            start = max(0, match.start() - 300)
+            if "translation_domain" in text[start : match.end()]:
+                used.add(match.group(1))
+
+    missing = used - declared
+    assert not missing, f"raised translation keys with no string: {missing}"

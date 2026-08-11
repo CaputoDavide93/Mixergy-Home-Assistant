@@ -19,10 +19,16 @@ from homeassistant.const import (
     Platform,
 )
 from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.exceptions import HomeAssistantError, Unauthorized, UnknownUser
+from homeassistant.exceptions import (
+    HomeAssistantError,
+    ServiceValidationError,
+    Unauthorized,
+    UnknownUser,
+)
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.typing import ConfigType
 from homeassistant.util import dt as dt_util
 
 from .api import MixergyApiClient, MixergyApiError, MixergyAuthError
@@ -70,6 +76,25 @@ _TARGET_FIELDS: dict[Any, Any] = {
 }
 
 
+async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+    """Register the domain's services.
+
+    Services are registered here rather than in async_setup_entry so they
+    exist whenever the integration is installed, independent of whether any
+    config entry has loaded. Registering per-entry meant that if the entry
+    failed to set up — the Mixergy cloud being unreachable at Home Assistant
+    start is enough — the services did not exist at all, and every automation
+    calling mixergy_tank.boost_charge failed validation rather than failing
+    gracefully at call time.
+
+    The handlers below resolve their targets at call time and raise
+    ServiceValidationError when nothing matches, which is the correct
+    behaviour for "installed but not currently loaded".
+    """
+    _register_services(hass)
+    return True
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: MixergyConfigEntry) -> bool:
     """Set up Mixergy from a config entry."""
     # Backfill experience_mode for entries created before the option existed.
@@ -105,27 +130,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: MixergyConfigEntry) -> b
     # methods (async_update_reload_and_abort in reauth/reconfigure) it is
     # deprecated since HA 2026.6 and an ERROR from 2026.12.
 
-    # Register services (only once per domain)
-    _register_services(hass)
-
     return True
 
 
 async def async_unload_entry(
     hass: HomeAssistant, entry: MixergyConfigEntry
 ) -> bool:
-    """Unload a Mixergy config entry."""
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    """Unload a Mixergy config entry.
 
-    # Remove services when the last entry is unloaded
-    loaded_entries = hass.config_entries.async_loaded_entries(DOMAIN)
-    if unload_ok and not loaded_entries:
-        for service_name in (
-            SERVICE_SET_HOLIDAY, SERVICE_CLEAR_HOLIDAY, SERVICE_BOOST_CHARGE
-        ):
-            hass.services.async_remove(DOMAIN, service_name)
-
-    return unload_ok
+    Services are deliberately NOT removed here — see async_setup. They are
+    registered once for the domain and stay registered, so an automation
+    referencing them keeps validating while entries come and go.
+    """
+    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
 def _coordinator_by_entry(
@@ -250,8 +267,11 @@ async def _target_coordinators(
     if entry_ids is not None:
         targets = [by_entry[e] for e in entry_ids if e in by_entry]
         if not targets:
-            raise HomeAssistantError(
-                "No Mixergy tanks match the supplied target."
+            # Bad input, not an integration fault: the user named a target
+            # this integration does not own, or the entry is not loaded.
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="no_matching_target",
             )
     elif serial is not None:
         serial = serial.upper().strip()
@@ -260,8 +280,10 @@ async def _target_coordinators(
             if c.client.tank_info.serial_number == serial
         ]
         if not targets:
-            raise HomeAssistantError(
-                f"No configured Mixergy tank with serial number {serial}"
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="unknown_serial_number",
+                translation_placeholders={"serial": serial},
             )
     else:
         targets = all_coords
@@ -325,8 +347,12 @@ def _register_services(hass: HomeAssistant) -> None:
         end_date = _as_local(call.data[ATTR_END_DATE])
 
         if start_date >= end_date:
-            raise HomeAssistantError(
-                "Holiday start date must be before the end date."
+            # User input, not an integration fault — ServiceValidationError
+            # renders this as a validation message rather than an error
+            # attributed to the integration.
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="holiday_start_after_end",
             )
 
         await _run_on_targets(

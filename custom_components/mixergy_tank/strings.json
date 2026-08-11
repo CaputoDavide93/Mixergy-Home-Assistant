@@ -241,6 +241,15 @@
   "exceptions": {
     "auth_failed": {
       "message": "Mixergy authentication failed. Please re-enter your credentials."
+    },
+    "no_matching_target": {
+      "message": "No Mixergy tanks match the supplied target. The tank may not be set up, or the target may belong to another integration."
+    },
+    "unknown_serial_number": {
+      "message": "No configured Mixergy tank has serial number {serial}."
+    },
+    "holiday_start_after_end": {
+      "message": "The holiday start must be before the end."
     }
   },
   "services": {
