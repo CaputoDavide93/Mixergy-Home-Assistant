@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="custom_components/mixergy/brand/icon.png" alt="Mixergy for Home Assistant" width="104" height="104">
+<img src="https://raw.githubusercontent.com/CaputoDavide93/Mixergy-Home-Assistant/main/custom_components/mixergy/brand/icon.png" alt="Mixergy for Home Assistant" width="104" height="104">
 
 # Mixergy for Home Assistant
 
