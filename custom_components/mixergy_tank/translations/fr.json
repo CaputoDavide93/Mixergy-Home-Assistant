@@ -33,6 +33,14 @@
           "username": "Adresse e-mail",
           "password": "Mot de passe"
         }
+      },
+      "reconfigure": {
+        "title": "Reconfigurer Mixergy",
+        "description": "Mettez à jour les identifiants du compte pour le ballon {serial_number}.",
+        "data": {
+          "username": "Adresse e-mail",
+          "password": "Mot de passe"
+        }
       }
     },
     "error": {
@@ -43,7 +51,8 @@
     },
     "abort": {
       "already_configured": "Ce ballon est déjà configuré.",
-      "reauth_successful": "Ré-authentification réussie."
+      "reauth_successful": "Ré-authentification réussie.",
+      "reconfigure_successful": "Reconfiguration réussie."
     }
   },
   "options": {
@@ -53,11 +62,17 @@
         "description": "**Simple** offre une surveillance en temps réel et un curseur de boost d'eau chaude.\n**Avancé** déverrouille tous les paramètres, le contrôle de source de chaleur, la déviation PV, la planification des vacances et plus encore.",
         "data": {
           "experience_mode": "Mode d'expérience",
-          "update_interval": "Intervalle de mise à jour (secondes)"
+          "update_interval": "Intervalle de mise à jour (secondes)",
+          "electric_rate": "Prix de l'électricité par kWh (0 pour désactiver le capteur de coût)",
+          "low_water_threshold": "Seuil d'alerte eau chaude faible (%)",
+          "no_water_threshold": "Seuil d'alerte absence d'eau chaude (%)"
         },
         "data_description": {
           "experience_mode": "Basculer entre Simple (surveillance + boost) et Avancé (contrôle total). L'intégration se rechargera à l'enregistrement.",
-          "update_interval": "À quelle fréquence récupérer les données de l'API Mixergy (30–300 secondes)."
+          "update_interval": "À quelle fréquence récupérer les données de l'API Mixergy (30–300 secondes).",
+          "electric_rate": "Utilisé pour calculer le capteur de coût de l'électricité. Laissez à 0 pour le désactiver.",
+          "low_water_threshold": "Le capteur binaire « eau chaude faible » s'active en dessous de cette charge.",
+          "no_water_threshold": "Le capteur binaire « pas d'eau chaude » s'active en dessous de cette charge."
         }
       }
     },
@@ -131,6 +146,9 @@
       },
       "last_update": {
         "name": "Dernière mise à jour réussie"
+      },
+      "electric_cost": {
+        "name": "Coût du chauffage électrique"
       }
     },
     "binary_sensor": {
@@ -210,6 +228,14 @@
       "clear_holiday": {
         "name": "Effacer les dates de vacances"
       }
+    },
+    "datetime": {
+      "holiday_start_set": {
+        "name": "Début des vacances"
+      },
+      "holiday_end_set": {
+        "name": "Fin des vacances"
+      }
     }
   },
   "exceptions": {
@@ -229,16 +255,55 @@
         "end_date": {
           "name": "Date de fin",
           "description": "La date et l'heure de retour du mode vacances."
+        },
+        "serial_number": {
+          "name": "Numéro de série",
+          "description": "Facultatif. Limiter au ballon portant ce numéro de série. Si omis, s'applique à tous les ballons configurés."
         }
       }
     },
     "clear_holiday_dates": {
       "name": "Effacer les dates de vacances",
-      "description": "Efface les dates du mode vacances pour le ballon Mixergy."
+      "description": "Efface les dates du mode vacances pour le ballon Mixergy.",
+      "fields": {
+        "serial_number": {
+          "name": "Numéro de série",
+          "description": "Facultatif. Limiter au ballon portant ce numéro de série. Si omis, s'applique à tous les ballons configurés."
+        }
+      }
     },
     "boost_charge": {
       "name": "Booster l'eau chaude",
-      "description": "Porte immédiatement la charge de l'eau chaude à 100%."
+      "description": "Porte immédiatement la charge de l'eau chaude à 100%.",
+      "fields": {
+        "serial_number": {
+          "name": "Numéro de série",
+          "description": "Facultatif. Limiter au ballon portant ce numéro de série. Si omis, s'applique à tous les ballons configurés."
+        }
+      }
+    }
+  },
+  "device_automation": {
+    "trigger_type": {
+      "heating_started": "Chauffage démarré",
+      "heating_stopped": "Chauffage arrêté",
+      "holiday_started": "Mode vacances démarré",
+      "holiday_ended": "Mode vacances terminé",
+      "low_hot_water": "Eau chaude faible"
+    }
+  },
+  "issues": {
+    "tank_not_found": {
+      "title": "Ballon Mixergy introuvable",
+      "description": "Le ballon portant le numéro de série {serial} n'est plus présent dans votre compte Mixergy. Si vous l'avez remplacé ou renommé, utilisez « Reconfigurer » pour mettre à jour l'intégration, ou supprimez-la puis ajoutez-la de nouveau."
+    }
+  },
+  "selector": {
+    "experience_mode": {
+      "options": {
+        "simple": "Simple",
+        "advanced": "Avancé"
+      }
     }
   }
 }

@@ -33,6 +33,14 @@
           "username": "E-Mail-Adresse",
           "password": "Passwort"
         }
+      },
+      "reconfigure": {
+        "title": "Mixergy neu konfigurieren",
+        "description": "Aktualisiere die Kontodaten für den Tank {serial_number}.",
+        "data": {
+          "username": "E-Mail-Adresse",
+          "password": "Passwort"
+        }
       }
     },
     "error": {
@@ -43,7 +51,8 @@
     },
     "abort": {
       "already_configured": "Dieser Tank ist bereits konfiguriert.",
-      "reauth_successful": "Erneute Authentifizierung erfolgreich."
+      "reauth_successful": "Erneute Authentifizierung erfolgreich.",
+      "reconfigure_successful": "Neukonfiguration erfolgreich."
     }
   },
   "options": {
@@ -53,11 +62,17 @@
         "description": "**Einfach** bietet Live-Überwachung und einen Schieberegler zum Aufheizen.\n**Erweitert** schaltet alle Einstellungen, Wärmequellensteuerung, PV-Umleitung, Urlaubsplanung und mehr frei.",
         "data": {
           "experience_mode": "Erlebnismodus",
-          "update_interval": "Aktualisierungsintervall (Sekunden)"
+          "update_interval": "Aktualisierungsintervall (Sekunden)",
+          "electric_rate": "Strompreis pro kWh (0 deaktiviert den Kostensensor)",
+          "low_water_threshold": "Schwellwert für die Warnung „wenig Warmwasser“ (%)",
+          "no_water_threshold": "Schwellwert für die Warnung „kein Warmwasser“ (%)"
         },
         "data_description": {
           "experience_mode": "Wechsel zwischen Einfach (Überwachung + Aufheizen) und Erweitert (vollständige Kontrolle). Die Integration wird nach dem Speichern neu geladen.",
-          "update_interval": "Wie häufig Daten von der Mixergy-API abgerufen werden (30–300 Sekunden)."
+          "update_interval": "Wie häufig Daten von der Mixergy-API abgerufen werden (30–300 Sekunden).",
+          "electric_rate": "Wird zur Berechnung des Stromkostensensors verwendet. Bei 0 bleibt er deaktiviert.",
+          "low_water_threshold": "Der Binärsensor „wenig Warmwasser“ schaltet unterhalb dieses Ladezustands ein.",
+          "no_water_threshold": "Der Binärsensor „kein Warmwasser“ schaltet unterhalb dieses Ladezustands ein."
         }
       }
     },
@@ -131,6 +146,9 @@
       },
       "last_update": {
         "name": "Letztes erfolgreiches Update"
+      },
+      "electric_cost": {
+        "name": "Kosten für elektrisches Heizen"
       }
     },
     "binary_sensor": {
@@ -210,6 +228,14 @@
       "clear_holiday": {
         "name": "Urlaubsdaten löschen"
       }
+    },
+    "datetime": {
+      "holiday_start_set": {
+        "name": "Urlaubsbeginn"
+      },
+      "holiday_end_set": {
+        "name": "Urlaubsende"
+      }
     }
   },
   "exceptions": {
@@ -229,16 +255,55 @@
         "end_date": {
           "name": "Enddatum",
           "description": "Das Rückkehrdatum und die Uhrzeit aus dem Urlaubsmodus."
+        },
+        "serial_number": {
+          "name": "Seriennummer",
+          "description": "Optional. Auf den Tank mit dieser Seriennummer beschränken. Ohne Angabe gilt es für alle konfigurierten Tanks."
         }
       }
     },
     "clear_holiday_dates": {
       "name": "Urlaubsdaten löschen",
-      "description": "Löscht die Urlaubsmodus-Daten für den Mixergy-Tank."
+      "description": "Löscht die Urlaubsmodus-Daten für den Mixergy-Tank.",
+      "fields": {
+        "serial_number": {
+          "name": "Seriennummer",
+          "description": "Optional. Auf den Tank mit dieser Seriennummer beschränken. Ohne Angabe gilt es für alle konfigurierten Tanks."
+        }
+      }
     },
     "boost_charge": {
       "name": "Warmwasser aufheizen",
-      "description": "Heizt das Warmwasser sofort auf 100% Ladung."
+      "description": "Heizt das Warmwasser sofort auf 100% Ladung.",
+      "fields": {
+        "serial_number": {
+          "name": "Seriennummer",
+          "description": "Optional. Auf den Tank mit dieser Seriennummer beschränken. Ohne Angabe gilt es für alle konfigurierten Tanks."
+        }
+      }
+    }
+  },
+  "device_automation": {
+    "trigger_type": {
+      "heating_started": "Heizen gestartet",
+      "heating_stopped": "Heizen beendet",
+      "holiday_started": "Urlaubsmodus gestartet",
+      "holiday_ended": "Urlaubsmodus beendet",
+      "low_hot_water": "Wenig Warmwasser"
+    }
+  },
+  "issues": {
+    "tank_not_found": {
+      "title": "Mixergy-Tank nicht gefunden",
+      "description": "Der Tank mit der Seriennummer {serial} ist in deinem Mixergy-Konto nicht mehr vorhanden. Wenn du den Tank ersetzt oder umbenannt hast, aktualisiere die Integration über „Neu konfigurieren“, oder entferne sie und füge sie erneut hinzu."
+    }
+  },
+  "selector": {
+    "experience_mode": {
+      "options": {
+        "simple": "Einfach",
+        "advanced": "Erweitert"
+      }
     }
   }
 }
