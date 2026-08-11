@@ -256,3 +256,53 @@ async def test_options_flow_round_trips(hass: HomeAssistant) -> None:
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert entry.options[CONF_EXPERIENCE_MODE] == MODE_ADVANCED
     assert entry.options["update_interval"] == 120
+
+
+async def test_tank_listing_failure_falls_back_to_free_text(
+    hass: HomeAssistant,
+) -> None:
+    """If the tank list can't be fetched, the user must still be able to type.
+
+    Credentials are already known good at this point, so aborting would strand
+    someone whose account lists fine but whose /tanks call blipped. The flow
+    degrades to free-text serial entry instead.
+    """
+    client = _client()
+    client.async_list_tanks = AsyncMock(
+        side_effect=MixergyConnectionError("listing down")
+    )
+
+    with patch(_CLIENT, return_value=client):
+        result = await hass.config_entries.flow.async_init(
+            DOMAIN, context={"source": config_entries.SOURCE_USER}
+        )
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {"username": MOCK_USERNAME, "password": MOCK_PASSWORD},
+        )
+
+    # Not an abort and not an error — the tank step is still reachable.
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "tank"
+    assert not result["errors"]
+
+
+async def test_unexpected_tank_step_error_is_reported_as_unknown(
+    hass: HomeAssistant,
+) -> None:
+    """A non-Mixergy exception must not escape the flow as a traceback."""
+    with patch(_CLIENT, return_value=_client(connection=OSError("socket"))):
+        result = await hass.config_entries.flow.async_init(
+            DOMAIN, context={"source": config_entries.SOURCE_USER}
+        )
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {"username": MOCK_USERNAME, "password": MOCK_PASSWORD},
+        )
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {CONF_SERIAL_NUMBER: MOCK_SERIAL}
+        )
+
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "tank"
+    assert result["errors"] == {"base": "unknown"}

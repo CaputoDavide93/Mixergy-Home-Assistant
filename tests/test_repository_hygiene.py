@@ -156,3 +156,48 @@ def test_py_typed_marker_is_shipped() -> None:
 
     component = Path(__file__).parents[1] / "custom_components" / "mixergy_tank"
     assert (component / "py.typed").is_file()
+
+
+def test_percentage_unit_falls_back_on_home_assistant_below_2026_7() -> None:
+    """The UnitOfRatio shim's fallback branch must be exercised, not assumed.
+
+    const.py picks PERCENTAGE_UNIT from UnitOfRatio where it exists and falls
+    back to the legacy PERCENTAGE constant below HA 2026.7. Only one branch can
+    run on any given Home Assistant, which makes it tempting to write the other
+    off as uncoverable — it isn't. Re-executing the module against a stand-in
+    homeassistant.const that lacks UnitOfRatio runs the fallback, and coverage
+    attributes it to the real file.
+
+    Worth pinning rather than skipping: if the fallback were broken, the
+    minimum-HA lane would fail at import with every entity gone, and no test on
+    a current HA would notice.
+    """
+    import importlib.util
+    import sys
+    import types
+    from pathlib import Path
+    from unittest.mock import patch
+
+    real = sys.modules["homeassistant.const"]
+
+    # Same module, minus UnitOfRatio — i.e. Home Assistant < 2026.7.
+    legacy = types.ModuleType("homeassistant.const")
+    for name in dir(real):
+        if name != "UnitOfRatio":
+            setattr(legacy, name, getattr(real, name))
+
+    const_path = (
+        Path(__file__).parents[1]
+        / "custom_components"
+        / "mixergy_tank"
+        / "const.py"
+    )
+    spec = importlib.util.spec_from_file_location(
+        "custom_components.mixergy_tank.const", const_path
+    )
+    module = importlib.util.module_from_spec(spec)
+
+    with patch.dict(sys.modules, {"homeassistant.const": legacy}):
+        spec.loader.exec_module(module)
+
+    assert module.PERCENTAGE_UNIT == real.PERCENTAGE
