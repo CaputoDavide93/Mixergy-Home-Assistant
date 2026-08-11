@@ -10,6 +10,7 @@ import pytest
 
 from custom_components.mixergy_tank.api import (
     API_ROOT,
+    MAX_RESPONSE_BYTES,
     HeatSource,
     MixergyApiClient,
     MixergyApiError,
@@ -20,6 +21,8 @@ from custom_components.mixergy_tank.api import (
     TankMeasurement,
     TankSchedule,
     TankSettings,
+    _read_capped,
+    _read_capped_json,
 )
 
 from .conftest import (
@@ -28,6 +31,7 @@ from .conftest import (
     MOCK_SERIAL,
     MOCK_TOKEN,
     MOCK_USERNAME,
+    attach_body,
 )
 
 
@@ -45,6 +49,15 @@ def _make_resp(status: int = 200, json_data=None, text_data: str | None = None):
         resp.json = AsyncMock(return_value=json_data)
     if text_data is not None:
         resp.text = AsyncMock(return_value=text_data)
+
+    # Bodies are read through the capped reader, never resp.json()/resp.text().
+    if text_data is not None:
+        body = text_data.encode()
+    elif json_data is not None:
+        body = json.dumps(json_data).encode()
+    else:
+        body = b""
+    attach_body(resp, body)
     return resp
 
 
@@ -1317,3 +1330,149 @@ async def test_redirect_clears_cached_discovery(
     assert client._control_url is None
     assert client._settings_url is None
     assert client._schedule_url is None
+
+
+# ── Response body size cap (issue #3) ─────────────────────────────────────────
+#
+# TLS, origin pinning, redirect rejection and timeouts all bound *who* we talk
+# to and for *how long*, but nothing bounded how many bytes a compromised or
+# malfunctioning upstream could stream into the Home Assistant process. These
+# pin the cap on both response shapes and on what the error is allowed to say.
+
+
+async def test_oversized_declared_body_is_rejected_without_reading():
+    """A Content-Length over the cap must fail before any body is buffered."""
+    resp = _make_resp(200)
+    attach_body(resp, b"", declared_length=MAX_RESPONSE_BYTES + 1)
+
+    read_attempted = False
+
+    async def iter_chunked(chunk_size):
+        nonlocal read_attempted
+        read_attempted = True
+        yield b""
+
+    resp.content.iter_chunked = iter_chunked
+
+    with pytest.raises(MixergyConnectionError) as err:
+        await _read_capped(resp, "Test response")
+
+    assert "limit" in str(err.value)
+    assert not read_attempted, "body was streamed despite an oversized header"
+
+
+async def test_oversized_streamed_body_is_abandoned_mid_read():
+    """A chunked body that lies about (or omits) its size is still bounded."""
+    # No Content-Length at all — the only defence is the streaming cap.
+    resp = _make_resp(200)
+    oversized = b"x" * (MAX_RESPONSE_BYTES + 1024)
+    attach_body(resp, oversized, declared_length=None)
+
+    delivered = 0
+    original = resp.content.iter_chunked
+
+    async def counting_iter(chunk_size):
+        nonlocal delivered
+        async for chunk in original(chunk_size):
+            delivered += len(chunk)
+            yield chunk
+
+    resp.content.iter_chunked = counting_iter
+
+    with pytest.raises(MixergyConnectionError):
+        await _read_capped(resp, "Test response")
+
+    # The read must stop shortly after crossing the cap, not consume the lot.
+    assert delivered <= MAX_RESPONSE_BYTES + 64 * 1024
+
+
+async def test_body_exactly_at_the_cap_is_accepted():
+    """The cap is a ceiling, not an off-by-one rejection of a legal payload."""
+    resp = _make_resp(200)
+    payload = b"y" * MAX_RESPONSE_BYTES
+    attach_body(resp, payload)
+
+    assert await _read_capped(resp, "Test response") == payload.decode()
+
+
+async def test_undersized_body_declaring_an_oversized_length_is_rejected():
+    """A lying header is enough on its own — we never trust it into a read."""
+    resp = _make_resp(200)
+    attach_body(resp, b'{"ok": true}', declared_length=MAX_RESPONSE_BYTES * 10)
+
+    with pytest.raises(MixergyConnectionError):
+        await _read_capped_json(resp, "Test response")
+
+
+async def test_malformed_content_length_falls_through_to_streaming_cap():
+    """A junk header must not crash the read, and must not disable the cap."""
+    resp = _make_resp(200)
+    attach_body(resp, b'{"ok": true}', declared_length="not-a-number")
+
+    assert await _read_capped_json(resp, "Test response") == {"ok": True}
+
+
+async def test_oversized_body_error_never_leaks_credentials_or_content():
+    """Cap errors surface in config-flow errors and logs — keep them bare."""
+    secret_body = (
+        b'{"token": "super-secret-jwt", "password": "hunter2"}'
+        + b"z" * (MAX_RESPONSE_BYTES + 1)
+    )
+    resp = _make_resp(200)
+    attach_body(resp, secret_body, declared_length=None)
+
+    with pytest.raises(MixergyConnectionError) as err:
+        await _read_capped(resp, "Settings response")
+
+    message = str(err.value)
+    for leak in ("super-secret-jwt", "hunter2", "token", "password"):
+        assert leak not in message
+    assert "Settings response" in message
+
+
+async def test_capped_reader_rejects_undecodable_body():
+    """Binary garbage must raise a typed error, not a raw UnicodeDecodeError."""
+    resp = _make_resp(200)
+    attach_body(resp, b"\xff\xfe\x00garbage")
+
+    with pytest.raises(MixergyConnectionError):
+        await _read_capped(resp, "Test response")
+
+
+async def test_capped_reader_rejects_invalid_json():
+    """Non-JSON under the cap stays a typed connection error."""
+    resp = _make_resp(200)
+    attach_body(resp, b"<html>not json</html>")
+
+    with pytest.raises(MixergyConnectionError):
+        await _read_capped_json(resp, "Test response")
+
+
+async def test_oversized_measurement_surfaces_as_connection_error(
+    mock_aiohttp_session: MagicMock,
+) -> None:
+    """End-to-end: an oversized cloud payload must not escape as a raw error.
+
+    The coordinator only handles MixergyApiError subclasses, so an unbounded
+    read escaping as MemoryError or a raw aiohttp error would surface as an
+    unhandled traceback rather than a normal unavailable cycle.
+    """
+    huge = b'{"padding": "' + b"x" * (MAX_RESPONSE_BYTES + 1) + b'"}'
+    resp = _make_resp(200)
+    attach_body(resp, huge, declared_length=None)
+    mock_aiohttp_session.request = AsyncMock(return_value=resp)
+
+    client = MixergyApiClient(
+        session=mock_aiohttp_session,
+        username=MOCK_USERNAME,
+        password=MOCK_PASSWORD,
+        serial_number=MOCK_SERIAL,
+    )
+    client._measurement_url = (
+        f"https://www.mixergy.io/api/v2/tank/{MOCK_SERIAL}/measurement"
+    )
+    client._token = MOCK_TOKEN
+    client._token_expiry = time.time() + 3600
+
+    with pytest.raises(MixergyConnectionError):
+        await client.fetch_measurement()

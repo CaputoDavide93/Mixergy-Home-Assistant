@@ -34,6 +34,14 @@ TOKEN_REFRESH_BUFFER = 300
 DEFAULT_TOKEN_TTL = 3600
 # Per-request timeout: 30 s total prevents indefinite hangs
 REQUEST_TIMEOUT = aiohttp.ClientTimeout(total=30)
+# Largest response body we will buffer. The biggest real payload is the tank
+# list on a multi-tank account, which is orders of magnitude below this; the
+# cap exists so a malformed or compromised upstream cannot stream an unbounded
+# body into the Home Assistant process.
+MAX_RESPONSE_BYTES = 2 * 1024 * 1024
+# Read granularity for the capped reader; only affects how promptly an
+# oversized stream is abandoned.
+_READ_CHUNK_BYTES = 64 * 1024
 
 
 class MixergyApiError(Exception):
@@ -65,6 +73,73 @@ class PVType(StrEnum):
     """PV diverter types."""
 
     NO_INVERTER = "NO_INVERTER"
+
+
+# ── Response body reading ─────────────────────────────────────────────────────
+
+async def _read_capped(resp: aiohttp.ClientResponse, context: str) -> str:
+    """Read a response body as text, refusing to buffer more than the cap.
+
+    aiohttp's own ``json()``/``text()`` read to completion, so a malformed or
+    compromised upstream could stream an unbounded body straight into the Home
+    Assistant process. Both shapes are bounded here:
+
+    - a declared ``Content-Length`` over the cap is rejected before any body is
+      read, so an oversized declared payload costs nothing;
+    - a chunked (or lying) response is read incrementally and abandoned the
+      moment the accumulated size exceeds the cap, so it can never be fully
+      buffered.
+
+    The error deliberately carries only sizes and the caller-supplied context —
+    never response content, headers, URLs or credentials, since these surface
+    in config-flow errors and logs.
+    """
+    declared = resp.headers.get("Content-Length")
+    if declared is not None:
+        try:
+            if int(declared) > MAX_RESPONSE_BYTES:
+                raise MixergyConnectionError(
+                    f"{context} declared {int(declared)} bytes, "
+                    f"over the {MAX_RESPONSE_BYTES} byte limit"
+                )
+        except ValueError:
+            # A malformed header tells us nothing; the streaming cap below
+            # still bounds the read.
+            pass
+
+    chunks: list[bytes] = []
+    total = 0
+    async for chunk in resp.content.iter_chunked(_READ_CHUNK_BYTES):
+        total += len(chunk)
+        if total > MAX_RESPONSE_BYTES:
+            raise MixergyConnectionError(
+                f"{context} exceeded the {MAX_RESPONSE_BYTES} byte limit"
+            )
+        chunks.append(chunk)
+
+    body = b"".join(chunks)
+    encoding = resp.charset or "utf-8"
+    try:
+        return body.decode(encoding, errors="strict")
+    except (UnicodeDecodeError, LookupError) as err:
+        raise MixergyConnectionError(
+            f"{context} was not valid {encoding} text"
+        ) from err
+
+
+async def _read_capped_json(resp: aiohttp.ClientResponse, context: str) -> Any:
+    """Read and decode a JSON body under the same cap as :func:`_read_capped`.
+
+    Used in place of ``resp.json()`` everywhere. Note the Mixergy settings and
+    schedule endpoints answer with a ``text/plain`` content type, so the body
+    is decoded with ``json.loads`` rather than aiohttp's content-type-checked
+    helper.
+    """
+    text = await _read_capped(resp, context)
+    try:
+        return json.loads(text)
+    except ValueError as err:
+        raise MixergyConnectionError(f"{context} was not valid JSON") from err
 
 
 # ── Format helpers ────────────────────────────────────────────────────────────
@@ -357,7 +432,7 @@ class MixergyApiClient:
                     raise MixergyConnectionError(
                         f"Root endpoint returned {resp.status}"
                     )
-                root = _require_object(await resp.json(), "Root response")
+                root = _require_object(await _read_capped_json(resp, "Root response"), "Root response")
                 root_links = _require_object(root.get("_links"), "Root links")
                 account_url = _require_link(root_links, "account")
 
@@ -371,7 +446,7 @@ class MixergyApiClient:
                     raise MixergyConnectionError(
                         f"Account endpoint returned {resp.status}"
                     )
-                account = _require_object(await resp.json(), "Account response")
+                account = _require_object(await _read_capped_json(resp, "Account response"), "Account response")
                 account_links = _require_object(
                     account.get("_links"), "Account links"
                 )
@@ -417,7 +492,7 @@ class MixergyApiClient:
                         )
 
                     data = _require_object(
-                        await resp.json(),
+                        await _read_capped_json(resp, "Authentication response"),
                         "Authentication response",
                         MixergyAuthError,
                     )
@@ -515,7 +590,7 @@ class MixergyApiClient:
                         raise MixergyConnectionError(
                             f"Root endpoint returned {resp.status}"
                         )
-                    root = _require_object(await resp.json(), "Root response")
+                    root = _require_object(await _read_capped_json(resp, "Root response"), "Root response")
                     root_links = _require_object(root.get("_links"), "Root links")
                     self._tanks_url = _require_link(root_links, "tanks")
 
@@ -527,7 +602,7 @@ class MixergyApiClient:
                         raise MixergyConnectionError(
                             f"Tanks endpoint returned {resp.status}"
                         )
-                    data = _require_object(await resp.json(), "Tanks response")
+                    data = _require_object(await _read_capped_json(resp, "Tanks response"), "Tanks response")
                     embedded = _require_object(
                         data.get("_embedded"), "Tanks embedded data"
                     )
@@ -567,7 +642,8 @@ class MixergyApiClient:
                             f"Tank detail endpoint returned {resp.status}"
                         )
                     detail = _require_object(
-                        await resp.json(), "Tank detail response"
+                        await _read_capped_json(resp, "Tank detail response"),
+                        "Tank detail response",
                     )
 
                 # Validate every required HATEOAS link (https + Mixergy host)
@@ -727,7 +803,8 @@ class MixergyApiClient:
                 )
             try:
                 data = _require_object(
-                    await resp.json(), "Measurement response"
+                    await _read_capped_json(resp, "Measurement response"),
+                    "Measurement response",
                 )
             except (aiohttp.ClientError, ValueError) as err:
                 raise MixergyConnectionError(
@@ -796,7 +873,7 @@ class MixergyApiClient:
                 )
             # Settings endpoint returns text/plain content-type
             try:
-                text = await resp.text()
+                text = await _read_capped(resp, "Settings response")
                 data = _require_object(
                     json.loads(text), "Settings response"
                 )
@@ -839,7 +916,7 @@ class MixergyApiClient:
                     f"Schedule fetch failed: {resp.status}"
                 )
             try:
-                text = await resp.text()
+                text = await _read_capped(resp, "Schedule response")
                 data = _require_object(
                     json.loads(text), "Schedule response"
                 )
@@ -1135,7 +1212,7 @@ class MixergyApiClient:
                     raise MixergyConnectionError(
                         f"Root endpoint returned {resp.status}"
                     )
-                root = _require_object(await resp.json(), "Root response")
+                root = _require_object(await _read_capped_json(resp, "Root response"), "Root response")
             root_links = _require_object(root.get("_links"), "Root links")
             tanks_url = _require_link(root_links, "tanks")
             async with await self._request_with_reauth("GET", tanks_url) as resp:
@@ -1143,7 +1220,7 @@ class MixergyApiClient:
                     raise MixergyConnectionError(
                         f"Tanks endpoint returned {resp.status}"
                     )
-                data = _require_object(await resp.json(), "Tanks response")
+                data = _require_object(await _read_capped_json(resp, "Tanks response"), "Tanks response")
             embedded = _require_object(data.get("_embedded"), "Tanks embedded data")
             tanks = _require_array(embedded.get("tankList"), "Tank list")
         except (aiohttp.ClientError, asyncio.TimeoutError,
