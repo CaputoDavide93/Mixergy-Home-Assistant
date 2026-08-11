@@ -37,6 +37,11 @@ Or add the repository by hand:
 
 > Searching HACS without adding the custom repository first can surface unrelated Mixergy projects from the default store. Check the repository owner is **CaputoDavide93** before installing.
 
+> Upgrading from a 1.x release is different from a fresh install because the
+> integration domain changed in 2.0.0. Follow the dedicated
+> [1.x → 2.x migration](#upgrading-from-1x-to-2x) before restarting Home
+> Assistant; a normal HACS update leaves the old component directory behind.
+
 After the restart, add the integration itself: **Settings** → **Devices & Services** → **Add Integration** → search for **Mixergy**, then enter your Mixergy account username, password, and the serial number from your tank label. The [configuration guide](configuration.md) covers the rest of the setup flow, including the Simple/Advanced experience modes.
 
 ---
@@ -71,7 +76,7 @@ Updates arrive as GitHub releases on [CaputoDavide93/Mixergy-Home-Assistant](htt
 
 ## ⬆️ How do I update safely?
 
-Read the release notes first, take a Home Assistant backup, then apply the update through HACS and restart. Your configuration entry — credentials, serial number, experience mode, and options — survives updates, so you never re-enter anything after upgrading.
+For normal updates within the same domain, read the release notes first, take a Home Assistant backup, then apply the update through HACS and restart. Your configuration entry — credentials, serial number, experience mode, and options — survives those updates. The 1.x → 2.x domain rename is the exception; use the dedicated migration below.
 
 1. Open the release notes for the new version on the [releases page](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/releases) and check for breaking changes
 2. Take a Home Assistant backup (**Settings** → **System** → **Backups**)
@@ -80,6 +85,35 @@ Read the release notes first, take a Home Assistant backup, then apply the updat
 5. Confirm the tank device still reports — check an entity such as `sensor.mixergy_tank_<serial>_current_charge` has a fresh state
 
 For a manual install, replace the whole `config/custom_components/mixergy_tank/` directory with the new release's copy, then restart. Do not merge old and new files — stale leftovers from a previous version cause hard-to-diagnose errors.
+
+### Upgrading from 1.x to 2.x
+
+Version 2.0.0 renamed the integration domain from `mixergy` to
+`mixergy_tank`. Home Assistant cannot move a config entry between domains, and
+HACS installs the new release into `custom_components/mixergy_tank/` without
+removing the old `custom_components/mixergy/` directory. Leaving both in place
+keeps the retired integration installed and can present two integrations named
+**Mixergy** after the restart.
+
+1. Take a full Home Assistant backup.
+2. Note the tank serial number under **Settings → Devices & Services → Mixergy
+   → Configure**.
+3. Delete the existing **Mixergy** config entry. This frees its entity IDs for
+   the replacement entry.
+4. Update the custom repository to 2.0.0 or later in HACS, but do not restart
+   yet.
+5. Using the File editor, Studio Code Server, Samba, or a terminal, delete the
+   old `/config/custom_components/mixergy/` directory. Keep
+   `/config/custom_components/mixergy_tank/`.
+6. Restart Home Assistant.
+7. Add **Mixergy** again and select the same tank and experience mode.
+8. Update service calls from `mixergy.*` to `mixergy_tank.*` and device
+   triggers from `domain: mixergy` to `domain: mixergy_tank`.
+
+The recreated entities normally reclaim their previous entity IDs because
+step 3 removes the old registry entries first. If an ID receives a numeric
+suffix, rename it back to the original ID to keep dashboards, automations, and
+recorder history aligned.
 
 ---
 

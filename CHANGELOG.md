@@ -13,9 +13,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   unrelated, still-maintained project of the same name, so every HACS listing
   of this integration showed that project's icon. A domain is the key both
   Home Assistant and the brands CDN use for identity; two projects cannot
-  share one. Moving to a domain of our own is the only way this integration
-  can carry its own icon, and it removes the config-entry collision that two
-  integrations sharing a domain would otherwise cause.
+  share one. Moving to a domain of our own ends that misattribution and removes
+  the config-entry collision that two integrations sharing a domain would
+  otherwise cause. HACS does not use the integration's packaged `brand/`
+  images, so its listing currently shows an "icon not available" placeholder;
+  Home Assistant 2026.3+ uses the packaged Mixergy artwork on its own
+  Integrations page.
 
   **Upgrading from 1.x requires manual steps — the config entry cannot
   migrate itself, because Home Assistant ties an entry to its domain:**
@@ -23,9 +26,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   1. Note your tank's serial number (**Settings → Devices & Services →
      Mixergy → Configure**).
   2. Delete the existing **Mixergy** integration entry.
-  3. Update to 2.0.0 in HACS and restart Home Assistant.
-  4. Re-add via **Settings → Devices & Services → Add Integration → Mixergy**.
-  5. Update any automations that call the services — `mixergy.boost_charge`,
+  3. Update to 2.0.0 in HACS, but do not restart yet.
+  4. Delete the old `/config/custom_components/mixergy/` directory. HACS
+     installs the renamed integration into `custom_components/mixergy_tank/`
+     but cannot remove the directory belonging to the previous domain.
+  5. Restart Home Assistant.
+  6. Re-add via **Settings → Devices & Services → Add Integration → Mixergy**.
+  7. Update any automations that call the services — `mixergy.boost_charge`,
      `mixergy.set_holiday_dates` and `mixergy.clear_holiday_dates` are now
      `mixergy_tank.*`. Device triggers using `domain: mixergy` become
      `domain: mixergy_tank`.
@@ -33,7 +40,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Entities are recreated under the new domain, so entity IDs that collide with
   the leftovers from 1.x will gain a numeric suffix unless the old entries are
   removed first (step 2 does this). To preserve history against specific entity
-  IDs, rename the new entities back to the old IDs after step 4.
+  IDs, rename the new entities back to the old IDs after step 6.
 
 ## [1.3.6] - 2026-08-10
 
