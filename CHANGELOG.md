@@ -4,6 +4,37 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-08-11
+
+### Changed — BREAKING
+
+- **The integration domain is now `mixergy_tank` (was `mixergy`).** The
+  `mixergy` domain was already registered in `home-assistant/brands` by an
+  unrelated, still-maintained project of the same name, so every HACS listing
+  of this integration showed that project's icon. A domain is the key both
+  Home Assistant and the brands CDN use for identity; two projects cannot
+  share one. Moving to a domain of our own is the only way this integration
+  can carry its own icon, and it removes the config-entry collision that two
+  integrations sharing a domain would otherwise cause.
+
+  **Upgrading from 1.x requires manual steps — the config entry cannot
+  migrate itself, because Home Assistant ties an entry to its domain:**
+
+  1. Note your tank's serial number (**Settings → Devices & Services →
+     Mixergy → Configure**).
+  2. Delete the existing **Mixergy** integration entry.
+  3. Update to 2.0.0 in HACS and restart Home Assistant.
+  4. Re-add via **Settings → Devices & Services → Add Integration → Mixergy**.
+  5. Update any automations that call the services — `mixergy.boost_charge`,
+     `mixergy.set_holiday_dates` and `mixergy.clear_holiday_dates` are now
+     `mixergy_tank.*`. Device triggers using `domain: mixergy` become
+     `domain: mixergy_tank`.
+
+  Entities are recreated under the new domain, so entity IDs that collide with
+  the leftovers from 1.x will gain a numeric suffix unless the old entries are
+  removed first (step 2 does this). To preserve history against specific entity
+  IDs, rename the new entities back to the old IDs after step 4.
+
 ## [1.3.6] - 2026-08-10
 
 ### Fixed

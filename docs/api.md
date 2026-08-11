@@ -29,7 +29,7 @@ flowchart LR
 
 ## 🔌 The standalone API client
 
-`MixergyApiClient` (`custom_components/mixergy/api.py`) has no Home Assistant dependency. Its constructor takes an `aiohttp.ClientSession`, a username, a password, and a tank serial number (upper-cased internally). Everything HA-specific — coordinators, config entries, repair issues — lives outside it, so the client works in any asyncio program.
+`MixergyApiClient` (`custom_components/mixergy_tank/api.py`) has no Home Assistant dependency. Its constructor takes an `aiohttp.ClientSession`, a username, a password, and a tank serial number (upper-cased internally). Everything HA-specific — coordinators, config entries, repair issues — lives outside it, so the client works in any asyncio program.
 
 The client holds all per-tank state:
 
@@ -148,14 +148,14 @@ One subtlety: `fetch_all()` gathers three sub-fetches concurrently, so a `404` h
 
 ## 🐍 Using the client outside Home Assistant
 
-The client needs nothing from HA — an `aiohttp.ClientSession` and your Mixergy credentials are enough. Clone [github.com/CaputoDavide93/Mixergy-Home-Assistant](https://github.com/CaputoDavide93/Mixergy-Home-Assistant) and import from `custom_components/mixergy/api.py` (the module imports only `aiohttp` and the standard library).
+The client needs nothing from HA — an `aiohttp.ClientSession` and your Mixergy credentials are enough. Clone [github.com/CaputoDavide93/Mixergy-Home-Assistant](https://github.com/CaputoDavide93/Mixergy-Home-Assistant) and import from `custom_components/mixergy_tank/api.py` (the module imports only `aiohttp` and the standard library).
 
 ```python
 import asyncio
 
 import aiohttp
 
-from custom_components.mixergy.api import (
+from custom_components.mixergy_tank.api import (
     MixergyApiClient,
     MixergyAuthError,
 )

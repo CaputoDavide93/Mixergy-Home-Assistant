@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://raw.githubusercontent.com/CaputoDavide93/Mixergy-Home-Assistant/main/custom_components/mixergy/brand/icon.png" alt="Mixergy for Home Assistant" width="104" height="104">
+<img src="https://raw.githubusercontent.com/CaputoDavide93/Mixergy-Home-Assistant/main/custom_components/mixergy_tank/brand/icon.png" alt="Mixergy for Home Assistant" width="104" height="104">
 
 # Mixergy for Home Assistant
 
@@ -57,7 +57,7 @@ Or add manually in HACS:
 ### Manual Installation
 
 1. Download the [latest release](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/releases)
-2. Copy `custom_components/mixergy/` into your HA `config/custom_components/` directory
+2. Copy `custom_components/mixergy_tank/` into your HA `config/custom_components/` directory
 3. Restart Home Assistant
 
 Full details, updating, and uninstalling: [Installation guide](docs/installation.md).
@@ -171,9 +171,9 @@ voice assistants, and `water_heater.*` services.
 <!-- AUTOGEN:entities:services -->
 | Service | Description |
 | ------- | ----------- |
-| `mixergy.set_holiday_dates` | Set the holiday start and end dates for the Mixergy tank. |
-| `mixergy.clear_holiday_dates` | Clear the holiday mode dates for the Mixergy tank. |
-| `mixergy.boost_charge` | Boost the hot water to 100% charge immediately. |
+| `mixergy_tank.set_holiday_dates` | Set the holiday start and end dates for the Mixergy tank. |
+| `mixergy_tank.clear_holiday_dates` | Clear the holiday mode dates for the Mixergy tank. |
+| `mixergy_tank.boost_charge` | Boost the hot water to 100% charge immediately. |
 <!-- /AUTOGEN:entities:services -->
 
 > The tables above are generated from the integration source by
@@ -245,7 +245,7 @@ automation:
       - condition: time
         weekday: [mon, tue, wed, thu, fri]
     actions:
-      - action: mixergy.boost_charge
+      - action: mixergy_tank.boost_charge
 ```
 
 ### Set holiday mode before a trip
@@ -258,7 +258,7 @@ automation:
         entity_id: input_boolean.going_on_holiday
         to: "on"
     actions:
-      - action: mixergy.set_holiday_dates
+      - action: mixergy_tank.set_holiday_dates
         data:
           start_date: "2026-08-14T00:00:00"
           end_date: "2026-08-28T00:00:00"
@@ -280,7 +280,7 @@ automation:
         entity_id: sensor.mixergy_tank_<serial>_current_charge
         below: 80
     actions:
-      - action: mixergy.boost_charge
+      - action: mixergy_tank.boost_charge
 ```
 
 > Entity ids follow the pattern `sensor.mixergy_tank_<serial>_…` — replace
@@ -364,7 +364,7 @@ with the checks in order. The two things you'll need for any bug report:
 logger:
   default: warning
   logs:
-    custom_components.mixergy: debug
+    custom_components.mixergy_tank: debug
 ```
 
 **Diagnostics** — **Settings → Devices & Services → Mixergy → Download

@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from custom_components.mixergy.api import (
+from custom_components.mixergy_tank.api import (
     API_ROOT,
     HeatSource,
     MixergyApiClient,
@@ -704,7 +704,7 @@ async def test_request_passes_timeout(
     api_client: MixergyApiClient, mock_aiohttp_session: MagicMock
 ) -> None:
     """Every authenticated request passes REQUEST_TIMEOUT to the session."""
-    from custom_components.mixergy.api import REQUEST_TIMEOUT
+    from custom_components.mixergy_tank.api import REQUEST_TIMEOUT
 
     # Trigger a request
     await api_client.fetch_all()
@@ -817,7 +817,7 @@ def test_energy_elapsed_hours_capped_post_outage():
     """
     import datetime as dt
 
-    from custom_components.mixergy.sensor import MixergyEnergySensor
+    from custom_components.mixergy_tank.sensor import MixergyEnergySensor
 
     # Fabricate a coordinator with a 30s update interval and 1 kW reading.
     coordinator = MagicMock()
@@ -863,7 +863,7 @@ def test_energy_negative_elapsed_clamps_to_zero():
     import datetime as dt
     import time
 
-    from custom_components.mixergy.sensor import MixergyEnergySensor
+    from custom_components.mixergy_tank.sensor import MixergyEnergySensor
 
     coordinator = MagicMock()
     coordinator.update_interval = dt.timedelta(seconds=30)
@@ -897,7 +897,7 @@ async def test_energy_restore_writes_state_immediately():
     losing all accumulated kWh stats.
     """
     from unittest.mock import AsyncMock, MagicMock
-    from custom_components.mixergy.sensor import MixergyEnergySensor
+    from custom_components.mixergy_tank.sensor import MixergyEnergySensor
 
     coordinator = MagicMock()
     coordinator.data = MagicMock()
@@ -917,7 +917,7 @@ async def test_energy_restore_writes_state_immediately():
     # HA core fixture. We're testing only our additions.
     async def _noop(self):
         pass
-    import custom_components.mixergy.sensor as sensor_mod
+    import custom_components.mixergy_tank.sensor as sensor_mod
     base = sensor_mod.MixergyEnergySensor.__mro__[1]
     original = base.async_added_to_hass
     base.async_added_to_hass = _noop
@@ -1071,7 +1071,7 @@ async def test_off_host_hateoas_link_rejected(
 )
 def test_ambiguous_mixergy_origins_rejected(href: str, message: str) -> None:
     """Only the exact public Mixergy API origin may supply HATEOAS links."""
-    from custom_components.mixergy.api import _require_safe_link
+    from custom_components.mixergy_tank.api import _require_safe_link
 
     with pytest.raises(MixergyConnectionError, match=message):
         _require_safe_link(href, "test")
@@ -1138,7 +1138,7 @@ def test_energy_accumulator_ignores_non_finite_power():
     import datetime as dt
     import time
 
-    from custom_components.mixergy.sensor import MixergyEnergySensor
+    from custom_components.mixergy_tank.sensor import MixergyEnergySensor
 
     coordinator = MagicMock()
     coordinator.update_interval = dt.timedelta(seconds=30)
@@ -1162,7 +1162,7 @@ def test_energy_accumulator_ignores_non_finite_power():
 
 
 def test_as_float_coerces_and_guards():
-    from custom_components.mixergy.api import _as_float
+    from custom_components.mixergy_tank.api import _as_float
 
     assert _as_float(5) == 5.0
     assert _as_float("7.5") == 7.5
@@ -1278,7 +1278,7 @@ def test_malformed_url_rejected_inside_error_taxonomy() -> None:
     An unclosed IPv6 bracket makes urlparse itself raise; attacker-influenced
     input must never escape the MixergyApiError taxonomy as a raw traceback.
     """
-    from custom_components.mixergy.api import _require_safe_link
+    from custom_components.mixergy_tank.api import _require_safe_link
 
     with pytest.raises(MixergyConnectionError, match="not a parseable URL"):
         _require_safe_link("https://[www.mixergy.io/api/v2", "test")

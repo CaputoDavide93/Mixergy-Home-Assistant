@@ -8,12 +8,12 @@ from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
 
 import pytest
 
-from custom_components.mixergy.api import (
+from custom_components.mixergy_tank.api import (
     MixergyAuthError,
     MixergyConnectionError,
     MixergyTankNotFoundError,
 )
-from custom_components.mixergy.const import (
+from custom_components.mixergy_tank.const import (
     CONF_SERIAL_NUMBER,
     CONF_UPDATE_INTERVAL,
     DOMAIN,
@@ -23,9 +23,9 @@ from custom_components.mixergy.const import (
 from .conftest import MOCK_PASSWORD, MOCK_SERIAL, MOCK_USERNAME
 
 # Patch target for the API client used inside the config flow
-_CLIENT_PATCH = "custom_components.mixergy.config_flow.MixergyApiClient"
+_CLIENT_PATCH = "custom_components.mixergy_tank.config_flow.MixergyApiClient"
 # Patch target for the aiohttp session helper used in the config flow
-_SESSION_PATCH = "custom_components.mixergy.config_flow.async_get_clientsession"
+_SESSION_PATCH = "custom_components.mixergy_tank.config_flow.async_get_clientsession"
 
 
 def test_update_interval_copy_matches_selector_bounds_in_every_locale() -> None:
@@ -36,12 +36,12 @@ def test_update_interval_copy_matches_selector_bounds_in_every_locale() -> None:
     the stale 10–300 range. The "(MIN–MAX " prefix is language-agnostic; the
     unit word after it is not asserted.
     """
-    from custom_components.mixergy.const import (
+    from custom_components.mixergy_tank.const import (
         MAX_UPDATE_INTERVAL,
         MIN_UPDATE_INTERVAL,
     )
 
-    component = Path(__file__).parents[1] / "custom_components" / "mixergy"
+    component = Path(__file__).parents[1] / "custom_components" / "mixergy_tank"
     sources = sorted((component / "translations").glob("*.json"))
     sources.append(component / "strings.json")
     assert len(sources) >= 5, "expected en/de/fr/it translations + strings.json"
@@ -88,7 +88,7 @@ async def test_config_flow_creates_entry_on_valid_input() -> None:
 
     with patch(_CLIENT_PATCH, return_value=mock_client), \
          patch(_SESSION_PATCH, return_value=MagicMock()):
-        from custom_components.mixergy.config_flow import MixergyConfigFlow
+        from custom_components.mixergy_tank.config_flow import MixergyConfigFlow
 
         flow = MixergyConfigFlow()
         flow.hass = _make_flow_hass()
@@ -146,7 +146,7 @@ async def test_config_flow_auth_error_shows_form() -> None:
 
     with patch(_CLIENT_PATCH, return_value=mock_client), \
          patch(_SESSION_PATCH, return_value=MagicMock()):
-        from custom_components.mixergy.config_flow import MixergyConfigFlow
+        from custom_components.mixergy_tank.config_flow import MixergyConfigFlow
 
         flow = MixergyConfigFlow()
         flow.hass = _make_flow_hass()
@@ -180,7 +180,7 @@ async def test_config_flow_tank_not_found_error() -> None:
 
     with patch(_CLIENT_PATCH, return_value=mock_client), \
          patch(_SESSION_PATCH, return_value=MagicMock()):
-        from custom_components.mixergy.config_flow import MixergyConfigFlow
+        from custom_components.mixergy_tank.config_flow import MixergyConfigFlow
 
         flow = MixergyConfigFlow()
         flow.hass = _make_flow_hass()
@@ -212,7 +212,7 @@ async def test_config_flow_connection_error() -> None:
 
     with patch(_CLIENT_PATCH, return_value=mock_client), \
          patch(_SESSION_PATCH, return_value=MagicMock()):
-        from custom_components.mixergy.config_flow import MixergyConfigFlow
+        from custom_components.mixergy_tank.config_flow import MixergyConfigFlow
 
         flow = MixergyConfigFlow()
         flow.hass = _make_flow_hass()
@@ -241,7 +241,7 @@ async def test_config_flow_connection_error() -> None:
 @pytest.mark.asyncio
 async def test_options_flow_shows_current_interval() -> None:
     """Options flow init step shows the current update interval as default."""
-    from custom_components.mixergy.config_flow import MixergyOptionsFlow
+    from custom_components.mixergy_tank.config_flow import MixergyOptionsFlow
 
     mock_entry = MagicMock()
     mock_entry.options = {CONF_UPDATE_INTERVAL: 60}
@@ -273,7 +273,7 @@ async def test_options_flow_shows_current_interval() -> None:
 @pytest.mark.asyncio
 async def test_options_flow_saves_new_interval() -> None:
     """Submitting a new interval calls async_create_entry with correct data."""
-    from custom_components.mixergy.config_flow import MixergyOptionsFlow
+    from custom_components.mixergy_tank.config_flow import MixergyOptionsFlow
 
     mock_entry = MagicMock()
     mock_entry.options = {}
@@ -293,7 +293,7 @@ async def test_options_flow_saves_new_interval() -> None:
 @pytest.mark.asyncio
 async def test_options_flow_defaults_to_update_interval_constant() -> None:
     """When no option is stored, the default should equal UPDATE_INTERVAL."""
-    from custom_components.mixergy.config_flow import MixergyOptionsFlow
+    from custom_components.mixergy_tank.config_flow import MixergyOptionsFlow
 
     mock_entry = MagicMock()
     mock_entry.options = {}  # No stored options
@@ -324,8 +324,8 @@ async def test_options_flow_rejects_no_water_at_or_above_low_water() -> None:
     """no_water_threshold >= low_water_threshold must re-show the form
     with an error — otherwise the two alert binary sensors contradict
     each other (no-water on while low-water off)."""
-    from custom_components.mixergy.config_flow import MixergyOptionsFlow
-    from custom_components.mixergy.const import (
+    from custom_components.mixergy_tank.config_flow import MixergyOptionsFlow
+    from custom_components.mixergy_tank.const import (
         CONF_LOW_WATER_THRESHOLD,
         CONF_NO_WATER_THRESHOLD,
     )

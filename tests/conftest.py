@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import aiohttp
 import pytest
 
-from custom_components.mixergy.api import (
+from custom_components.mixergy_tank.api import (
     MixergyApiClient,
     TankData,
     TankInfo,
