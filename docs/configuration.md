@@ -91,7 +91,7 @@ Open **Settings** → **Devices & Services** → **Mixergy** → **Configure** t
 
 ### How often should I poll?
 
-Leave the update interval at the default 30 s unless you have a reason to slow it down. Tank measurements update server-side at roughly 60-second cadence, so polling faster than 30 s wastes API calls and risks rate-limit throttling — which is why the flow rejects anything below 30 s.
+Leave the update interval at the default 60 s unless you have a reason to change it. Tank measurements update server-side at roughly 60-second cadence, so the default already matches the freshest data available — polling faster cannot surface newer readings, it only multiplies API calls and risks rate-limit throttling, which is why the flow rejects anything below 30 s.
 
 ### How do the water-level thresholds interact?
 

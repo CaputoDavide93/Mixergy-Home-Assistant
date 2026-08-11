@@ -357,7 +357,7 @@ Away mode is holiday mode by another name: turning it **on** opens an open-ended
 
 ### How quickly do these triggers fire?
 
-Within one poll cycle of the cloud reporting the change. This is a cloud-polling integration — Home Assistant polls the Mixergy API every 30–300 seconds (default 30), and the tank's measurements update server-side at roughly 60-second cadence. Expect up to a minute or two between the physical event and your automation firing; none of these triggers is instant.
+Within one poll cycle of the cloud reporting the change. This is a cloud-polling integration — Home Assistant polls the Mixergy API every 30–300 seconds (default 60), and the tank's measurements update server-side at roughly 60-second cadence. Expect up to a minute or two between the physical event and your automation firing; none of these triggers is instant.
 
 ### Why is the water_heater entity missing?
 

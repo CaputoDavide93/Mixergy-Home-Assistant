@@ -209,7 +209,7 @@ Configure via the integration's **Configure** button:
 | Option | Description |
 | ------ | ----------- |
 | Experience mode | Simple (monitoring + boost) or Advanced (full control) |
-| Update interval | Poll frequency, 30–300 seconds (default 30) |
+| Update interval | Poll frequency, 30–300 seconds (default 60) |
 | Low / no hot water thresholds | Charge % at which the alert binary sensors trip (defaults 5% / 0.5%) |
 | Electricity price per kWh | Set a tariff to enable the electric heating **cost** sensor (0 = off) |
 

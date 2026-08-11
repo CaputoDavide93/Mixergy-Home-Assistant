@@ -101,7 +101,7 @@ Write paths map errors separately. Entity writes (`MixergyEntity._async_write_co
 
 ## 🔁 Polling model
 
-One `DataUpdateCoordinator` runs per tank (per config entry), calling `client.fetch_all()` on each cycle. The interval comes from the entry's options — 30 to 300 seconds, default 30. Entities are `CoordinatorEntity` subclasses with `should_poll` off; every state update flows from the coordinator.
+One `DataUpdateCoordinator` runs per tank (per config entry), calling `client.fetch_all()` on each cycle. The interval comes from the entry's options — 30 to 300 seconds, default 60. Entities are `CoordinatorEntity` subclasses with `should_poll` off; every state update flows from the coordinator.
 
 `fetch_all()` gathers `fetch_measurement()`, `fetch_settings()`, and `fetch_schedule()` concurrently with `asyncio.gather(..., return_exceptions=True)`, then applies a deliberate asymmetry:
 
