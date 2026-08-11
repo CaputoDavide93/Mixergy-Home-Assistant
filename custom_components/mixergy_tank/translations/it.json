@@ -33,6 +33,14 @@
           "username": "Indirizzo email",
           "password": "Password"
         }
+      },
+      "reconfigure": {
+        "title": "Riconfigura Mixergy",
+        "description": "Aggiorna le credenziali dell'account per il serbatoio {serial_number}.",
+        "data": {
+          "username": "Indirizzo email",
+          "password": "Password"
+        }
       }
     },
     "error": {
@@ -43,7 +51,8 @@
     },
     "abort": {
       "already_configured": "Questo serbatoio è già configurato.",
-      "reauth_successful": "Ri-autenticazione riuscita."
+      "reauth_successful": "Ri-autenticazione riuscita.",
+      "reconfigure_successful": "Riconfigurazione riuscita."
     }
   },
   "options": {
@@ -53,11 +62,17 @@
         "description": "**Semplice** offre monitoraggio in tempo reale e uno slider per incrementare l'acqua calda.\n**Avanzato** sblocca tutte le impostazioni, il controllo della fonte di calore, il divert PV, la pianificazione delle vacanze e altro ancora.",
         "data": {
           "experience_mode": "Modalità esperienza",
-          "update_interval": "Intervallo di aggiornamento (secondi)"
+          "update_interval": "Intervallo di aggiornamento (secondi)",
+          "electric_rate": "Prezzo dell'elettricità per kWh (0 disattiva il sensore di costo)",
+          "low_water_threshold": "Soglia di avviso acqua calda scarsa (%)",
+          "no_water_threshold": "Soglia di avviso assenza di acqua calda (%)"
         },
         "data_description": {
           "experience_mode": "Passa tra Semplice (monitoraggio + incremento) e Avanzato (controllo completo). L'integrazione si ricaricherà al salvataggio.",
-          "update_interval": "Con quale frequenza recuperare i dati dall'API Mixergy (30–300 secondi)."
+          "update_interval": "Con quale frequenza recuperare i dati dall'API Mixergy (30–300 secondi).",
+          "electric_rate": "Usato per calcolare il sensore del costo dell'elettricità. Lascia 0 per disattivarlo.",
+          "low_water_threshold": "Il sensore binario «acqua calda scarsa» si attiva sotto questa carica.",
+          "no_water_threshold": "Il sensore binario «assenza di acqua calda» si attiva sotto questa carica."
         }
       }
     },
@@ -131,6 +146,9 @@
       },
       "last_update": {
         "name": "Ultimo aggiornamento riuscito"
+      },
+      "electric_cost": {
+        "name": "Costo riscaldamento elettrico"
       }
     },
     "binary_sensor": {
@@ -210,6 +228,14 @@
       "clear_holiday": {
         "name": "Cancella date vacanza"
       }
+    },
+    "datetime": {
+      "holiday_start_set": {
+        "name": "Data inizio vacanza"
+      },
+      "holiday_end_set": {
+        "name": "Data fine vacanza"
+      }
     }
   },
   "exceptions": {
@@ -229,16 +255,55 @@
         "end_date": {
           "name": "Data fine",
           "description": "La data e l'ora di rientro dalla modalità vacanza."
+        },
+        "serial_number": {
+          "name": "Numero di serie",
+          "description": "Facoltativo. Limita al serbatoio con questo numero di serie. Se omesso, si applica a tutti i serbatoi configurati."
         }
       }
     },
     "clear_holiday_dates": {
       "name": "Cancella date vacanza",
-      "description": "Cancella le date della modalità vacanza per il serbatoio Mixergy."
+      "description": "Cancella le date della modalità vacanza per il serbatoio Mixergy.",
+      "fields": {
+        "serial_number": {
+          "name": "Numero di serie",
+          "description": "Facoltativo. Limita al serbatoio con questo numero di serie. Se omesso, si applica a tutti i serbatoi configurati."
+        }
+      }
     },
     "boost_charge": {
       "name": "Incrementa acqua calda",
-      "description": "Porta immediatamente la carica dell'acqua calda al 100%."
+      "description": "Porta immediatamente la carica dell'acqua calda al 100%.",
+      "fields": {
+        "serial_number": {
+          "name": "Numero di serie",
+          "description": "Facoltativo. Limita al serbatoio con questo numero di serie. Se omesso, si applica a tutti i serbatoi configurati."
+        }
+      }
+    }
+  },
+  "device_automation": {
+    "trigger_type": {
+      "heating_started": "Riscaldamento avviato",
+      "heating_stopped": "Riscaldamento terminato",
+      "holiday_started": "Modalità vacanza avviata",
+      "holiday_ended": "Modalità vacanza terminata",
+      "low_hot_water": "Acqua calda scarsa"
+    }
+  },
+  "issues": {
+    "tank_not_found": {
+      "title": "Serbatoio Mixergy non trovato",
+      "description": "Il serbatoio con numero di serie {serial} non è più presente nel tuo account Mixergy. Se lo hai sostituito o rinominato, usa «Riconfigura» per aggiornare l'integrazione, oppure rimuovila e aggiungila di nuovo."
+    }
+  },
+  "selector": {
+    "experience_mode": {
+      "options": {
+        "simple": "Semplice",
+        "advanced": "Avanzata"
+      }
     }
   }
 }

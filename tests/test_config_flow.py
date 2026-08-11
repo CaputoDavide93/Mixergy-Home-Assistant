@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
 
@@ -54,6 +55,72 @@ def test_update_interval_copy_matches_selector_bounds_in_every_locale() -> None:
         assert (
             f"({MIN_UPDATE_INTERVAL}–{MAX_UPDATE_INTERVAL} " in description
         ), f"{source.name}: stale interval range in {description!r}"
+
+
+def _leaf_keys(node: object, path: str = "") -> dict[str, str]:
+    """Flatten a translation tree to {"/a/b/c": "text"} for structural diffing."""
+    if isinstance(node, dict):
+        leaves: dict[str, str] = {}
+        for key, value in node.items():
+            leaves.update(_leaf_keys(value, f"{path}/{key}"))
+        return leaves
+    return {path: node}
+
+
+def _translation_sources() -> tuple[dict[str, str], dict[str, dict[str, str]]]:
+    component = Path(__file__).parents[1] / "custom_components" / "mixergy_tank"
+    canonical = _leaf_keys(json.loads((component / "strings.json").read_text()))
+    locales = {
+        source.stem: _leaf_keys(json.loads(source.read_text()))
+        for source in sorted((component / "translations").glob("*.json"))
+    }
+    assert set(locales) >= {"en", "de", "fr", "it"}, "a shipped locale disappeared"
+    return canonical, locales
+
+
+def test_every_locale_matches_the_canonical_key_structure() -> None:
+    """Each locale must carry exactly the keys in strings.json — no more, no less.
+
+    A missing key makes Home Assistant fall back to English for that string
+    only, so a partly-translated locale looks fine in a screenshot and is only
+    noticed by the user reading it. An extra key is dead weight that usually
+    means a key was renamed in strings.json and the locale kept the old spelling.
+    Both directions are asserted so a rename cannot silently half-land.
+    """
+    canonical, locales = _translation_sources()
+
+    for locale, leaves in locales.items():
+        missing = sorted(set(canonical) - set(leaves))
+        extra = sorted(set(leaves) - set(canonical))
+        assert not missing, f"{locale}.json is missing {len(missing)} keys: {missing}"
+        assert not extra, f"{locale}.json has {len(extra)} keys not in strings.json: {extra}"
+
+
+def test_every_locale_preserves_translation_placeholders() -> None:
+    """Placeholders must survive translation or the string breaks at runtime.
+
+    Home Assistant formats these with named arguments, so dropping {serial}
+    leaves a literal placeholder on screen and inventing one raises KeyError
+    while rendering a repair issue or flow step — a failure that only shows up
+    in the locale nobody on the project reads.
+    """
+    canonical, locales = _translation_sources()
+    placeholder = re.compile(r"\{(\w+)\}")
+
+    for locale, leaves in locales.items():
+        for key, source_text in canonical.items():
+            if not isinstance(source_text, str) or key not in leaves:
+                continue
+            translated = leaves[key]
+            if not isinstance(translated, str):
+                continue
+            assert sorted(placeholder.findall(source_text)) == sorted(
+                placeholder.findall(translated)
+            ), (
+                f"{locale}.json {key}: placeholders "
+                f"{sorted(set(placeholder.findall(translated)))} do not match "
+                f"{sorted(set(placeholder.findall(source_text)))}"
+            )
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
