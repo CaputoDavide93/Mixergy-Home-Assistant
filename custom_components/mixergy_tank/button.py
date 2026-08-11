@@ -32,7 +32,6 @@ class MixergyClearHolidayButton(MixergyEntity, ButtonEntity):
     """Button to clear holiday mode dates (Advanced mode)."""
 
     _attr_translation_key = "clear_holiday"
-    _attr_icon = "mdi:airplane-off"
     _attr_entity_category = EntityCategory.CONFIG
 
     def __init__(self, coordinator: MixergyCoordinator) -> None:

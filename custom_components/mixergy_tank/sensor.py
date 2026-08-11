@@ -105,7 +105,6 @@ SENSOR_DESCRIPTIONS: tuple[MixergySensorEntityDescription, ...] = (
         translation_key="charge",
         native_unit_of_measurement=PERCENTAGE_UNIT,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:water-percent",
         suggested_display_precision=0,
         value_fn=lambda data: data.measurement.charge,
     ),
@@ -114,7 +113,6 @@ SENSOR_DESCRIPTIONS: tuple[MixergySensorEntityDescription, ...] = (
         translation_key="target_charge",
         native_unit_of_measurement=PERCENTAGE_UNIT,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:water-percent",
         suggested_display_precision=0,
         value_fn=lambda data: data.measurement.target_charge,
     ),
@@ -156,7 +154,6 @@ SENSOR_DESCRIPTIONS: tuple[MixergySensorEntityDescription, ...] = (
         translation_key="active_heat_source",
         device_class=SensorDeviceClass.ENUM,
         options=["electric", "indirect", "heat_pump", "none"],
-        icon="mdi:fire",
         value_fn=lambda data: data.measurement.active_heat_source.value,
     ),
     MixergySensorEntityDescription(
@@ -164,7 +161,6 @@ SENSOR_DESCRIPTIONS: tuple[MixergySensorEntityDescription, ...] = (
         translation_key="default_heat_source",
         device_class=SensorDeviceClass.ENUM,
         options=["electric", "indirect", "heat_pump"],
-        icon="mdi:fire-circle",
         value_fn=lambda data: data.schedule.default_heat_source,
     ),
     # ── Holiday date sensors ─────────────────────────────────────────
@@ -172,21 +168,18 @@ SENSOR_DESCRIPTIONS: tuple[MixergySensorEntityDescription, ...] = (
         key="holiday_start",
         translation_key="holiday_start",
         device_class=SensorDeviceClass.TIMESTAMP,
-        icon="mdi:airplane-takeoff",
         value_fn=lambda data: data.schedule.holiday_start,
     ),
     MixergySensorEntityDescription(
         key="holiday_end",
         translation_key="holiday_end",
         device_class=SensorDeviceClass.TIMESTAMP,
-        icon="mdi:airplane-landing",
         value_fn=lambda data: data.schedule.holiday_end,
     ),
     # ── Diagnostic / info sensors ────────────────────────────────────
     MixergySensorEntityDescription(
         key="firmware_version",
         translation_key="firmware_version",
-        icon="mdi:chip",
         entity_category=EntityCategory.DIAGNOSTIC,
         entity_registry_enabled_default=False,
         value_fn=lambda data: data.info.firmware_version,
@@ -194,7 +187,6 @@ SENSOR_DESCRIPTIONS: tuple[MixergySensorEntityDescription, ...] = (
     MixergySensorEntityDescription(
         key="model",
         translation_key="model",
-        icon="mdi:water-boiler",
         entity_category=EntityCategory.DIAGNOSTIC,
         entity_registry_enabled_default=False,
         value_fn=lambda data: data.info.model_code,
@@ -203,7 +195,6 @@ SENSOR_DESCRIPTIONS: tuple[MixergySensorEntityDescription, ...] = (
         key="last_update",
         translation_key="last_update",
         device_class=SensorDeviceClass.TIMESTAMP,
-        icon="mdi:clock-check-outline",
         entity_category=EntityCategory.DIAGNOSTIC,
         entity_registry_enabled_default=False,
         value_fn=lambda data: data.last_update_time,
@@ -230,7 +221,6 @@ async def async_setup_entry(
             coordinator,
             key="electric_energy",
             translation_key="electric_energy",
-            icon="mdi:lightning-bolt",
             power_w_fn=lambda data: (
                 data.measurement.clamp_power_w
                 if data.measurement.electric_heat_source
@@ -241,7 +231,6 @@ async def async_setup_entry(
             coordinator,
             key="pv_energy",
             translation_key="pv_energy",
-            icon="mdi:solar-power",
             power_w_fn=lambda data: data.measurement.pv_power_kw * 1000,
             available_fn=lambda data: data.info.has_pv_diverter,
         ),
@@ -304,7 +293,6 @@ class MixergyEnergySensor(MixergyEntity, RestoreSensor):
         *,
         key: str,
         translation_key: str,
-        icon: str,
         power_w_fn: Callable[[TankData], float],
         available_fn: Callable[[TankData], bool] = lambda _: True,
     ) -> None:
@@ -317,7 +305,6 @@ class MixergyEnergySensor(MixergyEntity, RestoreSensor):
 
         self._attr_unique_id = f"{coordinator.data.info.serial_number}_{key}"
         self._attr_translation_key = translation_key
-        self._attr_icon = icon
 
     async def async_added_to_hass(self) -> None:
         """Restore previous total and begin accumulating.
@@ -420,7 +407,6 @@ class MixergyElectricCostSensor(MixergyEntity, RestoreSensor):
     _attr_state_class = SensorStateClass.TOTAL
     _attr_suggested_display_precision = 2
     _attr_translation_key = "electric_cost"
-    _attr_icon = "mdi:cash"
 
     def __init__(self, coordinator: MixergyCoordinator, *, rate: float) -> None:
         """Initialise the cost sensor."""

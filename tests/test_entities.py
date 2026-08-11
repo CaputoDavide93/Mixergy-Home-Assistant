@@ -324,7 +324,6 @@ def _energy_sensor(coordinator=None):
         coordinator or _coordinator(),
         key="electric_energy",
         translation_key="electric_energy",
-        icon="mdi:lightning-bolt",
         power_w_fn=lambda data: data.measurement.clamp_power_w,
     )
 
@@ -388,7 +387,6 @@ def test_energy_sensor_availability_follows_its_predicate() -> None:
         coordinator,
         key="pv_energy",
         translation_key="pv_energy",
-        icon="mdi:solar-power",
         power_w_fn=lambda data: data.measurement.pv_power_kw * 1000,
         available_fn=lambda data: data.info.has_pv_diverter,
     )

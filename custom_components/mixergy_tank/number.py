@@ -47,7 +47,6 @@ NUMBER_DESCRIPTIONS: tuple[MixergyNumberEntityDescription, ...] = (
         native_step=1,
         mode=NumberMode.SLIDER,
         entity_category=EntityCategory.CONFIG,
-        icon="mdi:thermometer",
         value_fn=lambda data: data.settings.target_temperature,
         set_value_fn=lambda client, v: client.set_target_temperature(int(v)),
     ),
@@ -61,7 +60,6 @@ NUMBER_DESCRIPTIONS: tuple[MixergyNumberEntityDescription, ...] = (
         native_step=5,
         mode=NumberMode.SLIDER,
         entity_category=EntityCategory.CONFIG,
-        icon="mdi:water-percent",
         value_fn=lambda data: data.measurement.target_charge,
         set_value_fn=lambda client, v: client.set_target_charge(int(v)),
     ),
@@ -75,7 +73,6 @@ NUMBER_DESCRIPTIONS: tuple[MixergyNumberEntityDescription, ...] = (
         native_step=1,
         mode=NumberMode.SLIDER,
         entity_category=EntityCategory.CONFIG,
-        icon="mdi:thermometer-water",
         value_fn=lambda data: data.settings.cleansing_temperature,
         set_value_fn=lambda client, v: client.set_cleansing_temperature(int(v)),
     ),
@@ -88,7 +85,6 @@ NUMBER_DESCRIPTIONS: tuple[MixergyNumberEntityDescription, ...] = (
         native_step=50,
         mode=NumberMode.SLIDER,
         entity_category=EntityCategory.CONFIG,
-        icon="mdi:solar-power-variant",
         value_fn=lambda data: data.settings.pv_cut_in_threshold,
         set_value_fn=lambda client, v: client.set_pv_cut_in_threshold(int(v)),
         available_fn=lambda data: data.info.has_pv_diverter,
@@ -102,7 +98,6 @@ NUMBER_DESCRIPTIONS: tuple[MixergyNumberEntityDescription, ...] = (
         native_step=10,
         mode=NumberMode.SLIDER,
         entity_category=EntityCategory.CONFIG,
-        icon="mdi:solar-power",
         value_fn=lambda data: data.settings.pv_charge_limit,
         set_value_fn=lambda client, v: client.set_pv_charge_limit(int(v)),
         available_fn=lambda data: data.info.has_pv_diverter,
@@ -115,7 +110,6 @@ NUMBER_DESCRIPTIONS: tuple[MixergyNumberEntityDescription, ...] = (
         native_step=0.1,
         mode=NumberMode.BOX,
         entity_category=EntityCategory.CONFIG,
-        icon="mdi:current-ac",
         value_fn=lambda data: data.settings.pv_target_current,
         set_value_fn=lambda client, v: client.set_pv_target_current(v),
         available_fn=lambda data: data.info.has_pv_diverter,
@@ -130,7 +124,6 @@ NUMBER_DESCRIPTIONS: tuple[MixergyNumberEntityDescription, ...] = (
         native_step=1,
         mode=NumberMode.SLIDER,
         entity_category=EntityCategory.CONFIG,
-        icon="mdi:thermometer-alert",
         value_fn=lambda data: data.settings.pv_over_temperature,
         set_value_fn=lambda client, v: client.set_pv_over_temperature(int(v)),
         available_fn=lambda data: data.info.has_pv_diverter,
@@ -209,7 +202,6 @@ class MixergyBoostNumber(MixergyEntity, NumberEntity):
     _attr_native_max_value = 100
     _attr_native_step = 5
     _attr_mode = NumberMode.SLIDER
-    _attr_icon = "mdi:water-boiler-alert"
     # No entity_category — this is the PRIMARY action in Simple mode
 
     def __init__(self, coordinator: MixergyCoordinator) -> None:

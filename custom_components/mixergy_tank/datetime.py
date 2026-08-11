@@ -60,9 +60,6 @@ class MixergyHolidayDateTime(MixergyEntity, DateTimeEntity):
         self._is_start = is_start
         key = "holiday_start" if is_start else "holiday_end"
         self._attr_translation_key = f"{key}_set"
-        self._attr_icon = (
-            "mdi:airplane-takeoff" if is_start else "mdi:airplane-landing"
-        )
         self._attr_unique_id = (
             f"{coordinator.data.info.serial_number}_{key}_set"
         )

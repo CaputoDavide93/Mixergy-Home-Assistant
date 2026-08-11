@@ -44,21 +44,18 @@ STATIC_BINARY_SENSOR_DESCRIPTIONS: tuple[
         key="electric_heat",
         translation_key="electric_heat",
         device_class=BinarySensorDeviceClass.HEAT,
-        icon="mdi:lightning-bolt",
         is_on_fn=lambda data: data.measurement.electric_heat_source,
     ),
     MixergyBinarySensorEntityDescription(
         key="indirect_heat",
         translation_key="indirect_heat",
         device_class=BinarySensorDeviceClass.HEAT,
-        icon="mdi:fire",
         is_on_fn=lambda data: data.measurement.indirect_heat_source,
     ),
     MixergyBinarySensorEntityDescription(
         key="heatpump_heat",
         translation_key="heatpump_heat",
         device_class=BinarySensorDeviceClass.HEAT,
-        icon="mdi:heat-pump",
         is_on_fn=lambda data: data.measurement.heatpump_heat_source,
     ),
     # ── Heating status ───────────────────────────────────────────────
@@ -66,14 +63,12 @@ STATIC_BINARY_SENSOR_DESCRIPTIONS: tuple[
         key="is_heating",
         translation_key="is_heating",
         device_class=BinarySensorDeviceClass.HEAT,
-        icon="mdi:water-boiler",
         is_on_fn=lambda data: data.measurement.is_heating,
     ),
     # ── Holiday mode ─────────────────────────────────────────────────
     MixergyBinarySensorEntityDescription(
         key="holiday_mode",
         translation_key="holiday_mode",
-        icon="mdi:airplane-takeoff",
         is_on_fn=lambda data: data.measurement.in_holiday_mode,
     ),
 )
@@ -88,14 +83,12 @@ def _threshold_descriptions(
             key="low_hot_water",
             translation_key="low_hot_water",
             device_class=BinarySensorDeviceClass.PROBLEM,
-            icon="mdi:water-percent-alert",
             is_on_fn=lambda data: data.measurement.charge < low,
         ),
         MixergyBinarySensorEntityDescription(
             key="no_hot_water",
             translation_key="no_hot_water",
             device_class=BinarySensorDeviceClass.PROBLEM,
-            icon="mdi:water-remove-outline",
             is_on_fn=lambda data: data.measurement.charge < no,
         ),
     )
