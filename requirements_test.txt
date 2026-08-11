@@ -14,3 +14,9 @@ pytest-cov==7.1.0
 # a new ruff release cannot turn a green branch red without a deliberate bump.
 ruff==0.16.2
 mypy==2.3.0
+
+# NOT listed here on purpose: pytest-homeassistant-custom-component. It pins one
+# exact Home Assistant version per release, so putting it in this file would
+# force that version on every CI leg and break the minimum-HA lane. The
+# workflow installs it only on the leg whose HA version it matches; the
+# fixture-backed tests in tests/test_config_flow_hass.py skip where it is absent.

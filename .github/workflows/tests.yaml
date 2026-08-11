@@ -91,6 +91,13 @@ jobs:
             # symbols that aiodns 3.5 imports, so today's resolver otherwise
             # creates an environment that fails before Home Assistant loads.
             requirements+=("pycares<5")
+          else
+            # pytest-homeassistant-custom-component pins ONE exact HA version
+            # per release, so it can only be installed on the leg whose HA it
+            # matches — 0.13.355 pins exactly 2026.8.1. The fixture-backed
+            # flow tests skip themselves where it is absent, so the minimum
+            # leg still runs everything else.
+            requirements+=("pytest-homeassistant-custom-component==0.13.355")
           fi
           python -m pip install -r requirements_test.txt "${requirements[@]}"
 
