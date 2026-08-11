@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Generator
+import json
+from collections.abc import AsyncIterator, Generator
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import aiohttp
@@ -16,6 +17,35 @@ from custom_components.mixergy_tank.api import (
     TankSchedule,
     TankSettings,
 )
+
+def attach_body(
+    resp,
+    body: bytes,
+    *,
+    declared_length: int | str | None = -1,
+    charset: str | None = "utf-8",
+) -> None:
+    """Give a mock response the streaming surface the capped reader uses.
+
+    ``declared_length`` defaults to the real body length; pass ``None`` to omit
+    the header (chunked transfer) or an explicit value to model an upstream
+    that lies about its size.
+    """
+    length = len(body) if declared_length == -1 else declared_length
+    headers: dict[str, str] = {}
+    if length is not None:
+        headers["Content-Length"] = str(length)
+    resp.headers = headers
+    resp.charset = charset
+
+    async def iter_chunked(chunk_size: int) -> AsyncIterator[bytes]:
+        for start in range(0, len(body), chunk_size):
+            yield body[start : start + chunk_size]
+
+    content = MagicMock()
+    content.iter_chunked = iter_chunked
+    resp.content = content
+
 
 MOCK_SERIAL = "TEST001"
 MOCK_USERNAME = "user@example.com"
@@ -117,6 +147,17 @@ def mock_aiohttp_session() -> Generator[MagicMock, None, None]:
             resp.json = AsyncMock(return_value=json_data)
         if text_data is not None:
             resp.text = AsyncMock(return_value=text_data)
+
+        # The client never calls resp.json()/resp.text() — every body goes
+        # through the capped reader, which streams resp.content and consults
+        # Content-Length. Model both here so tests exercise the real path.
+        if text_data is not None:
+            body = text_data.encode()
+        elif json_data is not None:
+            body = json.dumps(json_data).encode()
+        else:
+            body = b""
+        attach_body(resp, body)
         return resp
 
     def get_side_effect(url, **kwargs):
