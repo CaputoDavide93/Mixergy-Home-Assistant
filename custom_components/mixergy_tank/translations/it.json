@@ -7,6 +7,10 @@
         "data": {
           "username": "Indirizzo email",
           "password": "Password"
+        },
+        "data_description": {
+          "username": "L'indirizzo email che usi per accedere all'app Mixergy.",
+          "password": "La password del tuo account Mixergy. Viene salvata solo in Home Assistant e inviata esclusivamente a mixergy.io."
         }
       },
       "tank": {
@@ -24,6 +28,9 @@
         "description": "Il tuo **{model}** (seriale: `{serial}`) è connesso!\n\nScegli come vuoi interagire con l'integrazione. Puoi modificare questa scelta in qualsiasi momento dal pulsante **Configura** sulla scheda dell'integrazione.\n\n---\n\n### 🟢 Semplice\nIdeale per gli utenti di tutti i giorni che vogliono monitorare il serbatoio e aumentare rapidamente la temperatura dell'acqua calda.\n\n✅ Temperature e livello di carica in tempo reale\n✅ Stato di riscaldamento e fonte di calore\n✅ Consumo energetico (kWh) per il Pannello Energia\n✅ Stato modalità vacanza\n✅ **Incremento acqua calda** — imposta il livello target con uno slider\n\n❌ Nessuna modifica delle impostazioni\n❌ Nessuna selezione della fonte di calore\n❌ Nessuna pianificazione delle vacanze\n\n---\n\n### ⚙️ Avanzato\nIdeale per gli utenti esperti che vogliono il controllo completo del serbatoio.\n\n✅ Tutto di Semplice\n✅ Regola temperatura target e temperatura di purifica\n✅ Cambia fonte di calore predefinita (elettrica / indiretta / pompa di calore)\n✅ Controlli PV (se installato)\n✅ Interruttori protezione antigelo e DSR\n✅ Pianificazione modalità vacanza\n✅ Supporto completo per automazioni",
         "data": {
           "experience_mode": "Modalità esperienza"
+        },
+        "data_description": {
+          "experience_mode": "Semplice mostra temperature, carica e un cursore di incremento. Avanzata aggiunge i controlli di temperatura e sorgente di calore, le impostazioni del deviatore FV e la pianificazione delle vacanze. Puoi cambiarla in seguito."
         }
       },
       "reauth_confirm": {
@@ -32,6 +39,10 @@
         "data": {
           "username": "Indirizzo email",
           "password": "Password"
+        },
+        "data_description": {
+          "username": "L'indirizzo email che usi per accedere all'app Mixergy.",
+          "password": "La password attuale del tuo account Mixergy."
         }
       },
       "reconfigure": {
@@ -40,6 +51,10 @@
         "data": {
           "username": "Indirizzo email",
           "password": "Password"
+        },
+        "data_description": {
+          "username": "L'indirizzo email che usi per accedere all'app Mixergy.",
+          "password": "La password attuale del tuo account Mixergy."
         }
       }
     },

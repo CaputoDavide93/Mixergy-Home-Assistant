@@ -614,3 +614,27 @@ async def test_reconfigure_maps_each_failure_to_its_own_message(
         })
 
     assert result["errors"] == {"base": expected_error}
+
+
+def test_every_config_field_has_help_text_in_every_locale() -> None:
+    """Each form field needs a data_description, in all shipped languages.
+
+    The config-flow quality rule asks for these because a bare "Username"
+    label does not tell a first-time user *which* account to use. Without a
+    guard the next new field ships undocumented, and a locale can silently
+    fall behind strings.json even while the key-parity test passes — parity
+    only checks the keys that exist, not that a field has help at all.
+    """
+    _canonical, locales = _translation_sources()
+
+    for locale, leaves in locales.items():
+        fields = {
+            tuple(key.rsplit("/", 1))
+            for key in leaves
+            if "/config/step/" in key and "/data/" in key
+        }
+        for prefix, field in fields:
+            described = prefix.replace("/data", "/data_description")
+            assert f"{described}/{field}" in leaves, (
+                f"{locale}.json: {prefix}/{field} has no data_description"
+            )
