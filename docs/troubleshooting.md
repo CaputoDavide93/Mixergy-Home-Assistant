@@ -82,7 +82,7 @@ The optional running-cost sensor only exists when you set an electricity rate in
 
 ### Why is the charge stuck or updating slowly?
 
-The tank reports measurements to the Mixergy cloud roughly once a minute, so that is the freshest data any client can see — polling faster cannot invent newer readings. The integration polls every 30 seconds by default (configurable 30–300 s), which means consecutive polls can legitimately return the same value.
+The tank reports measurements to the Mixergy cloud roughly once a minute, so that is the freshest data any client can see — polling faster cannot invent newer readings. The integration polls every 60 seconds by default (configurable 30–300 s) to match that cadence, so consecutive polls can still legitimately return the same value.
 
 Check in this order:
 

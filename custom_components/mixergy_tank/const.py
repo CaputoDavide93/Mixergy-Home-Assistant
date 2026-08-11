@@ -7,17 +7,23 @@ from typing import TYPE_CHECKING, Final
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
 
-try:
-    from homeassistant.const import UnitOfRatio
-except ImportError:  # Home Assistant < 2026.7
-    from homeassistant.const import PERCENTAGE
-
-    # Assigned rather than imported-as: `from x import y as PERCENTAGE_UNIT`
-    # is an implicit re-export, which strict type checking rejects for
-    # downstream modules importing it from here.
-    PERCENTAGE_UNIT: str = PERCENTAGE
+    # Declared, not imported, for the type checker. UnitOfRatio only exists on
+    # Home Assistant 2026.7+, so importing it here would be an attr-defined
+    # error on older cores — while a `# type: ignore` would itself be flagged
+    # as unused on newer ones. Declaring the resulting type sidesteps both and
+    # keeps the module strict-clean on every supported version. It also makes
+    # PERCENTAGE_UNIT an explicit export, which downstream modules need under
+    # no_implicit_reexport.
+    PERCENTAGE_UNIT: str
 else:
-    PERCENTAGE_UNIT = UnitOfRatio.PERCENTAGE
+    try:
+        from homeassistant.const import UnitOfRatio
+    except ImportError:  # Home Assistant < 2026.7
+        from homeassistant.const import PERCENTAGE
+
+        PERCENTAGE_UNIT = PERCENTAGE
+    else:
+        PERCENTAGE_UNIT = UnitOfRatio.PERCENTAGE
 
 DOMAIN: Final = "mixergy_tank"
 MANUFACTURER: Final = "Mixergy Ltd"
@@ -38,10 +44,14 @@ MODE_SIMPLE: Final = "simple"
 MODE_ADVANCED: Final = "advanced"
 
 # Coordinator update interval (seconds).
-# 30 s is the default; 30–300 s is the allowed range.
-# Tank measurements update server-side at ~60 s cadence so values below
-# 30 s waste API calls and risk rate-limit throttling on the cloud API.
-UPDATE_INTERVAL: Final = 30
+# 60 s is the default; 30–300 s is the allowed range.
+# The default matches the ~60 s cadence at which the tank reports to the
+# Mixergy cloud: polling faster cannot surface fresher data, it just triples
+# the request count (each cycle fetches measurement + settings + schedule).
+# Writes call async_request_refresh() immediately, so user actions never wait
+# for the next poll — the interval only governs background refresh. 30 s
+# remains selectable for anyone who wants it.
+UPDATE_INTERVAL: Final = 60
 MIN_UPDATE_INTERVAL: Final = 30
 MAX_UPDATE_INTERVAL: Final = 300
 

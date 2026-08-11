@@ -15,7 +15,7 @@ You can rename any entity id from its settings dialog; the tables below list the
 
 ## 📊 Sensors
 
-The sensor platform reports temperatures, charge level, power draw, heat sources, holiday dates, and diagnostics — all read-only, all refreshed on every poll (30–300 s, default 30). Three diagnostic sensors ship disabled; the two energy sensors and the optional cost sensor accumulate over time and are covered in their own sections below.
+The sensor platform reports temperatures, charge level, power draw, heat sources, holiday dates, and diagnostics — all read-only, all refreshed on every poll (30–300 s, default 60). Three diagnostic sensors ship disabled; the two energy sensors and the optional cost sensor accumulate over time and are covered in their own sections below.
 
 <!-- AUTOGEN:entities:sensors -->
 | Sensor | Unit | Description |

@@ -4,6 +4,38 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- **The default poll interval is now 60 seconds (was 30).** The tank reports to
+  the Mixergy cloud roughly once a minute, so polling twice that fast could
+  never surface fresher data — it only tripled the request count, since each
+  cycle fetches measurement, settings and schedule. Writes still refresh
+  immediately, so boosts and control changes are as responsive as before; only
+  background refresh slows. **This affects existing installs that never chose
+  an interval.** To keep 30 seconds, set it under
+  **Settings → Devices & Services → Mixergy → Configure**; the 30–300 second
+  range is unchanged.
+
+### Fixed
+
+- Services are registered when the integration loads rather than per config
+  entry, so they exist even if a config entry fails to set up. Previously a
+  Mixergy cloud outage at Home Assistant start meant `mixergy_tank.boost_charge`
+  and friends did not exist at all, and automations calling them failed
+  validation instead of reporting a clear error.
+- Invalid service input — reversed holiday dates, an unknown serial number, a
+  target owned by another integration — is now reported as a validation error
+  rather than as an integration failure.
+- Error messages shown when a control fails, a service call fails, or a tank
+  disappears from your account are now translated (en/de/fr/it).
+
+### Added
+
+- `quality_scale.yaml` recording this integration's status against every Home
+  Assistant Integration Quality Scale rule.
+
 ## [2.0.0] - 2026-08-11
 
 ### Changed — BREAKING

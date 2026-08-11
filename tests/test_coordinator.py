@@ -121,3 +121,25 @@ async def test_async_update_data_stamps_last_update_time(mock_tank_data) -> None
 
     assert result.last_update_time is not None
     assert isinstance(result.last_update_time, datetime)
+
+
+def test_default_poll_interval_is_inside_the_advertised_range() -> None:
+    """The default must be selectable, and must not out-run the data source.
+
+    The tank reports to the cloud at roughly 60 s, so a default below that
+    polls faster than data can change — three requests per cycle for readings
+    that cannot have moved. This pins the default against both the configurable
+    bounds and the upstream cadence, so a future tweak cannot quietly
+    reintroduce over-polling.
+    """
+    from custom_components.mixergy_tank.const import (
+        MAX_UPDATE_INTERVAL,
+        MIN_UPDATE_INTERVAL,
+        UPDATE_INTERVAL,
+    )
+
+    assert MIN_UPDATE_INTERVAL <= UPDATE_INTERVAL <= MAX_UPDATE_INTERVAL
+    assert UPDATE_INTERVAL >= 60, (
+        "the cloud refreshes about once a minute; a faster default only "
+        "multiplies requests without surfacing fresher data"
+    )

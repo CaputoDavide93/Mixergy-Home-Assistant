@@ -48,3 +48,11 @@ python_version = "3.13"
 # and that is not something this repo can fix.
 strict = true
 ignore_missing_imports = true
+
+[tool.coverage.report]
+exclude_also = [
+    # Type-checker-only blocks never execute at runtime by definition;
+    # counting them as uncovered would push a module below the per-module
+    # coverage bar for code that cannot be run.
+    "if TYPE_CHECKING:",
+]

@@ -30,15 +30,13 @@ rules:
       left the services non-existent and every automation calling them failed
       validation. Fixed in #21.
   appropriate-polling:
-    status: todo
+    status: done
     comment: |
-      Default is 30 s, user-configurable 30–300 s. The integration's own docs
-      state the cloud refreshes tank measurements at roughly 60 s, so the
-      default polls at about twice the rate the data changes, and each cycle
-      issues three requests (measurement + settings + schedule). Writes call
-      async_request_refresh() immediately, so a slower default would not make
-      the UI feel less responsive. Left at 30 s pending an owner decision
-      because it changes behaviour on existing installs.
+      Default is 60 s, matching the ~60 s cadence at which the tank reports to
+      the Mixergy cloud — polling faster cannot surface fresher data, it only
+      multiplies requests (each cycle fetches measurement + settings +
+      schedule). Writes call async_request_refresh() immediately, so user
+      actions never wait for a poll. 30–300 s remains selectable.
   brands:
     status: todo
     comment: |

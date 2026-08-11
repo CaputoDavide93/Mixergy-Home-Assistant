@@ -48,7 +48,7 @@ Clock corrections (NTP skew) are floored at zero elapsed time, so a backwards cl
 
 ## 🤔 Why do my readings differ from the Mixergy app?
 
-Expect small differences — the integration samples power at your configured poll interval (30–300 s, default 30) and assumes it stays constant between polls, while Mixergy meters on its own side. Short bursts of heating that start and end between two polls are approximated, not measured exactly.
+Expect small differences — the integration samples power at your configured poll interval (30–300 s, default 60) and assumes it stays constant between polls, while Mixergy meters on its own side. Short bursts of heating that start and end between two polls are approximated, not measured exactly.
 
 Other sources of divergence:
 
