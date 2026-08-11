@@ -35,7 +35,7 @@ Re-render with any SVG rasteriser, for example:
 
 ```bash
 pip install cairosvg
-python -c "import cairosvg; cairosvg.svg2png(url='assets/icon.svg', write_to='custom_components/mixergy/brand/icon@2x.png', output_width=512, output_height=512)"
+python -c "import cairosvg; cairosvg.svg2png(url='assets/icon.svg', write_to='custom_components/mixergy_tank/brand/icon@2x.png', output_width=512, output_height=512)"
 ```
 
 After re-rendering, update `assets/brand-manifest.json`. Repository tests verify

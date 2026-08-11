@@ -85,7 +85,7 @@ body:
         logger:
           default: warning
           logs:
-            custom_components.mixergy: debug
+            custom_components.mixergy_tank: debug
         ```
       render: text
     validations:

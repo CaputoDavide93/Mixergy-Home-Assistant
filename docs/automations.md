@@ -6,13 +6,13 @@ All examples use `<serial>` as a placeholder for your tank's serial number. The 
 
 ## 🧰 The three services
 
-The integration registers three services: `mixergy.set_holiday_dates` puts the tank into holiday mode between two dates, `mixergy.clear_holiday_dates` removes the holiday window, and `mixergy.boost_charge` sets the target charge to 100% so the tank heats a full cylinder. All three accept the same targeting options and run per-tank permission checks.
+The integration registers three services: `mixergy_tank.set_holiday_dates` puts the tank into holiday mode between two dates, `mixergy_tank.clear_holiday_dates` removes the holiday window, and `mixergy_tank.boost_charge` sets the target charge to 100% so the tank heats a full cylinder. All three accept the same targeting options and run per-tank permission checks.
 
 | Service | Required fields | Optional fields | Effect |
 | --- | --- | --- | --- |
-| `mixergy.set_holiday_dates` | `start_date`, `end_date` | target, `serial_number` | Sets a holiday window on the tank |
-| `mixergy.clear_holiday_dates` | — | target, `serial_number` | Clears any holiday window |
-| `mixergy.boost_charge` | — | target, `serial_number` | Sets target charge to 100% |
+| `mixergy_tank.set_holiday_dates` | `start_date`, `end_date` | target, `serial_number` | Sets a holiday window on the tank |
+| `mixergy_tank.clear_holiday_dates` | — | target, `serial_number` | Clears any holiday window |
+| `mixergy_tank.boost_charge` | — | target, `serial_number` | Sets target charge to 100% |
 
 Rules for `set_holiday_dates`:
 
@@ -28,22 +28,22 @@ Targeting precedence: an explicit entity, device, or area target wins; otherwise
 
 ```yaml
 # Target one tank by entity (any Mixergy entity works)
-- action: mixergy.boost_charge
+- action: mixergy_tank.boost_charge
   target:
     entity_id: sensor.mixergy_tank_<serial>_current_charge
 
 # Target by area
-- action: mixergy.boost_charge
+- action: mixergy_tank.boost_charge
   target:
     area_id: utility_room
 
 # Legacy: target by serial number (matched case-insensitively, whitespace trimmed)
-- action: mixergy.boost_charge
+- action: mixergy_tank.boost_charge
   data:
     serial_number: "<serial>"
 
 # No target at all: applies to ALL configured tanks
-- action: mixergy.boost_charge
+- action: mixergy_tank.boost_charge
 ```
 
 The targeting fails closed. A target that matches no Mixergy tank raises *"No Mixergy tanks match the supplied target."* rather than falling through to all tanks, an unknown serial number raises an error naming it, and floor or label targets are rejected outright at validation because the integration does not resolve them.
@@ -70,7 +70,7 @@ Picking **Hot water is low** in the UI produces an automation like this — the 
 alias: "Tank — low hot water (device trigger)"
 triggers:
   - trigger: device
-    domain: mixergy
+    domain: mixergy_tank
     device_id: <device_id_filled_by_the_ui>
     entity_id: binary_sensor.mixergy_tank_<serial>_low_hot_water
     type: low_hot_water
@@ -119,7 +119,7 @@ actions:
 
 ### 2. Morning boost on workdays
 
-Boost the tank early on working days only, using the [Workday integration](https://www.home-assistant.io/integrations/workday/) as the condition. `mixergy.boost_charge` sets the target charge to 100%; to boost to a lower level, use `number.set_value` on the `Target charge` control instead (0–100% in steps of 5).
+Boost the tank early on working days only, using the [Workday integration](https://www.home-assistant.io/integrations/workday/) as the condition. `mixergy_tank.boost_charge` sets the target charge to 100%; to boost to a lower level, use `number.set_value` on the `Target charge` control instead (0–100% in steps of 5).
 
 ```yaml
 alias: "Tank — workday morning boost"
@@ -131,7 +131,7 @@ conditions:
     entity_id: binary_sensor.workday_sensor
     state: "on"
 actions:
-  - action: mixergy.boost_charge
+  - action: mixergy_tank.boost_charge
     target:
       entity_id: sensor.mixergy_tank_<serial>_current_charge
 ```
@@ -153,7 +153,7 @@ conditions:
     entity_id: sensor.mixergy_tank_<serial>_current_charge
     below: 80
 actions:
-  - action: mixergy.boost_charge
+  - action: mixergy_tank.boost_charge
     target:
       entity_id: sensor.mixergy_tank_<serial>_current_charge
 ```
@@ -174,7 +174,7 @@ conditions:
     entity_id: sensor.mixergy_tank_<serial>_current_charge
     below: 100
 actions:
-  - action: mixergy.boost_charge
+  - action: mixergy_tank.boost_charge
     target:
       entity_id: sensor.mixergy_tank_<serial>_current_charge
 ```
@@ -193,7 +193,7 @@ conditions:
   - condition: template
     value_template: "{{ 'holiday' in trigger.calendar_event.summary | lower }}"
 actions:
-  - action: mixergy.set_holiday_dates
+  - action: mixergy_tank.set_holiday_dates
     target:
       entity_id: sensor.mixergy_tank_<serial>_current_charge
     data:
@@ -222,7 +222,7 @@ script:
   tank_set_holiday:
     alias: "Tank — set holiday from helpers"
     sequence:
-      - action: mixergy.set_holiday_dates
+      - action: mixergy_tank.set_holiday_dates
         target:
           entity_id: sensor.mixergy_tank_<serial>_current_charge
         data:
@@ -245,10 +245,10 @@ conditions:
     entity_id: binary_sensor.mixergy_tank_<serial>_holiday_mode
     state: "on"
 actions:
-  - action: mixergy.clear_holiday_dates
+  - action: mixergy_tank.clear_holiday_dates
     target:
       entity_id: sensor.mixergy_tank_<serial>_current_charge
-  - action: mixergy.boost_charge
+  - action: mixergy_tank.boost_charge
     target:
       entity_id: sensor.mixergy_tank_<serial>_current_charge
 ```
@@ -351,7 +351,7 @@ script:
           away_mode: false
 ```
 
-Away mode is holiday mode by another name: turning it **on** opens an open-ended holiday window (3650 days from now), turning it **off** clears the window — the same effect as `mixergy.clear_holiday_dates`. Use the services from recipes 5–7 when you want a dated window; use away mode for an indefinite "off until I say otherwise".
+Away mode is holiday mode by another name: turning it **on** opens an open-ended holiday window (3650 days from now), turning it **off** clears the window — the same effect as `mixergy_tank.clear_holiday_dates`. Use the services from recipes 5–7 when you want a dated window; use away mode for an indefinite "off until I say otherwise".
 
 ## ❓ FAQ
 

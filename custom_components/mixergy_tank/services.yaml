@@ -4,7 +4,7 @@
 set_holiday_dates:
   target:
     entity:
-      integration: mixergy
+      integration: mixergy_tank
   fields:
     start_date:
       required: true
@@ -26,7 +26,7 @@ set_holiday_dates:
 clear_holiday_dates:
   target:
     entity:
-      integration: mixergy
+      integration: mixergy_tank
   fields:
     serial_number:
       required: false
@@ -38,7 +38,7 @@ clear_holiday_dates:
 boost_charge:
   target:
     entity:
-      integration: mixergy
+      integration: mixergy_tank
   fields:
     serial_number:
       required: false

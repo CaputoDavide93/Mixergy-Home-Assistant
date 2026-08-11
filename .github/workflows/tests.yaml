@@ -64,7 +64,7 @@ jobs:
       - name: Run tests
         run: >-
           pytest tests/ -v --tb=short
-          --cov=custom_components.mixergy
+          --cov=custom_components.mixergy_tank
           --cov-report=term-missing
           --cov-fail-under=65
 
@@ -107,6 +107,6 @@ jobs:
       - name: Run latest compatibility suite
         run: >-
           pytest tests/ -v --tb=short
-          --cov=custom_components.mixergy
+          --cov=custom_components.mixergy_tank
           --cov-report=term-missing
           --cov-fail-under=65

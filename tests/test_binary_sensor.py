@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from custom_components.mixergy.api import TankData, TankMeasurement
-from custom_components.mixergy.const import (
+from custom_components.mixergy_tank.api import TankData, TankMeasurement
+from custom_components.mixergy_tank.const import (
     LOW_HOT_WATER_THRESHOLD,
     NO_HOT_WATER_THRESHOLD,
 )
@@ -62,7 +62,7 @@ def test_is_advanced_mode_returns_true_for_advanced() -> None:
     """is_advanced_mode returns True when mode is 'advanced'."""
     from unittest.mock import MagicMock
 
-    from custom_components.mixergy.const import (
+    from custom_components.mixergy_tank.const import (
         CONF_EXPERIENCE_MODE,
         MODE_ADVANCED,
         is_advanced_mode,
@@ -77,7 +77,7 @@ def test_is_advanced_mode_returns_false_for_simple() -> None:
     """is_advanced_mode returns False when mode is 'simple'."""
     from unittest.mock import MagicMock
 
-    from custom_components.mixergy.const import (
+    from custom_components.mixergy_tank.const import (
         CONF_EXPERIENCE_MODE,
         MODE_SIMPLE,
         is_advanced_mode,
@@ -97,7 +97,7 @@ def test_is_advanced_mode_defaults_to_false_when_no_options() -> None:
     """
     from unittest.mock import MagicMock
 
-    from custom_components.mixergy.const import is_advanced_mode
+    from custom_components.mixergy_tank.const import is_advanced_mode
 
     entry = MagicMock()
     entry.options = {}

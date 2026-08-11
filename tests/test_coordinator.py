@@ -7,16 +7,16 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from custom_components.mixergy.api import (
+from custom_components.mixergy_tank.api import (
     MixergyAuthError,
     MixergyConnectionError,
 )
-from custom_components.mixergy.const import (
+from custom_components.mixergy_tank.const import (
     CONF_UPDATE_INTERVAL,
     DOMAIN,
     UPDATE_INTERVAL,
 )
-from custom_components.mixergy.coordinator import MixergyCoordinator
+from custom_components.mixergy_tank.coordinator import MixergyCoordinator
 
 from .conftest import MOCK_SERIAL, mock_tank_data
 

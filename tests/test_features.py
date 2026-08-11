@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from custom_components.mixergy.api import (
+from custom_components.mixergy_tank.api import (
     TankData,
     TankInfo,
     TankMeasurement,
@@ -51,7 +51,7 @@ def _coordinator(
 
 def test_device_metadata_does_not_assume_a_private_home_area(mock_tank_data) -> None:
     """Public integration devices must not be forced into Utility Room."""
-    from custom_components.mixergy.entity import MixergyEntity
+    from custom_components.mixergy_tank.entity import MixergyEntity
 
     coordinator = MagicMock()
     coordinator.data = mock_tank_data
@@ -65,7 +65,7 @@ def test_device_metadata_does_not_assume_a_private_home_area(mock_tank_data) -> 
 
 
 def test_water_heater_reads_state() -> None:
-    from custom_components.mixergy.water_heater import MixergyWaterHeater
+    from custom_components.mixergy_tank.water_heater import MixergyWaterHeater
 
     wh = MixergyWaterHeater(_coordinator(top=58.0, target_temp=62.0))
     assert wh.current_temperature == 58.0
@@ -75,7 +75,7 @@ def test_water_heater_reads_state() -> None:
 
 
 def test_water_heater_operation_mapping() -> None:
-    from custom_components.mixergy.water_heater import MixergyWaterHeater
+    from custom_components.mixergy_tank.water_heater import MixergyWaterHeater
 
     assert MixergyWaterHeater(
         _coordinator(heat_source="indirect")
@@ -89,7 +89,7 @@ def test_water_heater_operation_mapping() -> None:
 async def test_water_heater_set_temperature() -> None:
     from homeassistant.const import ATTR_TEMPERATURE
 
-    from custom_components.mixergy.water_heater import MixergyWaterHeater
+    from custom_components.mixergy_tank.water_heater import MixergyWaterHeater
 
     coordinator = _coordinator()
     wh = MixergyWaterHeater(coordinator)
@@ -99,7 +99,7 @@ async def test_water_heater_set_temperature() -> None:
 
 @pytest.mark.asyncio
 async def test_water_heater_set_operation_mode_maps_back() -> None:
-    from custom_components.mixergy.water_heater import MixergyWaterHeater
+    from custom_components.mixergy_tank.water_heater import MixergyWaterHeater
 
     coordinator = _coordinator()
     wh = MixergyWaterHeater(coordinator)
@@ -109,7 +109,7 @@ async def test_water_heater_set_operation_mode_maps_back() -> None:
 
 @pytest.mark.asyncio
 async def test_water_heater_away_mode_on_off() -> None:
-    from custom_components.mixergy.water_heater import MixergyWaterHeater
+    from custom_components.mixergy_tank.water_heater import MixergyWaterHeater
 
     coordinator = _coordinator()
     wh = MixergyWaterHeater(coordinator)
@@ -124,7 +124,7 @@ async def test_water_heater_away_mode_on_off() -> None:
 
 @pytest.mark.asyncio
 async def test_holiday_datetime_set_start_preserves_end() -> None:
-    from custom_components.mixergy.datetime import MixergyHolidayDateTime
+    from custom_components.mixergy_tank.datetime import MixergyHolidayDateTime
 
     end = datetime(2026, 8, 20, 12, 0, tzinfo=timezone.utc)
     coordinator = _coordinator(holiday_end=end)
@@ -137,7 +137,7 @@ async def test_holiday_datetime_set_start_preserves_end() -> None:
 
 @pytest.mark.asyncio
 async def test_holiday_datetime_set_start_defaults_end_when_unset() -> None:
-    from custom_components.mixergy.datetime import MixergyHolidayDateTime
+    from custom_components.mixergy_tank.datetime import MixergyHolidayDateTime
 
     coordinator = _coordinator()  # no existing holiday_end
     ent = MixergyHolidayDateTime(coordinator, is_start=True)
@@ -149,7 +149,7 @@ async def test_holiday_datetime_set_start_defaults_end_when_unset() -> None:
 
 
 def test_holiday_datetime_native_value() -> None:
-    from custom_components.mixergy.datetime import MixergyHolidayDateTime
+    from custom_components.mixergy_tank.datetime import MixergyHolidayDateTime
 
     start = datetime(2026, 8, 1, tzinfo=timezone.utc)
     coordinator = _coordinator(holiday_start=start)
@@ -164,7 +164,7 @@ def test_holiday_datetime_native_value() -> None:
 def test_cost_sensor_integrates_with_rate() -> None:
     import time
 
-    from custom_components.mixergy.sensor import MixergyElectricCostSensor
+    from custom_components.mixergy_tank.sensor import MixergyElectricCostSensor
 
     coordinator = MagicMock()
     coordinator.update_interval = timedelta(seconds=30)
@@ -194,7 +194,7 @@ def test_cost_sensor_integrates_with_rate() -> None:
 def test_cost_sensor_ignores_non_electric_power() -> None:
     import time
 
-    from custom_components.mixergy.sensor import MixergyElectricCostSensor
+    from custom_components.mixergy_tank.sensor import MixergyElectricCostSensor
 
     coordinator = MagicMock()
     coordinator.update_interval = timedelta(seconds=30)
@@ -221,7 +221,7 @@ def test_cost_sensor_state_class_is_total() -> None:
     rejected by HA's DEVICE_CLASS_STATE_CLASSES and breaks statistics."""
     from homeassistant.components.sensor import SensorStateClass
 
-    from custom_components.mixergy.sensor import MixergyElectricCostSensor
+    from custom_components.mixergy_tank.sensor import MixergyElectricCostSensor
 
     # HA's CachedProperties metaclass shadows class-level _attr_* with a
     # property, so read it through an instance.
@@ -241,12 +241,12 @@ def test_percentage_entities_use_ratio_enum() -> None:
     """
     from homeassistant import const as ha_const
 
-    from custom_components.mixergy.const import PERCENTAGE_UNIT
-    from custom_components.mixergy.number import (
+    from custom_components.mixergy_tank.const import PERCENTAGE_UNIT
+    from custom_components.mixergy_tank.number import (
         NUMBER_DESCRIPTIONS,
         MixergyBoostNumber,
     )
-    from custom_components.mixergy.sensor import SENSOR_DESCRIPTIONS
+    from custom_components.mixergy_tank.sensor import SENSOR_DESCRIPTIONS
 
     descriptions = (*NUMBER_DESCRIPTIONS, *SENSOR_DESCRIPTIONS)
     percentage_descriptions = [
@@ -277,7 +277,7 @@ def test_cost_sensor_skips_integration_on_failed_poll() -> None:
     outage window is not credited on recovery either."""
     import time
 
-    from custom_components.mixergy.sensor import MixergyElectricCostSensor
+    from custom_components.mixergy_tank.sensor import MixergyElectricCostSensor
 
     coordinator = MagicMock()
     coordinator.update_interval = timedelta(seconds=30)
@@ -310,7 +310,7 @@ def test_energy_sensor_skips_integration_on_failed_poll() -> None:
     success->failure edge must not be integrated into a persisted total."""
     import time
 
-    from custom_components.mixergy.sensor import MixergyEnergySensor
+    from custom_components.mixergy_tank.sensor import MixergyEnergySensor
 
     coordinator = MagicMock()
     coordinator.update_interval = timedelta(seconds=30)
@@ -333,7 +333,7 @@ def test_energy_sensor_skips_integration_on_failed_poll() -> None:
 
 
 def test_capped_elapsed_hours():
-    from custom_components.mixergy.sensor import _capped_elapsed_hours
+    from custom_components.mixergy_tank.sensor import _capped_elapsed_hours
 
     interval = timedelta(seconds=30)
     # 1 hour gap capped to 2x30s = 60s = 0.01667h
@@ -349,7 +349,7 @@ def test_capped_elapsed_hours():
 
 @pytest.mark.asyncio
 async def test_device_get_triggers_maps_binary_sensors(monkeypatch) -> None:
-    from custom_components.mixergy import device_trigger
+    from custom_components.mixergy_tank import device_trigger
 
     def _entry(key):
         e = MagicMock()

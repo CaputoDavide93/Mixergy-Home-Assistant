@@ -14,7 +14,7 @@ except ImportError:  # Home Assistant < 2026.7
 else:
     PERCENTAGE_UNIT = UnitOfRatio.PERCENTAGE
 
-DOMAIN: Final = "mixergy"
+DOMAIN: Final = "mixergy_tank"
 MANUFACTURER: Final = "Mixergy Ltd"
 
 # Config keys

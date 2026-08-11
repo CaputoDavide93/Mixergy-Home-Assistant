@@ -31,7 +31,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-COMPONENT = ROOT / "custom_components" / "mixergy"
+COMPONENT = ROOT / "custom_components" / "mixergy_tank"
 README = ROOT / "README.md"
 
 # ── Description prose (the only hand-written part; keyed by entity key) ────
@@ -360,7 +360,7 @@ def render_services(src: dict) -> str:
     services = src["strings"]["services"]
     lines = ["| Service | Description |", "| ------- | ----------- |"]
     for key in src["service_keys"]:
-        lines.append(f"| `mixergy.{key}` | {services[key]['description']} |")
+        lines.append(f"| `mixergy_tank.{key}` | {services[key]['description']} |")
     return "\n".join(lines)
 
 

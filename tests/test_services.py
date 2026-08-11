@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from custom_components.mixergy.api import MixergyApiError
+from custom_components.mixergy_tank.api import MixergyApiError
 
 from .conftest import MOCK_SERIAL
 
@@ -50,7 +50,7 @@ def _make_call(data: dict | None = None) -> MagicMock:
 @pytest.mark.asyncio
 async def test_boost_charge_calls_set_target_charge_100() -> None:
     """boost_charge service sets the target charge to 100 on each coordinator."""
-    from custom_components.mixergy import _register_services
+    from custom_components.mixergy_tank import _register_services
 
     coordinator = _make_coordinator()
     coordinator.client.set_target_charge = AsyncMock()
@@ -62,7 +62,7 @@ async def test_boost_charge_calls_set_target_charge_100() -> None:
     # The patch must remain active when the handler is invoked, so we keep the
     # context manager open across both _register_services() and the handler call.
     with patch(
-        "custom_components.mixergy._coordinator_by_entry",
+        "custom_components.mixergy_tank._coordinator_by_entry",
         return_value={"e1": coordinator},
     ):
         _register_services(hass)
@@ -86,7 +86,7 @@ async def test_boost_charge_raises_homeassistant_error_on_api_failure() -> None:
     """boost_charge raises HomeAssistantError when the API call fails."""
     from homeassistant.exceptions import HomeAssistantError
 
-    from custom_components.mixergy import _register_services
+    from custom_components.mixergy_tank import _register_services
 
     coordinator = _make_coordinator()
     coordinator.client.set_target_charge = AsyncMock(
@@ -96,7 +96,7 @@ async def test_boost_charge_raises_homeassistant_error_on_api_failure() -> None:
     hass = _make_hass()
 
     with patch(
-        "custom_components.mixergy._coordinator_by_entry",
+        "custom_components.mixergy_tank._coordinator_by_entry",
         return_value={"e1": coordinator},
     ):
         _register_services(hass)
@@ -119,7 +119,7 @@ async def test_set_holiday_dates_raises_homeassistant_error_on_api_failure() -> 
     """set_holiday_dates raises HomeAssistantError when the API call fails."""
     from homeassistant.exceptions import HomeAssistantError
 
-    from custom_components.mixergy import _register_services
+    from custom_components.mixergy_tank import _register_services
 
     coordinator = _make_coordinator()
     coordinator.client.set_holiday_dates = AsyncMock(
@@ -129,7 +129,7 @@ async def test_set_holiday_dates_raises_homeassistant_error_on_api_failure() -> 
     hass = _make_hass()
 
     with patch(
-        "custom_components.mixergy._coordinator_by_entry",
+        "custom_components.mixergy_tank._coordinator_by_entry",
         return_value={"e1": coordinator},
     ):
         _register_services(hass)
@@ -155,7 +155,7 @@ async def test_set_holiday_dates_raises_homeassistant_error_on_api_failure() -> 
 @pytest.mark.asyncio
 async def test_boost_charge_targets_single_tank_by_serial() -> None:
     """With serial_number set, only the matching tank is acted on."""
-    from custom_components.mixergy import _register_services
+    from custom_components.mixergy_tank import _register_services
 
     tank_a = _make_coordinator("AAA111")
     tank_a.client.set_target_charge = AsyncMock()
@@ -165,7 +165,7 @@ async def test_boost_charge_targets_single_tank_by_serial() -> None:
     hass = _make_hass()
 
     with patch(
-        "custom_components.mixergy._coordinator_by_entry",
+        "custom_components.mixergy_tank._coordinator_by_entry",
         return_value={"a": tank_a, "b": tank_b},
     ):
         _register_services(hass)
@@ -185,7 +185,7 @@ async def test_boost_charge_unknown_serial_raises() -> None:
     """An unknown serial_number raises HomeAssistantError."""
     from homeassistant.exceptions import HomeAssistantError
 
-    from custom_components.mixergy import _register_services
+    from custom_components.mixergy_tank import _register_services
 
     tank_a = _make_coordinator("AAA111")
     tank_a.client.set_target_charge = AsyncMock()
@@ -193,7 +193,7 @@ async def test_boost_charge_unknown_serial_raises() -> None:
     hass = _make_hass()
 
     with patch(
-        "custom_components.mixergy._coordinator_by_entry",
+        "custom_components.mixergy_tank._coordinator_by_entry",
         return_value={"a": tank_a},
     ):
         _register_services(hass)
@@ -214,17 +214,17 @@ async def test_boost_charge_unknown_serial_raises() -> None:
 @pytest.mark.asyncio
 async def test_target_resolves_device_to_coordinator() -> None:
     """An entity/device target resolves to the matching coordinator."""
-    from custom_components.mixergy import _target_coordinators
+    from custom_components.mixergy_tank import _target_coordinators
 
     coord = _make_coordinator("BBB222")
     hass = _make_hass()
     call = _make_call({})  # target keys supplied via _resolve patch below
 
     with patch(
-        "custom_components.mixergy._coordinator_by_entry",
+        "custom_components.mixergy_tank._coordinator_by_entry",
         return_value={"entryB": coord},
     ), patch(
-        "custom_components.mixergy._resolve_target_entry_ids",
+        "custom_components.mixergy_tank._resolve_target_entry_ids",
         return_value={"entryB"},
     ):
         targets = await _target_coordinators(hass, call)
@@ -237,16 +237,16 @@ async def test_target_unknown_reference_raises() -> None:
     """A target that resolves to no Mixergy entry raises HomeAssistantError."""
     from homeassistant.exceptions import HomeAssistantError
 
-    from custom_components.mixergy import _target_coordinators
+    from custom_components.mixergy_tank import _target_coordinators
 
     hass = _make_hass()
     call = _make_call({})
 
     with patch(
-        "custom_components.mixergy._coordinator_by_entry",
+        "custom_components.mixergy_tank._coordinator_by_entry",
         return_value={"entryA": _make_coordinator("AAA111")},
     ), patch(
-        "custom_components.mixergy._resolve_target_entry_ids",
+        "custom_components.mixergy_tank._resolve_target_entry_ids",
         return_value={"some-other-entry"},
     ):
         with pytest.raises(HomeAssistantError):
@@ -258,7 +258,7 @@ async def test_non_admin_without_permission_is_unauthorized() -> None:
     """A non-admin lacking control on the targeted tank is rejected."""
     from homeassistant.exceptions import Unauthorized
 
-    from custom_components.mixergy import _target_coordinators
+    from custom_components.mixergy_tank import _target_coordinators
 
     coord = _make_coordinator("AAA111")
     coord.config_entry.entry_id = "e1"
@@ -273,10 +273,10 @@ async def test_non_admin_without_permission_is_unauthorized() -> None:
     call.context.user_id = "user-123"
 
     with patch(
-        "custom_components.mixergy._coordinator_by_entry",
+        "custom_components.mixergy_tank._coordinator_by_entry",
         return_value={"e1": coord},
     ), patch(
-        "custom_components.mixergy.er.async_entries_for_config_entry",
+        "custom_components.mixergy_tank.er.async_entries_for_config_entry",
         return_value=[MagicMock(entity_id="number.tank_boost")],
     ):
         with pytest.raises(Unauthorized):
@@ -286,7 +286,7 @@ async def test_non_admin_without_permission_is_unauthorized() -> None:
 @pytest.mark.asyncio
 async def test_non_admin_with_permission_allowed() -> None:
     """A non-admin holding control on the targeted tank is allowed."""
-    from custom_components.mixergy import _target_coordinators
+    from custom_components.mixergy_tank import _target_coordinators
 
     coord = _make_coordinator("AAA111")
     coord.config_entry.entry_id = "e1"
@@ -301,10 +301,10 @@ async def test_non_admin_with_permission_allowed() -> None:
     call.context.user_id = "user-123"
 
     with patch(
-        "custom_components.mixergy._coordinator_by_entry",
+        "custom_components.mixergy_tank._coordinator_by_entry",
         return_value={"e1": coord},
     ), patch(
-        "custom_components.mixergy.er.async_entries_for_config_entry",
+        "custom_components.mixergy_tank.er.async_entries_for_config_entry",
         return_value=[MagicMock(entity_id="number.tank_boost")],
     ):
         targets = await _target_coordinators(hass, call)
@@ -315,7 +315,7 @@ async def test_non_admin_with_permission_allowed() -> None:
 @pytest.mark.asyncio
 async def test_admin_bypasses_per_entity_check() -> None:
     """An admin is authorised without per-entity permission lookups."""
-    from custom_components.mixergy import _target_coordinators
+    from custom_components.mixergy_tank import _target_coordinators
 
     coord = _make_coordinator("AAA111")
     coord.config_entry.entry_id = "e1"
@@ -329,7 +329,7 @@ async def test_admin_bypasses_per_entity_check() -> None:
     call.context.user_id = "admin-1"
 
     with patch(
-        "custom_components.mixergy._coordinator_by_entry",
+        "custom_components.mixergy_tank._coordinator_by_entry",
         return_value={"e1": coord},
     ):
         targets = await _target_coordinators(hass, call)
@@ -348,11 +348,11 @@ async def test_floor_label_target_rejected_by_schema() -> None:
     """
     import voluptuous as vol
 
-    from custom_components.mixergy import _register_services
+    from custom_components.mixergy_tank import _register_services
 
     hass = _make_hass()
     with patch(
-        "custom_components.mixergy._coordinator_by_entry",
+        "custom_components.mixergy_tank._coordinator_by_entry",
         return_value={"e1": _make_coordinator()},
     ):
         _register_services(hass)

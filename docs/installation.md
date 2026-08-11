@@ -46,7 +46,7 @@ After the restart, add the integration itself: **Settings** → **Devices & Serv
 Manual installation copies the integration files into your Home Assistant configuration directory yourself. It works identically to a HACS install once running, but you take on the job of applying updates by hand — HACS will not know the integration exists.
 
 1. Download the [latest release](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/releases) from GitHub
-2. Copy `custom_components/mixergy/` into your HA `config/custom_components/` directory
+2. Copy `custom_components/mixergy_tank/` into your HA `config/custom_components/` directory
 3. Restart Home Assistant
 4. Add the integration via **Settings** → **Devices & Services** → **Add Integration** → **Mixergy**
 
@@ -55,7 +55,7 @@ Your directory should end up looking like this:
 ```text
 config/
 └── custom_components/
-    └── mixergy/
+    └── mixergy_tank/
         ├── __init__.py
         ├── manifest.json
         └── ...
@@ -79,7 +79,7 @@ Read the release notes first, take a Home Assistant backup, then apply the updat
 4. Restart Home Assistant
 5. Confirm the tank device still reports — check an entity such as `sensor.mixergy_tank_<serial>_current_charge` has a fresh state
 
-For a manual install, replace the whole `config/custom_components/mixergy/` directory with the new release's copy, then restart. Do not merge old and new files — stale leftovers from a previous version cause hard-to-diagnose errors.
+For a manual install, replace the whole `config/custom_components/mixergy_tank/` directory with the new release's copy, then restart. Do not merge old and new files — stale leftovers from a previous version cause hard-to-diagnose errors.
 
 ---
 
@@ -92,7 +92,7 @@ Remove the integration entry first, then remove the repository from HACS. Deleti
 3. In HACS, open **Mixergy** → 3-dots menu → **Remove**
 4. Restart Home Assistant
 
-For a manual install, replace steps 3–4 with deleting the `config/custom_components/mixergy/` directory and restarting.
+For a manual install, replace steps 3–4 with deleting the `config/custom_components/mixergy_tank/` directory and restarting.
 
 If you created automations, dashboards, or Energy Dashboard entries that reference Mixergy entities, remove those references too — they will show as unavailable entities otherwise.
 

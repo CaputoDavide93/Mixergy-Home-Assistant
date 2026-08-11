@@ -69,7 +69,7 @@ def test_local_artifacts_are_ignored() -> None:
 
 def test_brand_assets_are_complete_and_distinct() -> None:
     """Ship one coherent icon/logo family at HA's exact dimensions."""
-    brand = ROOT / "custom_components" / "mixergy" / "brand"
+    brand = ROOT / "custom_components" / "mixergy_tank" / "brand"
     expected = {
         "icon.png": (256, 256),
         "icon@2x.png": (512, 512),

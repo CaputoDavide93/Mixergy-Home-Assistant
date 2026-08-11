@@ -101,7 +101,7 @@ Try in this order:
 
    ```yaml
    actions:
-     - action: mixergy.clear_holiday_dates
+     - action: mixergy_tank.clear_holiday_dates
    ```
 
 2. Press the **Clear holiday** button on the device page (Advanced experience mode only).
@@ -129,7 +129,7 @@ Add the integration's logger to your `configuration.yaml` and restart Home Assis
 logger:
   default: warning
   logs:
-    custom_components.mixergy: debug
+    custom_components.mixergy_tank: debug
 ```
 
 Alternatively, enable debug logging without a restart from Settings → Devices & Services → Mixergy → **Enable debug logging**; disabling it again downloads the captured log. Debug level shows authentication events, tank discovery (model, firmware, PV flag), and cached-fallback warnings for failed settings/schedule fetches.

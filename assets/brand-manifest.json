@@ -7,11 +7,11 @@
   },
   "outputs": {
     "assets/banner.png": "1a480747a2ad8c7e3d257916a0cc023be4e25f528ba49b7a9de2432439be00a3",
-    "custom_components/mixergy/brand/dark_logo.png": "ce12dd02ecf4a70d30c6068aa0aa50dc6cdcfbcef84b1d1af514da251160e336",
-    "custom_components/mixergy/brand/dark_logo@2x.png": "1e353127ca3d710ebd91683b1e144485102623523a6e905f9bbf3a2d7f2c826c",
-    "custom_components/mixergy/brand/icon.png": "abeacd540fa3173091425912ec50d80d3d40309a3911da4ff7314b512f3c42bc",
-    "custom_components/mixergy/brand/icon@2x.png": "8108a221f5aadd4927cfb33adb99fe8cc494f64425700732f68ba5b39aaf657d",
-    "custom_components/mixergy/brand/logo.png": "227319bda31a1c28fa21e9d369af58fdeb55de2cccc5212bdfcf38b3c7769cbd",
-    "custom_components/mixergy/brand/logo@2x.png": "911a07390c2061a26cb56045c08f2c4a7f04f39fb5199b8c87cda66efbd5461f"
+    "custom_components/mixergy_tank/brand/dark_logo.png": "ce12dd02ecf4a70d30c6068aa0aa50dc6cdcfbcef84b1d1af514da251160e336",
+    "custom_components/mixergy_tank/brand/dark_logo@2x.png": "1e353127ca3d710ebd91683b1e144485102623523a6e905f9bbf3a2d7f2c826c",
+    "custom_components/mixergy_tank/brand/icon.png": "abeacd540fa3173091425912ec50d80d3d40309a3911da4ff7314b512f3c42bc",
+    "custom_components/mixergy_tank/brand/icon@2x.png": "8108a221f5aadd4927cfb33adb99fe8cc494f64425700732f68ba5b39aaf657d",
+    "custom_components/mixergy_tank/brand/logo.png": "227319bda31a1c28fa21e9d369af58fdeb55de2cccc5212bdfcf38b3c7769cbd",
+    "custom_components/mixergy_tank/brand/logo@2x.png": "911a07390c2061a26cb56045c08f2c4a7f04f39fb5199b8c87cda66efbd5461f"
   }
 }
