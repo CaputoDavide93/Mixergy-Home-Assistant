@@ -4,7 +4,7 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [2.1.0] - 2026-08-12
 
 ### Changed
 
@@ -30,6 +30,23 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   notice and the service fields fell back to English mid-dialog.
 - Cloud responses are now size-capped before parsing, so a malformed or
   oversized reply cannot consume memory inside Home Assistant.
+- **Holiday mode no longer hides heating that is actually happening.** Frost
+  protection, the anti-legionella cycle and the pre-return reheat all reported
+  as not-heating while away, so the power sensor read zero and the energy and
+  cost totals stopped for the whole holiday.
+- **An untargeted service call no longer reports success while doing nothing.**
+  `boost_charge` and friends called without a target succeeded silently
+  whenever no tank was loaded; they now fail with an actionable message.
+- **A Mixergy server error no longer looks like a wrong password.** Any
+  non-success response from the login endpoint was reported as an
+  authentication failure, which stopped polling and raised a re-authenticate
+  prompt during outages nothing could be done about.
+- **A missing default heat source no longer prevents the integration loading.**
+  An explicitly empty value from the cloud failed the whole refresh, and on a
+  first start that meant the integration never finished setting up.
+- **Tank readings are parsed correctly in both response formats.** One of the
+  two shapes the cloud returns was silently discarded, leaving target charge,
+  heat source, heating status and holiday mode all reporting defaults.
 - Services are registered when the integration loads rather than per config
   entry, so they exist even if a config entry fails to set up. Previously a
   Mixergy cloud outage at Home Assistant start meant `mixergy_tank.boost_charge`
