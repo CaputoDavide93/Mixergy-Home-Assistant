@@ -101,8 +101,11 @@ async def async_setup_entry(
 ) -> None:
     """Set up Mixergy binary sensor entities.
 
-    Water-level thresholds are read from options; the options update listener
-    reloads the entry so changes take effect immediately.
+    Water-level thresholds are read from options and baked into the entity
+    descriptions here, so a threshold change takes effect when the entry
+    reloads. That reload comes from MixergyOptionsFlow subclassing
+    OptionsFlowWithReload — deliberately NOT from an update listener, which
+    __init__ explains must not be re-added.
     """
     coordinator = entry.runtime_data
     low = entry.options.get(CONF_LOW_WATER_THRESHOLD, LOW_HOT_WATER_THRESHOLD)
