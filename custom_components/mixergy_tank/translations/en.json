@@ -283,6 +283,9 @@
     },
     "tank_not_found_setup": {
       "message": "Tank {serial} is no longer present in your Mixergy account."
+    },
+    "no_tanks_loaded": {
+      "message": "No Mixergy tanks are currently loaded. The integration may still be starting up, or the connection to Mixergy may be down."
     }
   },
   "services": {

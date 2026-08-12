@@ -494,11 +494,17 @@ class MixergyApiClient:
                     timeout=REQUEST_TIMEOUT,
                     allow_redirects=False,
                 ) as resp:
-                    if resp.status == 401 or resp.status == 403:
+                    if resp.status in (400, 401, 403):
                         raise MixergyAuthError("Invalid username or password")
                     if resp.status != 201:
-                        raise MixergyAuthError(
-                            f"Authentication failed with status {resp.status}"
+                        # NOT MixergyAuthError. The coordinator maps that to
+                        # ConfigEntryAuthFailed, which stops polling and tells
+                        # the user their credentials are wrong — so a cloud
+                        # 500/503 would raise a sticky re-authenticate prompt
+                        # during an outage the user cannot do anything about.
+                        # Every other endpoint already treats 5xx as retryable.
+                        raise MixergyConnectionError(
+                            f"Authentication endpoint returned {resp.status}"
                         )
 
                     data = _require_object(
@@ -865,27 +871,34 @@ class MixergyApiClient:
             source = current.get("source", "")
             measurement.in_holiday_mode = source == "Vacation"
 
-            if not measurement.in_holiday_mode:
-                # `or` (not the .get default) guards against an explicit null
-                # value for these keys — .get only substitutes when the key is
-                # absent, so a present-but-None value would crash on .lower().
-                heat_source_str = (current.get("heat_source") or "none").lower()
-                immersion_on = (current.get("immersion") or "off").lower() == "on"
+            # Parsed regardless of holiday mode. The tank still heats while
+            # away — frost protection, anti-legionella, and the pre-return
+            # reheat all run — and the payload reports heat_source/immersion
+            # normally during Vacation. Skipping this block left is_heating and
+            # every per-source flag False, which zeroed the power sensor and
+            # stopped the energy and cost accumulators for the whole holiday.
+            # in_holiday_mode stays an independent flag above.
+            #
+            # `or` (not the .get default) guards against an explicit null
+            # value for these keys — .get only substitutes when the key is
+            # absent, so a present-but-None value would crash on .lower().
+            heat_source_str = (current.get("heat_source") or "none").lower()
+            immersion_on = (current.get("immersion") or "off").lower() == "on"
 
-                if heat_source_str == "indirect":
-                    measurement.active_heat_source = HeatSource.INDIRECT
-                    measurement.indirect_heat_source = immersion_on
-                    measurement.is_heating = immersion_on
-                elif heat_source_str == "electric":
-                    measurement.active_heat_source = HeatSource.ELECTRIC
-                    measurement.electric_heat_source = immersion_on
-                    measurement.is_heating = immersion_on
-                elif heat_source_str == "heatpump":
-                    measurement.active_heat_source = HeatSource.HEAT_PUMP
-                    measurement.heatpump_heat_source = immersion_on
-                    measurement.is_heating = immersion_on
-                else:
-                    measurement.active_heat_source = HeatSource.NONE
+            if heat_source_str == "indirect":
+                measurement.active_heat_source = HeatSource.INDIRECT
+                measurement.indirect_heat_source = immersion_on
+                measurement.is_heating = immersion_on
+            elif heat_source_str == "electric":
+                measurement.active_heat_source = HeatSource.ELECTRIC
+                measurement.electric_heat_source = immersion_on
+                measurement.is_heating = immersion_on
+            elif heat_source_str == "heatpump":
+                measurement.active_heat_source = HeatSource.HEAT_PUMP
+                measurement.heatpump_heat_source = immersion_on
+                measurement.is_heating = immersion_on
+            else:
+                measurement.active_heat_source = HeatSource.NONE
 
         except (json.JSONDecodeError, KeyError, TypeError, AttributeError) as err:
             _LOGGER.warning("Failed to parse measurement state: %s", err)
@@ -960,7 +973,18 @@ class MixergyApiClient:
 
         # Normalise "heatpump" (API) → "heat_pump" (HA) so the select entity
         # and default_heat_source sensor always show the HA-canonical value.
-        raw_heat_source = data.get("defaultHeatSource", "electric")
+        # Explicitly None-checked rather than relying on .get's default: an
+        # explicit JSON null passes straight through .get and would fail the
+        # whole poll — and on a first refresh, with no cached schedule to fall
+        # back to, stop the integration loading at all. Same trap the
+        # measurement parser guards against above.
+        #
+        # Deliberately narrower than `or`: a falsy-but-present value such as
+        # [] or 0 is a genuine schema change, and should still surface rather
+        # than being quietly read as "electric".
+        raw_heat_source = data.get("defaultHeatSource")
+        if raw_heat_source is None:
+            raw_heat_source = "electric"
         schedule.default_heat_source = _api_to_ha_heat_source(raw_heat_source)
 
         # `holiday` should be a dict; tolerate a schema change (string/list)

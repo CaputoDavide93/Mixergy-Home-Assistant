@@ -512,11 +512,18 @@ async def test_rejected_credentials_raise_auth_error(
         await client.authenticate()
 
 
-async def test_unexpected_login_status_raises_auth_error(
+async def test_server_error_on_login_is_retryable_not_an_auth_failure(
     mock_aiohttp_session: MagicMock,
 ) -> None:
-    """Any non-201 login response is an auth failure, not a silent success."""
-    from custom_components.mixergy_tank.api import MixergyAuthError
+    """A 5xx at the login endpoint is an outage, not bad credentials.
+
+    Previously any non-201 became MixergyAuthError, which the coordinator maps
+    to ConfigEntryAuthFailed — so a cloud 500 stopped polling and raised a
+    sticky "re-authenticate" repair telling the user their password was wrong,
+    during an outage they could do nothing about. Every other endpoint already
+    treats 5xx as retryable; login was the outlier.
+    """
+    from custom_components.mixergy_tank.api import MixergyConnectionError
 
     mock_aiohttp_session.post = MagicMock(return_value=_make_resp(500))
     client = MixergyApiClient(
@@ -527,7 +534,7 @@ async def test_unexpected_login_status_raises_auth_error(
     )
     client._login_url = "https://www.mixergy.io/api/v2/login"
 
-    with pytest.raises(MixergyAuthError, match="status 500"):
+    with pytest.raises(MixergyConnectionError, match="500"):
         await client.authenticate()
 
 
@@ -668,10 +675,17 @@ async def test_null_heat_source_and_immersion_do_not_crash(
     assert measurement.is_heating is False
 
 
-async def test_vacation_source_marks_holiday_and_skips_heat_parsing(
+async def test_vacation_mode_still_reports_a_running_element(
     mock_aiohttp_session: MagicMock,
 ) -> None:
-    """Holiday mode is reported through the same source field."""
+    """Holiday mode must not hide heating that is actually happening.
+
+    The heat-source block used to be skipped entirely while source ==
+    "Vacation", so frost protection, anti-legionella and the pre-return reheat
+    all reported as not-heating: the power sensor read 0 W and the energy and
+    cost accumulators stopped for the whole holiday, silently under-reporting
+    the Energy dashboard. in_holiday_mode is an independent flag.
+    """
     import json as _json
 
     payload = {
@@ -691,8 +705,9 @@ async def test_vacation_source_marks_holiday_and_skips_heat_parsing(
 
     measurement = await client.fetch_measurement()
     assert measurement.in_holiday_mode is True
-    # Heat parsing is skipped in holiday mode, so no element reports heating.
-    assert measurement.is_heating is False
+    # ...and the immersion the payload reports as on is still visible.
+    assert measurement.is_heating is True
+    assert measurement.electric_heat_source is True
 
 
 async def test_unparsable_state_json_degrades_without_raising(
@@ -941,3 +956,134 @@ async def test_failure_with_no_cached_value_propagates(
 
     with pytest.raises(MixergyConnectionError):
         await client.fetch_all()
+
+
+async def test_null_default_heat_source_does_not_break_the_poll(
+    mock_aiohttp_session: MagicMock,
+) -> None:
+    """An explicit null must fall back, not fail the whole refresh.
+
+    .get's default only covers an ABSENT key, so a present-but-null value
+    reached the enum parser and raised. On a first refresh there is no cached
+    schedule to fall back to, so fetch_all re-raised and the integration never
+    finished loading — over one cosmetic field, while measurement and settings
+    were both fine.
+    """
+    import json as _json
+
+    body = _json.dumps({"defaultHeatSource": None, "holiday": {}})
+    mock_aiohttp_session.request = AsyncMock(
+        return_value=_make_resp(200, None, body)
+    )
+    client = _write_client(mock_aiohttp_session)
+
+    schedule = await client.fetch_schedule()
+    assert schedule.default_heat_source == "electric"
+
+
+async def test_pv_settings_are_read_back_into_their_own_fields(
+    mock_aiohttp_session: MagicMock,
+) -> None:
+    """Each PV setting must be READ from its own key, not just written to it.
+
+    The write side is pinned per-key, but the read side had no equivalent: the
+    shared settings fixture omits every PV key, so the parser always took its
+    default branch and a swapped read (pv_charge_limit reading
+    pv_cut_in_threshold) passed the whole suite.
+    """
+    import json as _json
+
+    body = _json.dumps({
+        "max_temp": 60,
+        "pv_cut_in_threshold": 111,
+        "pv_charge_limit": 22,
+        "pv_target_current": -0.33,
+        "pv_over_temperature": 44,
+        "divert_exported_enabled": True,
+    })
+    mock_aiohttp_session.request = AsyncMock(
+        return_value=_make_resp(200, None, body)
+    )
+    client = _write_client(mock_aiohttp_session)
+
+    settings = await client.fetch_settings()
+
+    assert settings.pv_cut_in_threshold == 111
+    assert settings.pv_charge_limit == 22
+    assert settings.pv_target_current == -0.33
+    assert settings.pv_over_temperature == 44
+    assert settings.divert_exported_enabled is True
+
+
+@pytest.mark.parametrize(
+    ("pv_type", "expected"),
+    (
+        ("NO_INVERTER", False),
+        ("SOLAREDGE", True),
+        # Deliberately not asserting the empty-string case: the current code
+        # treats any non-"NO_INVERTER" string as a diverter, and there is no
+        # evidence the API ever sends "". Pinning a guess here would invent a
+        # contract rather than record one.
+    ),
+)
+async def test_pv_diverter_detection_from_the_tank_configuration(
+    mock_aiohttp_session: MagicMock, pv_type: str, expected: bool
+) -> None:
+    """has_pv_diverter must be derived from the real configuration blob.
+
+    The shared fixture hard-codes NO_INVERTER, so this flag was never True
+    anywhere from the parser — every PV test hand-built TankInfo instead.
+    Inverting the comparison would have flipped PV entity visibility for every
+    user with a diverter and passed the entire suite.
+    """
+    import json as _json
+
+    base = f"https://www.mixergy.io/api/v2/tank/{MOCK_SERIAL}"
+    detail = {
+        "tankModelCode": "MIXERGY-180",
+        "configuration": _json.dumps({"mixergyPvType": pv_type}),
+        "_links": {
+            "latest_measurement": {"href": f"{base}/measurement"},
+            "control": {"href": f"{base}/control"},
+            "settings": {"href": f"{base}/settings"},
+            "schedule": {"href": f"{base}/schedule"},
+        },
+    }
+    tanks = {
+        "_embedded": {
+            "tankList": [
+                {
+                    "serialNumber": MOCK_SERIAL,
+                    "firmwareVersion": "2.1.0",
+                    "_links": {"self": {"href": base}},
+                }
+            ]
+        }
+    }
+
+    def get_side_effect(url, **kwargs):
+        if url.endswith("/api/v2"):
+            return _make_resp(200, {"_links": {
+                "account": {"href": "https://www.mixergy.io/api/v2/account"},
+                "tanks": {"href": "https://www.mixergy.io/api/v2/tanks"},
+            }})
+        if url.endswith("/account"):
+            return _make_resp(200, {"_links": {
+                "login": {"href": "https://www.mixergy.io/api/v2/login"}}})
+        if url.endswith("/tanks"):
+            return _make_resp(200, tanks)
+        return _make_resp(200, detail)
+
+    mock_aiohttp_session.get = MagicMock(side_effect=get_side_effect)
+    client = MixergyApiClient(
+        session=mock_aiohttp_session,
+        username=MOCK_USERNAME,
+        password=MOCK_PASSWORD,
+        serial_number=MOCK_SERIAL,
+    )
+    client._token = MOCK_TOKEN
+    client._token_expiry = time.time() + 3600
+
+    await client._discover_tank()
+
+    assert client.tank_info.has_pv_diverter is expected
