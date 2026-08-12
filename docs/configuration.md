@@ -84,7 +84,7 @@ Open **Settings** → **Devices & Services** → **Mixergy** → **Configure** t
 | Option | Range | Default | Effect |
 | ------ | ----- | ------- | ------ |
 | Experience mode | Simple / Advanced | Simple | Which control entities exist — see the comparison above |
-| Update interval | 30–300 s, step 1 | 30 s | How often the integration polls the Mixergy cloud API |
+| Update interval | 30–300 s, step 1 | 60 s | How often the integration polls the Mixergy cloud API |
 | Low hot water alert threshold | 0–100 %, step 1 | 5 % | `Low hot water` binary sensor turns on below this charge |
 | No hot water alert threshold | 0–100 %, step 0.5 | 0.5 % | `No hot water` binary sensor turns on below this charge |
 | Electricity price per kWh | 0–10, step 0.001 | 0 | Creates the `Electric heating cost` sensor; 0 disables it |

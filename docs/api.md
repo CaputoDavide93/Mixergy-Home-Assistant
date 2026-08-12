@@ -25,7 +25,7 @@ flowchart LR
     API <-->|"HTTPS + bearer token"| CLOUD
 ```
 
-`async_setup_entry` (`__init__.py`) wires this up: it builds the client from the entry's username, password and serial number, creates the coordinator, runs `async_config_entry_first_refresh()`, stores the coordinator in `entry.runtime_data`, forwards the eight platforms, and registers the domain services once per domain. Services are removed again when the last config entry unloads.
+`async_setup_entry` (`__init__.py`) wires this up: it builds the client from the entry's username, password and serial number, creates the coordinator, runs `async_config_entry_first_refresh()`, stores the coordinator in `entry.runtime_data`, and forwards the eight platforms. The domain's services are registered separately in `async_setup`, not here, so they exist even when no config entry has loaded — and they are never unregistered, so an automation referencing them keeps validating while entries come and go.
 
 ## 🔌 The standalone API client
 

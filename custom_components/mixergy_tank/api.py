@@ -375,7 +375,6 @@ class MixergyApiClient:
         # Discovered URLs (HATEOAS)
         self._login_url: str | None = None
         self._tanks_url: str | None = None
-        self._tank_url: str | None = None
         self._measurement_url: str | None = None
         self._control_url: str | None = None
         self._settings_url: str | None = None
@@ -746,8 +745,9 @@ class MixergyApiClient:
         Only ``json=<dict>`` request bodies are supported (we replay
         ``kwargs`` verbatim on the 401 retry). Passing ``data=<stream>``
         or any other one-shot body would silently send an empty payload
-        on the second attempt — assert on import-time-detectable misuse
-        so a future caller can't introduce that footgun unnoticed.
+        on the second attempt. Raises rather than asserts, deliberately:
+        asserts are stripped under -O, and this module argues against
+        them elsewhere for exactly that reason.
         """
         if "data" in kwargs:
             raise TypeError(
