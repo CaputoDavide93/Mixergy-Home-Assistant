@@ -1087,3 +1087,45 @@ async def test_pv_diverter_detection_from_the_tank_configuration(
     await client._discover_tank()
 
     assert client.tank_info.has_pv_diverter is expected
+
+
+@pytest.mark.parametrize("as_object", (False, True))
+async def test_state_is_parsed_in_both_wire_shapes(
+    mock_aiohttp_session: MagicMock, as_object: bool
+) -> None:
+    """`state` arrives as a JSON string OR an object, depending on the tank.
+
+    Both shapes are attested in captured payloads. json.loads() on a dict
+    raises TypeError, which the parser's own handler catches — so the object
+    form silently produced target charge 0, heat source none, not heating and
+    holiday off, with only a log warning. Every value looked plausible and
+    every one was wrong.
+    """
+    import json as _json
+
+    state = {
+        "current": {
+            "target": 70,
+            "source": "Schedule",
+            "heat_source": "electric",
+            "immersion": "on",
+        }
+    }
+    payload = {
+        "topTemperature": 55.0,
+        "bottomTemperature": 20.0,
+        "charge": 65.0,
+        "state": state if as_object else _json.dumps(state),
+    }
+    mock_aiohttp_session.request = AsyncMock(
+        return_value=_make_resp(200, payload)
+    )
+    client = _write_client(mock_aiohttp_session)
+
+    measurement = await client.fetch_measurement()
+
+    # Identical results either way — the wire shape must not change meaning.
+    assert measurement.target_charge == 70.0
+    assert measurement.electric_heat_source is True
+    assert measurement.is_heating is True
+    assert measurement.in_holiday_mode is False
