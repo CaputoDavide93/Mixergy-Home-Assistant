@@ -286,6 +286,15 @@ async def _target_coordinators(
                 translation_placeholders={"serial": serial},
             )
     else:
+        # Legacy untargeted form = every configured tank. If none are loaded —
+        # the entry failed setup, which is exactly why services are registered
+        # in async_setup — this must fail loudly. Returning an empty list made
+        # the call report success while doing nothing at all.
+        if not all_coords:
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="no_tanks_loaded",
+            )
         targets = all_coords
 
     await _async_check_user_can_control(hass, call, targets)

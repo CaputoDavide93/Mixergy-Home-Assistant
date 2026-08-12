@@ -283,6 +283,9 @@
     },
     "tank_not_found_setup": {
       "message": "Il serbatoio {serial} non è più presente nel tuo account Mixergy."
+    },
+    "no_tanks_loaded": {
+      "message": "Nessun serbatoio Mixergy è attualmente caricato. L'integrazione potrebbe essere ancora in avvio, oppure la connessione a Mixergy non è disponibile."
     }
   },
   "services": {

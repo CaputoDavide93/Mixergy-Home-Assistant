@@ -283,6 +283,9 @@
     },
     "tank_not_found_setup": {
       "message": "Le ballon {serial} n'est plus présent dans votre compte Mixergy."
+    },
+    "no_tanks_loaded": {
+      "message": "Aucun ballon Mixergy n'est actuellement chargé. L'intégration est peut-être encore en cours de démarrage, ou la connexion à Mixergy est interrompue."
     }
   },
   "services": {

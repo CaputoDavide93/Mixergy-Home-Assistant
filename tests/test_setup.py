@@ -377,3 +377,27 @@ async def test_every_exception_translation_key_exists_in_strings() -> None:
 
     missing = used - declared
     assert not missing, f"raised translation keys with no string: {missing}"
+
+
+async def test_untargeted_call_with_nothing_loaded_fails_loudly() -> None:
+    """An untargeted call must not report success while doing nothing.
+
+    The entity/device/area and serial branches already raised when they
+    resolved to nothing, but the untargeted branch returned an empty list —
+    so `action: mixergy_tank.boost_charge` with no target reported SUCCESS
+    while the entry was unloaded. No error, no log line, and no hot water.
+    That is exactly the state async_setup exists to serve: installed, but the
+    entry failed to load because the cloud was unreachable at startup.
+    """
+    from custom_components.mixergy_tank import _target_coordinators
+
+    hass = _hass()
+    hass.config_entries.async_loaded_entries.return_value = []
+
+    call = MagicMock()
+    call.data = {}
+
+    with pytest.raises(ServiceValidationError) as err:
+        await _target_coordinators(hass, call)
+
+    assert err.value.translation_key == "no_tanks_loaded"
