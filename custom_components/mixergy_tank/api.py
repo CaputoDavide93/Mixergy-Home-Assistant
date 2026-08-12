@@ -862,7 +862,15 @@ class MixergyApiClient:
 
         # Parse state JSON
         try:
-            state = json.loads(data.get("state", "{}"))
+            # The cloud returns `state` as EITHER a JSON-encoded string or
+            # an already-decoded object, depending on the tank/firmware —
+            # both shapes are attested in captured payloads. json.loads() on
+            # a dict raises TypeError, which the handler below catches, so
+            # the object form silently degraded EVERYTHING parsed here:
+            # target charge 0, heat source none, not heating, holiday off,
+            # with only a warning in the log. Plausible-looking and wrong.
+            raw_state = data.get("state", "{}")
+            state = raw_state if isinstance(raw_state, dict) else json.loads(raw_state)
             current = state.get("current", {})
 
             measurement.target_charge = _as_float(current.get("target"))
