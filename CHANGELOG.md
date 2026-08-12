@@ -20,6 +20,16 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **Authentication could get permanently stuck after a malformed token
+  response.** A non-finite token lifetime from the cloud was accepted, which
+  produced an expiry that never compared as expired — so the integration
+  reused a dead token indefinitely and every poll failed with an
+  authentication error until Home Assistant was restarted.
+- **German, French and Italian were missing 29 strings each**, so parts of the
+  setup, reconfigure and options dialogs, all device triggers, the repair
+  notice and the service fields fell back to English mid-dialog.
+- Cloud responses are now size-capped before parsing, so a malformed or
+  oversized reply cannot consume memory inside Home Assistant.
 - Services are registered when the integration loads rather than per config
   entry, so they exist even if a config entry fails to set up. Previously a
   Mixergy cloud outage at Home Assistant start meant `mixergy_tank.boost_charge`
