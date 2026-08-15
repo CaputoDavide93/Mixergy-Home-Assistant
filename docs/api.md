@@ -132,7 +132,7 @@ After any entity write, `_async_write_command` requests a coordinator refresh so
 
 The schedule endpoint has no field-level PATCH — `set_holiday_dates`, `clear_holiday_dates`, and `set_default_heat_source` each fetch the whole schedule object, mutate one field, and `PUT` the whole object back. Two near-simultaneous callers — a UI button plus an automation, or two automations firing on overlapping triggers — could read the same starting point, mutate independent fields, and overwrite each other, so only one mutation survives.
 
-`_schedule_write_lock` serialises the entire GET-mutate-PUT sequence, making each schedule write atomic from the integration's perspective. The second caller's read happens after the first caller's write has landed, so both mutations survive.
+`_mutate_schedule` owns the entire GET-mutate-PUT sequence under `_schedule_write_lock`, making each schedule write atomic from the integration's perspective and structurally preventing a new writer from forgetting the lock. The second caller's read happens after the first caller's write has landed, so both mutations survive. Mutations operate on a shallow copy, so a rejected PUT cannot alter the last-known-good cached schedule.
 
 Home Assistant adds a second layer: every write-capable platform (`button`, `datetime`, `number`, `select`, `switch`, `water_heater`) declares `PARALLEL_UPDATES = 1`, so HA serialises entity service calls within each platform. The read-only platforms (`sensor`, `binary_sensor`) declare `PARALLEL_UPDATES = 0` — unlimited, as they never write and are coordinator-driven anyway.
 

@@ -4,6 +4,20 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- All schedule changes now share one locked read-modify-write path, so a new
+  schedule writer cannot accidentally bypass lost-update protection. A
+  rejected schedule write also leaves the last-known-good cached document
+  unchanged.
+- Energy and cost totals now share the same restore, stale-report, elapsed-time
+  and non-finite-value safeguards instead of maintaining two copies that could
+  drift apart.
+- The unknown-key preservation test now labels its fixture as deliberately
+  unrecognised instead of using a fictional weekly-schedule field.
+
 ## [2.2.0] - 2026-08-15
 
 ### Added
