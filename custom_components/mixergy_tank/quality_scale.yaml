@@ -36,7 +36,9 @@ rules:
       the Mixergy cloud — polling faster cannot surface fresher data, it only
       multiplies requests (each cycle fetches measurement + settings +
       schedule). Writes call async_request_refresh() immediately, so user
-      actions never wait for a poll. 30–300 s remains selectable.
+      actions never wait for a poll. 30–300 s remains selectable. Tank report
+      timestamps are checked independently of HTTP success; stale reports are
+      exposed by a connectivity entity and excluded from accumulators.
   brands:
     status: todo
     comment: |
@@ -196,7 +198,9 @@ rules:
     status: done
   entity-disabled-by-default:
     status: done
-    comment: Diagnostic sensors (firmware, model, last update) start disabled.
+    comment: |
+      Firmware, model, API last-update time and cloud received-time start
+      disabled. Tank recorded-time stays enabled so report age is visible.
   entity-translations:
     status: done
   exception-translations:

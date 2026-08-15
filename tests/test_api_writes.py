@@ -19,6 +19,7 @@ import pytest
 from custom_components.mixergy_tank.api import (
     MixergyApiClient,
     MixergyApiError,
+    OperatingReason,
 )
 
 from .conftest import MOCK_PASSWORD, MOCK_SERIAL, MOCK_TOKEN, MOCK_USERNAME
@@ -404,6 +405,80 @@ async def test_measurement_parses_pv_and_clamp_when_present(
 
     assert measurement.pv_power_kw == 1.0
     assert measurement.clamp_power_w == 275.0
+
+
+async def test_measurement_preserves_missing_and_invalid_values(
+    mock_aiohttp_session: MagicMock,
+) -> None:
+    """Absent or non-finite readings are unknown rather than credible zeroes."""
+    payload = {
+        "topTemperature": None,
+        "bottomTemperature": "not-a-number",
+        "charge": float("nan"),
+        "pvEnergy": float("inf"),
+        "clampPower": None,
+        "state": {"current": {}},
+    }
+    mock_aiohttp_session.request = AsyncMock(
+        return_value=_make_resp(200, payload)
+    )
+    measurement = await _write_client(mock_aiohttp_session).fetch_measurement()
+
+    assert measurement.hot_water_temperature is None
+    assert measurement.coldest_water_temperature is None
+    assert measurement.charge is None
+    assert measurement.target_charge is None
+    assert measurement.pv_power_kw is None
+    assert measurement.clamp_power_w is None
+
+
+async def test_measurement_parses_report_timestamps(
+    mock_aiohttp_session: MagicMock,
+) -> None:
+    """Measurement report times are epoch milliseconds and are kept distinct."""
+    recorded = 1_765_800_000_000
+    received = recorded + 4_000
+    payload = {"recordedTime": recorded, "receivedTime": received}
+    mock_aiohttp_session.request = AsyncMock(
+        return_value=_make_resp(200, payload)
+    )
+    measurement = await _write_client(mock_aiohttp_session).fetch_measurement()
+
+    assert measurement.recorded_time == datetime.fromtimestamp(
+        recorded / 1000, tz=UTC
+    )
+    assert measurement.received_time == datetime.fromtimestamp(
+        received / 1000, tz=UTC
+    )
+
+
+@pytest.mark.parametrize(
+    ("source", "expected"),
+    (
+        ("AutoSchedule", OperatingReason.AUTO_SCHEDULE),
+        ("Schedule", OperatingReason.MANUAL_SCHEDULE),
+        ("ManualSchedule", OperatingReason.MANUAL_SCHEDULE),
+        ("Boost", OperatingReason.MANUAL_BOOST),
+        ("ManualBoost", OperatingReason.MANUAL_BOOST),
+        ("Cleansing", OperatingReason.CLEANSING),
+        ("Vacation", OperatingReason.VACATION),
+        ("future-mode", OperatingReason.UNKNOWN),
+    ),
+)
+async def test_measurement_normalises_operating_reason(
+    mock_aiohttp_session: MagicMock,
+    source: str,
+    expected: OperatingReason,
+) -> None:
+    """Expose control intent without making automations depend on wire labels."""
+    payload = {"state": {"current": {"source": source}}}
+    mock_aiohttp_session.request = AsyncMock(
+        return_value=_make_resp(200, payload)
+    )
+    measurement = await _write_client(mock_aiohttp_session).fetch_measurement()
+
+    assert measurement.operating_reason is expected
+    assert measurement.in_holiday_mode is (expected is OperatingReason.VACATION)
 
 
 def test_require_array_rejects_a_non_list() -> None:

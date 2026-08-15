@@ -27,7 +27,7 @@ jobs:
           # Home Assistant is the stricter direction — it catches use of APIs
           # that do not exist there yet — and it keeps mypy's python_version
           # (3.13, see pyproject) consistent with the interpreter and with the
-          # HA source it has to parse. Checking against 2026.8.1 instead fails
+          # HA source it has to parse. Checking against 2026.8.2 instead fails
           # before reaching our code: that release contains 3.14-only syntax,
           # which mypy cannot parse while targeting 3.13.
           python-version: "3.13"
@@ -62,9 +62,9 @@ jobs:
             python: "3.13"
             homeassistant: "2025.8.0"
             minimum: true
-          - name: Current HA 2026.8.1
+          - name: Current HA 2026.8.2
             python: "3.14"
-            homeassistant: "2026.8.1"
+            homeassistant: "2026.8.2"
             minimum: false
 
     steps:
@@ -94,10 +94,10 @@ jobs:
           else
             # pytest-homeassistant-custom-component pins ONE exact HA version
             # per release, so it can only be installed on the leg whose HA it
-            # matches — 0.13.355 pins exactly 2026.8.1. The fixture-backed
+            # matches — 0.13.356 pins exactly 2026.8.2. The fixture-backed
             # flow tests skip themselves where it is absent, so the minimum
             # leg still runs everything else.
-            requirements+=("pytest-homeassistant-custom-component==0.13.355")
+            requirements+=("pytest-homeassistant-custom-component==0.13.356")
           fi
           python -m pip install -r requirements_test.txt "${requirements[@]}"
 
@@ -109,7 +109,7 @@ jobs:
           pytest tests/ -v --tb=short
           --cov=custom_components.mixergy_tank
           --cov-report=term-missing
-          --cov-fail-under=90
+          --cov-fail-under=95
 
   latest-ha-canary:
     name: Latest HA canary
@@ -152,4 +152,4 @@ jobs:
           pytest tests/ -v --tb=short
           --cov=custom_components.mixergy_tank
           --cov-report=term-missing
-          --cov-fail-under=90
+          --cov-fail-under=95

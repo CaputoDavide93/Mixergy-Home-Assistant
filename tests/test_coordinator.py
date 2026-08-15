@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -10,6 +10,8 @@ import pytest
 from custom_components.mixergy_tank.api import (
     MixergyAuthError,
     MixergyConnectionError,
+    TankData,
+    TankMeasurement,
 )
 from custom_components.mixergy_tank.const import (
     CONF_UPDATE_INTERVAL,
@@ -121,6 +123,43 @@ async def test_async_update_data_stamps_last_update_time(mock_tank_data) -> None
 
     assert result.last_update_time is not None
     assert isinstance(result.last_update_time, datetime)
+
+
+@pytest.mark.parametrize(
+    ("age_seconds", "expected"),
+    ((299, True), (301, False)),
+)
+async def test_report_freshness_uses_tank_timestamp(
+    age_seconds: int, expected: bool
+) -> None:
+    """A successful cloud request must not disguise an old tank report."""
+    from homeassistant.util import dt as dt_util
+
+    now = datetime(2026, 8, 15, 12, 0, tzinfo=UTC)
+    data = TankData(
+        measurement=TankMeasurement(received_time=now - timedelta(seconds=age_seconds))
+    )
+    client = AsyncMock()
+    client.fetch_all = AsyncMock(return_value=data)
+    coordinator = MixergyCoordinator(_make_hass(), client, _make_config_entry())
+
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setattr(dt_util, "utcnow", lambda: now)
+        result = await coordinator._async_update_data()
+
+    assert result.measurement.report_is_fresh is expected
+
+
+async def test_report_freshness_is_unknown_without_tank_timestamps() -> None:
+    """Older tanks without report times retain backwards-compatible behaviour."""
+    data = TankData(measurement=TankMeasurement())
+    client = AsyncMock()
+    client.fetch_all = AsyncMock(return_value=data)
+    coordinator = MixergyCoordinator(_make_hass(), client, _make_config_entry())
+
+    result = await coordinator._async_update_data()
+
+    assert result.measurement.report_is_fresh is None
 
 
 def test_default_poll_interval_is_inside_the_advertised_range() -> None:

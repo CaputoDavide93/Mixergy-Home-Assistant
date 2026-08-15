@@ -1,6 +1,6 @@
 # Automation cookbook
 
-This page shows how to automate a Mixergy tank from Home Assistant: the three `mixergy.*` services (holiday dates, clearing them, and boost), how service calls target tanks, the five device triggers the integration adds to the automation UI, and eleven complete recipes you can paste in and adapt — from workday morning boosts to solar-surplus charging and holiday handling.
+This page shows how to automate a Mixergy tank from Home Assistant: the three `mixergy_tank.*` services (holiday dates, clearing them, and boost), how service calls target tanks, the five device triggers the integration adds to the automation UI, and eleven complete recipes you can paste in and adapt — from workday morning boosts to solar-surplus charging and holiday handling.
 
 All examples use `<serial>` as a placeholder for your tank's serial number. The integration names each device `Mixergy Tank (<SERIAL>)`, so entity ids follow the pattern `sensor.mixergy_tank_<serial>_current_charge` with the serial in lower case. Home Assistant generates ids when entities first register — confirm yours in **Developer Tools → States** before copying a recipe. Replace `notify.mobile_app_<your_phone>` with your own notify service. Every recipe uses the modern automation syntax (`triggers:` / `conditions:` / `actions:`); the integration requires Home Assistant 2025.8 or newer, which supports it.
 

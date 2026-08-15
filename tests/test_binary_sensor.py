@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from unittest.mock import MagicMock
 
 import pytest
@@ -128,6 +129,8 @@ def _full_data(
     indirect: bool = False,
     heatpump: bool = False,
     holiday: bool = False,
+    target_charge: float | None = 80.0,
+    report_is_fresh: bool | None = True,
 ) -> TankData:
     from custom_components.mixergy_tank.api import TankInfo
 
@@ -139,6 +142,9 @@ def _full_data(
             indirect_heat_source=indirect,
             heatpump_heat_source=heatpump,
             in_holiday_mode=holiday,
+            target_charge=target_charge,
+            received_time=datetime(2026, 8, 15, 12, 0, tzinfo=UTC),
+            report_is_fresh=report_is_fresh,
         ),
     )
 
@@ -187,13 +193,9 @@ async def test_each_binary_sensor_reads_its_own_field(key: str, field: str) -> N
         MixergyBinarySensor,
     )
 
-    description = next(
-        d for d in STATIC_BINARY_SENSOR_DESCRIPTIONS if d.key == key
-    )
+    description = next(d for d in STATIC_BINARY_SENSOR_DESCRIPTIONS if d.key == key)
 
-    on = MixergyBinarySensor(
-        _bs_coordinator(_full_data(**{field: True})), description
-    )
+    on = MixergyBinarySensor(_bs_coordinator(_full_data(**{field: True})), description)
     off = MixergyBinarySensor(
         _bs_coordinator(_full_data(**{field: False})), description
     )
@@ -269,3 +271,45 @@ async def test_is_heating_is_independent_of_the_selected_heat_source() -> None:
     heating = _full_data(electric=True)
     heating.measurement.is_heating = True
     assert MixergyBinarySensor(_bs_coordinator(heating), description).is_on is True
+
+
+@pytest.mark.parametrize(
+    ("key", "data", "expected_on", "expected_available"),
+    (
+        ("target_charge_active", _full_data(target_charge=80), True, True),
+        ("target_charge_active", _full_data(target_charge=None), False, True),
+        ("tank_connectivity", _full_data(report_is_fresh=True), True, True),
+        ("tank_connectivity", _full_data(report_is_fresh=False), False, True),
+        ("tank_connectivity", _full_data(report_is_fresh=None), False, False),
+    ),
+)
+def test_observability_binary_sensors(
+    key: str,
+    data: TankData,
+    expected_on: bool,
+    expected_available: bool,
+) -> None:
+    """Target activity and report freshness retain distinct semantics."""
+    from custom_components.mixergy_tank.binary_sensor import (
+        STATIC_BINARY_SENSOR_DESCRIPTIONS,
+        MixergyBinarySensor,
+    )
+
+    description = next(d for d in STATIC_BINARY_SENSOR_DESCRIPTIONS if d.key == key)
+    sensor = MixergyBinarySensor(_bs_coordinator(data), description)
+    assert sensor.is_on is expected_on
+    assert sensor.available is expected_available
+
+
+@pytest.mark.parametrize("key", ("low_hot_water", "no_hot_water"))
+def test_water_alerts_are_unavailable_when_charge_is_missing(key: str) -> None:
+    """An absent charge reading is unknown, never a zero-charge alert."""
+    from custom_components.mixergy_tank.binary_sensor import (
+        MixergyBinarySensor,
+        _threshold_descriptions,
+    )
+
+    description = next(d for d in _threshold_descriptions(25.0, 5.0) if d.key == key)
+    sensor = MixergyBinarySensor(_bs_coordinator(_full_data(charge=None)), description)
+    assert sensor.available is False
+    assert sensor.is_on is False

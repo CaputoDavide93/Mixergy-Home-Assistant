@@ -36,9 +36,7 @@ class MixergyBinarySensorEntityDescription(BinarySensorEntityDescription):
 
 
 # Sensors whose state doesn't depend on user-configurable thresholds.
-STATIC_BINARY_SENSOR_DESCRIPTIONS: tuple[
-    MixergyBinarySensorEntityDescription, ...
-] = (
+STATIC_BINARY_SENSOR_DESCRIPTIONS: tuple[MixergyBinarySensorEntityDescription, ...] = (
     # ── Heat source active indicators ────────────────────────────────
     MixergyBinarySensorEntityDescription(
         key="electric_heat",
@@ -71,6 +69,21 @@ STATIC_BINARY_SENSOR_DESCRIPTIONS: tuple[
         translation_key="holiday_mode",
         is_on_fn=lambda data: data.measurement.in_holiday_mode,
     ),
+    MixergyBinarySensorEntityDescription(
+        key="target_charge_active",
+        translation_key="target_charge_active",
+        is_on_fn=lambda data: (
+            data.measurement.target_charge is not None
+            and data.measurement.target_charge > 0
+        ),
+    ),
+    MixergyBinarySensorEntityDescription(
+        key="tank_connectivity",
+        translation_key="tank_connectivity",
+        device_class=BinarySensorDeviceClass.CONNECTIVITY,
+        is_on_fn=lambda data: data.measurement.report_is_fresh is True,
+        available_fn=lambda data: data.measurement.report_is_fresh is not None,
+    ),
 )
 
 
@@ -83,13 +96,19 @@ def _threshold_descriptions(
             key="low_hot_water",
             translation_key="low_hot_water",
             device_class=BinarySensorDeviceClass.PROBLEM,
-            is_on_fn=lambda data: data.measurement.charge < low,
+            is_on_fn=lambda data: (
+                data.measurement.charge is not None and data.measurement.charge < low
+            ),
+            available_fn=lambda data: data.measurement.charge is not None,
         ),
         MixergyBinarySensorEntityDescription(
             key="no_hot_water",
             translation_key="no_hot_water",
             device_class=BinarySensorDeviceClass.PROBLEM,
-            is_on_fn=lambda data: data.measurement.charge < no,
+            is_on_fn=lambda data: (
+                data.measurement.charge is not None and data.measurement.charge < no
+            ),
+            available_fn=lambda data: data.measurement.charge is not None,
         ),
     )
 
@@ -116,8 +135,7 @@ async def async_setup_entry(
         *_threshold_descriptions(low, no),
     )
     async_add_entities(
-        MixergyBinarySensor(coordinator, description)
-        for description in descriptions
+        MixergyBinarySensor(coordinator, description) for description in descriptions
     )
 
 
@@ -146,7 +164,6 @@ class MixergyBinarySensor(MixergyEntity, BinarySensorEntity):
     @property
     def available(self) -> bool:
         """Return True if the entity is available."""
-        return (
-            super().available
-            and self.entity_description.available_fn(self.coordinator.data)
+        return super().available and self.entity_description.available_fn(
+            self.coordinator.data
         )

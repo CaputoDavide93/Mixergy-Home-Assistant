@@ -147,6 +147,17 @@
           "heat_pump": "Wärmepumpe"
         }
       },
+      "operating_reason": {
+        "name": "Betriebsgrund",
+        "state": {
+          "auto_schedule": "Automatischer Zeitplan",
+          "manual_schedule": "Manueller Zeitplan",
+          "manual_boost": "Manueller Boost",
+          "cleansing": "Reinigungszyklus",
+          "vacation": "Urlaub",
+          "unknown": "Unbekannt"
+        }
+      },
       "holiday_start": {
         "name": "Urlaubsbeginn"
       },
@@ -161,6 +172,12 @@
       },
       "last_update": {
         "name": "Letztes erfolgreiches Update"
+      },
+      "recorded_time": {
+        "name": "Letzte Tankmessung"
+      },
+      "received_time": {
+        "name": "Letzter Cloud-Empfang"
       },
       "electric_cost": {
         "name": "Kosten für elektrisches Heizen"
@@ -187,6 +204,12 @@
       },
       "holiday_mode": {
         "name": "Urlaubsmodus"
+      },
+      "target_charge_active": {
+        "name": "Ladeziel aktiv"
+      },
+      "tank_connectivity": {
+        "name": "Tankverbindung"
       }
     },
     "switch": {

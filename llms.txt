@@ -8,6 +8,7 @@ Key facts:
 - Services: `mixergy_tank.set_holiday_dates`, `mixergy_tank.clear_holiday_dates`, `mixergy_tank.boost_charge` — all accept entity/device/area targets
 - Energy: cumulative electric and PV kWh sensors compatible with the HA Energy Dashboard, plus an optional tariff-based cost sensor
 - Alerts: configurable low / no hot water binary sensors and device triggers
+- Observability: operating reason, active target, tank report timestamps, and stale-report connectivity
 - Cloud polling every 30–300 s (default 60); credentials stay in the HA config entry; TLS-verified requests only
 
 ## Docs

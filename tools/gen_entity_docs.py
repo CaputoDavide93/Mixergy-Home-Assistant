@@ -50,12 +50,15 @@ SENSOR_TEXT = {
     "clamp_power": "CT clamp power reading",
     "active_heat_source": "Currently active heat source",
     "default_heat_source": "Configured default heat source",
+    "operating_reason": "Why the tank is currently being controlled",
     "holiday_start": "Holiday mode start date",
     "holiday_end": "Holiday mode end date",
     "electric_cost": "Cumulative cost *(only when a tariff rate is set in options)*",
     "firmware_version": "Tank firmware",
     "model": "Tank model code",
     "last_update": "Time of the last API refresh",
+    "recorded_time": "Time the tank recorded its latest measurement",
+    "received_time": "Time the cloud received the latest measurement",
 }
 
 # Sensors table row order (must cover exactly the strings.json sensor keys).
@@ -69,6 +72,8 @@ BINARY_TEXT = {
     "low_hot_water": "Charge is below the low threshold (default 5%, configurable)",
     "no_hot_water": "Charge is below the no-water threshold (default 0.5%, configurable)",
     "holiday_mode": "Tank is currently in holiday mode",
+    "target_charge_active": "A non-zero charge target is currently active",
+    "tank_connectivity": "Latest tank report is fresh",
 }
 BINARY_ORDER = list(BINARY_TEXT)
 

@@ -147,6 +147,17 @@
           "heat_pump": "Pompa di calore"
         }
       },
+      "operating_reason": {
+        "name": "Motivo di funzionamento",
+        "state": {
+          "auto_schedule": "Programmazione automatica",
+          "manual_schedule": "Programmazione manuale",
+          "manual_boost": "Boost manuale",
+          "cleansing": "Ciclo antilegionella",
+          "vacation": "Vacanza",
+          "unknown": "Sconosciuto"
+        }
+      },
       "holiday_start": {
         "name": "Data inizio vacanza"
       },
@@ -161,6 +172,12 @@
       },
       "last_update": {
         "name": "Ultimo aggiornamento riuscito"
+      },
+      "recorded_time": {
+        "name": "Ultima misurazione del bollitore"
+      },
+      "received_time": {
+        "name": "Ultima ricezione cloud"
       },
       "electric_cost": {
         "name": "Costo riscaldamento elettrico"
@@ -187,6 +204,12 @@
       },
       "holiday_mode": {
         "name": "Modalità vacanza"
+      },
+      "target_charge_active": {
+        "name": "Carica obiettivo attiva"
+      },
+      "tank_connectivity": {
+        "name": "Connettività bollitore"
       }
     },
     "switch": {

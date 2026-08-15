@@ -75,6 +75,17 @@ class PVType(StrEnum):
     NO_INVERTER = "NO_INVERTER"
 
 
+class OperatingReason(StrEnum):
+    """Why the tank is currently being controlled or heated."""
+
+    AUTO_SCHEDULE = "auto_schedule"
+    MANUAL_SCHEDULE = "manual_schedule"
+    MANUAL_BOOST = "manual_boost"
+    CLEANSING = "cleansing"
+    VACATION = "vacation"
+    UNKNOWN = "unknown"
+
+
 # ── Response body reading ─────────────────────────────────────────────────────
 
 async def _read_capped(resp: aiohttp.ClientResponse, context: str) -> str:
@@ -173,6 +184,46 @@ def _as_float(value: Any, default: float = 0.0) -> float:
     except (TypeError, ValueError):
         return default
     return result if math.isfinite(result) else default
+
+
+def _as_optional_float(value: Any) -> float | None:
+    """Coerce an API value to a finite float, preserving missing data."""
+    try:
+        result = float(value)
+    except (TypeError, ValueError):
+        return None
+    return result if math.isfinite(result) else None
+
+
+def _as_epoch_ms_datetime(value: Any) -> datetime | None:
+    """Convert a finite, positive epoch-millisecond value to UTC."""
+    if isinstance(value, bool):
+        return None
+    milliseconds = _as_optional_float(value)
+    if milliseconds is None or milliseconds <= 0:
+        return None
+    try:
+        return datetime.fromtimestamp(milliseconds / 1000, tz=UTC)
+    except (OverflowError, OSError, ValueError):
+        return None
+
+
+def _operating_reason(value: Any) -> OperatingReason | None:
+    """Normalise the cloud's free-form control source to stable HA states."""
+    if not isinstance(value, str) or not value.strip():
+        return None
+    normalized = value.strip().lower().replace("_", "").replace("-", "")
+    known = {
+        "autoschedule": OperatingReason.AUTO_SCHEDULE,
+        "schedule": OperatingReason.MANUAL_SCHEDULE,
+        "manualschedule": OperatingReason.MANUAL_SCHEDULE,
+        "boost": OperatingReason.MANUAL_BOOST,
+        "manualboost": OperatingReason.MANUAL_BOOST,
+        "cleansing": OperatingReason.CLEANSING,
+        "cleansingcycle": OperatingReason.CLEANSING,
+        "vacation": OperatingReason.VACATION,
+    }
+    return known.get(normalized, OperatingReason.UNKNOWN)
 
 
 def _as_bool(value: Any, default: bool = False) -> bool:
@@ -287,18 +338,22 @@ def _ha_to_api_heat_source(ha_value: str) -> str:
 class TankMeasurement:
     """Snapshot of the latest tank measurement."""
 
-    hot_water_temperature: float = 0.0
-    coldest_water_temperature: float = 0.0
-    charge: float = 0.0
-    target_charge: float = 0.0
+    hot_water_temperature: float | None = None
+    coldest_water_temperature: float | None = None
+    charge: float | None = None
+    target_charge: float | None = None
     electric_heat_source: bool = False
     indirect_heat_source: bool = False
     heatpump_heat_source: bool = False
     in_holiday_mode: bool = False
-    pv_power_kw: float = 0.0
-    clamp_power_w: float = 0.0
+    pv_power_kw: float | None = None
+    clamp_power_w: float | None = None
     active_heat_source: HeatSource = HeatSource.NONE
     is_heating: bool = False
+    operating_reason: OperatingReason | None = None
+    recorded_time: datetime | None = None
+    received_time: datetime | None = None
+    report_is_fresh: bool | None = None
 
 
 @dataclass
@@ -849,16 +904,21 @@ class MixergyApiClient:
                 ) from err
 
         measurement = TankMeasurement(
-            hot_water_temperature=_as_float(data.get("topTemperature")),
-            coldest_water_temperature=_as_float(data.get("bottomTemperature")),
-            charge=_as_float(data.get("charge")),
+            hot_water_temperature=_as_optional_float(data.get("topTemperature")),
+            coldest_water_temperature=_as_optional_float(data.get("bottomTemperature")),
+            charge=_as_optional_float(data.get("charge")),
+            recorded_time=_as_epoch_ms_datetime(data.get("recordedTime")),
+            received_time=_as_epoch_ms_datetime(data.get("receivedTime")),
         )
 
         # PV power: API returns energy in joules per minute
         if "pvEnergy" in data:
-            measurement.pv_power_kw = _as_float(data["pvEnergy"]) / 60000
+            pv_energy = _as_optional_float(data["pvEnergy"])
+            measurement.pv_power_kw = (
+                pv_energy / 60000 if pv_energy is not None else None
+            )
         if "clampPower" in data:
-            measurement.clamp_power_w = _as_float(data["clampPower"])
+            measurement.clamp_power_w = _as_optional_float(data["clampPower"])
 
         # Parse state JSON
         try:
@@ -873,11 +933,14 @@ class MixergyApiClient:
             state = raw_state if isinstance(raw_state, dict) else json.loads(raw_state)
             current = state.get("current", {})
 
-            measurement.target_charge = _as_float(current.get("target"))
+            measurement.target_charge = _as_optional_float(current.get("target"))
 
             # Holiday mode
             source = current.get("source", "")
-            measurement.in_holiday_mode = source == "Vacation"
+            measurement.operating_reason = _operating_reason(source)
+            measurement.in_holiday_mode = (
+                measurement.operating_reason is OperatingReason.VACATION
+            )
 
             # Parsed regardless of holiday mode. The tank still heats while
             # away — frost protection, anti-legionella, and the pre-return

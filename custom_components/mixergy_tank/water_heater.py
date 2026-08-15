@@ -87,7 +87,7 @@ class MixergyWaterHeater(MixergyEntity, WaterHeaterEntity):
         self._attr_unique_id = f"{coordinator.data.info.serial_number}_water_heater"
 
     @property
-    def current_temperature(self) -> float:
+    def current_temperature(self) -> float | None:
         """Return the current (top) tank temperature."""
         return self.coordinator.data.measurement.hot_water_temperature
 

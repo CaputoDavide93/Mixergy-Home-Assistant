@@ -25,7 +25,7 @@ from homeassistant.const import (
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .api import TankData
+from .api import OperatingReason, TankData
 from .const import CONF_ELECTRIC_RATE, PERCENTAGE_UNIT
 from .coordinator import MixergyConfigEntry, MixergyCoordinator
 from .entity import MixergyEntity
@@ -73,6 +73,7 @@ SENSOR_DESCRIPTIONS: tuple[MixergySensorEntityDescription, ...] = (
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=1,
         value_fn=lambda data: data.measurement.hot_water_temperature,
+        available_fn=lambda data: data.measurement.hot_water_temperature is not None,
     ),
     MixergySensorEntityDescription(
         key="coldest_water_temperature",
@@ -82,6 +83,9 @@ SENSOR_DESCRIPTIONS: tuple[MixergySensorEntityDescription, ...] = (
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=1,
         value_fn=lambda data: data.measurement.coldest_water_temperature,
+        available_fn=lambda data: (
+            data.measurement.coldest_water_temperature is not None
+        ),
     ),
     MixergySensorEntityDescription(
         key="target_temperature",
@@ -107,6 +111,7 @@ SENSOR_DESCRIPTIONS: tuple[MixergySensorEntityDescription, ...] = (
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
         value_fn=lambda data: data.measurement.charge,
+        available_fn=lambda data: data.measurement.charge is not None,
     ),
     MixergySensorEntityDescription(
         key="target_charge",
@@ -115,6 +120,7 @@ SENSOR_DESCRIPTIONS: tuple[MixergySensorEntityDescription, ...] = (
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
         value_fn=lambda data: data.measurement.target_charge,
+        available_fn=lambda data: data.measurement.target_charge is not None,
     ),
     # ── Power sensors ────────────────────────────────────────────────
     MixergySensorEntityDescription(
@@ -128,6 +134,10 @@ SENSOR_DESCRIPTIONS: tuple[MixergySensorEntityDescription, ...] = (
             if data.measurement.electric_heat_source
             else 0.0
         ),
+        available_fn=lambda data: (
+            not data.measurement.electric_heat_source
+            or data.measurement.clamp_power_w is not None
+        ),
     ),
     MixergySensorEntityDescription(
         key="pv_power",
@@ -137,7 +147,9 @@ SENSOR_DESCRIPTIONS: tuple[MixergySensorEntityDescription, ...] = (
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=3,
         value_fn=lambda data: data.measurement.pv_power_kw,
-        available_fn=lambda data: data.info.has_pv_diverter,
+        available_fn=lambda data: (
+            data.info.has_pv_diverter and data.measurement.pv_power_kw is not None
+        ),
     ),
     MixergySensorEntityDescription(
         key="clamp_power",
@@ -146,7 +158,9 @@ SENSOR_DESCRIPTIONS: tuple[MixergySensorEntityDescription, ...] = (
         native_unit_of_measurement=UnitOfPower.WATT,
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda data: data.measurement.clamp_power_w,
-        available_fn=lambda data: data.info.has_pv_diverter,
+        available_fn=lambda data: (
+            data.info.has_pv_diverter and data.measurement.clamp_power_w is not None
+        ),
     ),
     # ── Heat source sensors ──────────────────────────────────────────
     MixergySensorEntityDescription(
@@ -162,6 +176,18 @@ SENSOR_DESCRIPTIONS: tuple[MixergySensorEntityDescription, ...] = (
         device_class=SensorDeviceClass.ENUM,
         options=["electric", "indirect", "heat_pump"],
         value_fn=lambda data: data.schedule.default_heat_source,
+    ),
+    MixergySensorEntityDescription(
+        key="operating_reason",
+        translation_key="operating_reason",
+        device_class=SensorDeviceClass.ENUM,
+        options=[reason.value for reason in OperatingReason],
+        value_fn=lambda data: (
+            data.measurement.operating_reason.value
+            if data.measurement.operating_reason is not None
+            else None
+        ),
+        available_fn=lambda data: data.measurement.operating_reason is not None,
     ),
     # ── Holiday date sensors ─────────────────────────────────────────
     MixergySensorEntityDescription(
@@ -199,6 +225,23 @@ SENSOR_DESCRIPTIONS: tuple[MixergySensorEntityDescription, ...] = (
         entity_registry_enabled_default=False,
         value_fn=lambda data: data.last_update_time,
     ),
+    MixergySensorEntityDescription(
+        key="recorded_time",
+        translation_key="recorded_time",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda data: data.measurement.recorded_time,
+        available_fn=lambda data: data.measurement.recorded_time is not None,
+    ),
+    MixergySensorEntityDescription(
+        key="received_time",
+        translation_key="received_time",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        entity_registry_enabled_default=False,
+        value_fn=lambda data: data.measurement.received_time,
+        available_fn=lambda data: data.measurement.received_time is not None,
+    ),
 )
 
 
@@ -211,30 +254,34 @@ async def async_setup_entry(
     coordinator = entry.runtime_data
 
     entities: list[SensorEntity] = [
-        MixergySensor(coordinator, description)
-        for description in SENSOR_DESCRIPTIONS
+        MixergySensor(coordinator, description) for description in SENSOR_DESCRIPTIONS
     ]
 
     # Energy accumulation sensors (persisted across restarts via RestoreSensor)
-    entities.extend([
-        MixergyEnergySensor(
-            coordinator,
-            key="electric_energy",
-            translation_key="electric_energy",
-            power_w_fn=lambda data: (
-                data.measurement.clamp_power_w
-                if data.measurement.electric_heat_source
-                else 0.0
+    entities.extend(
+        [
+            MixergyEnergySensor(
+                coordinator,
+                key="electric_energy",
+                translation_key="electric_energy",
+                power_w_fn=lambda data: (
+                    data.measurement.clamp_power_w or 0.0
+                    if data.measurement.electric_heat_source
+                    else 0.0
+                ),
             ),
-        ),
-        MixergyEnergySensor(
-            coordinator,
-            key="pv_energy",
-            translation_key="pv_energy",
-            power_w_fn=lambda data: data.measurement.pv_power_kw * 1000,
-            available_fn=lambda data: data.info.has_pv_diverter,
-        ),
-    ])
+            MixergyEnergySensor(
+                coordinator,
+                key="pv_energy",
+                translation_key="pv_energy",
+                power_w_fn=lambda data: (data.measurement.pv_power_kw or 0.0) * 1000,
+                available_fn=lambda data: (
+                    data.info.has_pv_diverter
+                    and data.measurement.pv_power_kw is not None
+                ),
+            ),
+        ]
+    )
 
     # Optional electric cost sensor — only when a tariff rate is configured.
     rate = entry.options.get(CONF_ELECTRIC_RATE, 0.0)
@@ -269,9 +316,8 @@ class MixergySensor(MixergyEntity, SensorEntity):
     @property
     def available(self) -> bool:
         """Return True if the entity is available."""
-        return (
-            super().available
-            and self.entity_description.available_fn(self.coordinator.data)
+        return super().available and self.entity_description.available_fn(
+            self.coordinator.data
         )
 
 
@@ -347,13 +393,15 @@ class MixergyEnergySensor(MixergyEntity, RestoreSensor):
         a fictitious multi-hour spike on the next successful tick.
         """
         now = time.time()
-        if not self.coordinator.last_update_success:
-            # Failed poll: the coordinator notifies listeners on the
-            # success→failure edge too, with coordinator.data STALE.
-            # Integrating stale power would credit phantom kWh into a
-            # total that RestoreSensor PERSISTS across restarts. Resync
-            # the clock so the outage window isn't credited on recovery
-            # either.
+        if (
+            not self.coordinator.last_update_success
+            or self.coordinator.data.measurement.report_is_fresh is False
+        ):
+            # A failed poll leaves coordinator.data stale, and a successful
+            # cloud request can still carry an old physical-tank report.
+            # Integrating either would credit phantom kWh into a total that
+            # RestoreSensor persists across restarts. Resync the clock so the
+            # gap is not credited on recovery either.
             self._last_update = now
             self.async_write_ha_state()
             return
@@ -379,7 +427,8 @@ class MixergyEnergySensor(MixergyEntity, RestoreSensor):
         if not math.isfinite(self._accumulated_kwh):
             _LOGGER.warning(
                 "Energy accumulator for %s went non-finite (%s); resetting to 0",
-                self._attr_unique_id, self._accumulated_kwh,
+                self._attr_unique_id,
+                self._accumulated_kwh,
             )
             self._accumulated_kwh = 0.0
         return round(self._accumulated_kwh, 4)
@@ -414,9 +463,7 @@ class MixergyElectricCostSensor(MixergyEntity, RestoreSensor):
         self._rate = rate
         self._accumulated_cost: float = 0.0
         self._last_update: float | None = None
-        self._attr_unique_id = (
-            f"{coordinator.data.info.serial_number}_electric_cost"
-        )
+        self._attr_unique_id = f"{coordinator.data.info.serial_number}_electric_cost"
         self._attr_native_unit_of_measurement = coordinator.hass.config.currency
 
     async def async_added_to_hass(self) -> None:
@@ -435,10 +482,13 @@ class MixergyElectricCostSensor(MixergyEntity, RestoreSensor):
     def _handle_coordinator_update(self) -> None:
         """Integrate electric power × tariff over elapsed time."""
         now = time.time()
-        if not self.coordinator.last_update_success:
-            # Failed poll: coordinator.data is stale — integrating it would
-            # credit phantom cost into a persisted total (see the energy
-            # sensor for the full rationale).
+        if (
+            not self.coordinator.last_update_success
+            or self.coordinator.data.measurement.report_is_fresh is False
+        ):
+            # Failed poll or stale tank report: integrating it would credit
+            # phantom cost into a persisted total (see the energy sensor for
+            # the full rationale).
             self._last_update = now
             self.async_write_ha_state()
             return
@@ -447,14 +497,12 @@ class MixergyElectricCostSensor(MixergyEntity, RestoreSensor):
             elapsed_hours = _capped_elapsed_hours(now, self._last_update, interval)
             measurement = self.coordinator.data.measurement
             power_w = (
-                measurement.clamp_power_w
+                measurement.clamp_power_w or 0.0
                 if measurement.electric_heat_source
                 else 0.0
             )
             if math.isfinite(power_w) and power_w > 0:
-                self._accumulated_cost += (
-                    (power_w / 1000) * elapsed_hours * self._rate
-                )
+                self._accumulated_cost += (power_w / 1000) * elapsed_hours * self._rate
         self._last_update = now
         self.async_write_ha_state()
 
@@ -464,7 +512,8 @@ class MixergyElectricCostSensor(MixergyEntity, RestoreSensor):
         if not math.isfinite(self._accumulated_cost):
             _LOGGER.warning(
                 "Cost accumulator for %s went non-finite (%s); resetting to 0",
-                self._attr_unique_id, self._accumulated_cost,
+                self._attr_unique_id,
+                self._accumulated_cost,
             )
             self._accumulated_cost = 0.0
         return round(self._accumulated_cost, 4)

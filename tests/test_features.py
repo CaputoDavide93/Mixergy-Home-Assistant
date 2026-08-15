@@ -332,6 +332,50 @@ def test_energy_sensor_skips_integration_on_failed_poll() -> None:
     sensor.async_write_ha_state.assert_called_once()
 
 
+def test_accumulators_skip_a_successful_poll_with_a_stale_tank_report() -> None:
+    """HTTP success must not integrate power from an old physical report."""
+    import time
+
+    from custom_components.mixergy_tank.sensor import (
+        MixergyElectricCostSensor,
+        MixergyEnergySensor,
+    )
+
+    coordinator = MagicMock()
+    coordinator.update_interval = timedelta(seconds=60)
+    coordinator.last_update_success = True
+    coordinator.data = TankData(
+        info=TankInfo(serial_number="T1"),
+        measurement=TankMeasurement(
+            clamp_power_w=3000.0,
+            electric_heat_source=True,
+            report_is_fresh=False,
+        ),
+    )
+
+    energy = MixergyEnergySensor.__new__(MixergyEnergySensor)
+    energy.coordinator = coordinator
+    energy._accumulated_kwh = 5.0
+    energy._power_w_fn = lambda _data: 3000.0
+    energy._last_update = time.time() - 60
+    energy.async_write_ha_state = MagicMock()
+
+    cost = MixergyElectricCostSensor.__new__(MixergyElectricCostSensor)
+    cost.coordinator = coordinator
+    cost._rate = 0.30
+    cost._accumulated_cost = 1.0
+    cost._last_update = time.time() - 60
+    cost.async_write_ha_state = MagicMock()
+
+    energy._handle_coordinator_update()
+    cost._handle_coordinator_update()
+
+    assert energy._accumulated_kwh == 5.0
+    assert cost._accumulated_cost == 1.0
+    energy.async_write_ha_state.assert_called_once()
+    cost.async_write_ha_state.assert_called_once()
+
+
 def test_capped_elapsed_hours():
     from custom_components.mixergy_tank.sensor import _capped_elapsed_hours
 
