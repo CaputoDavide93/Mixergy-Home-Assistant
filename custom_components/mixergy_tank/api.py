@@ -11,6 +11,7 @@ import json
 import logging
 import math
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import StrEnum
@@ -1246,6 +1247,34 @@ class MixergyApiClient:
         value = max(45, min(60, value))
         await self.set_setting("pv_over_temperature", value)
 
+    async def _mutate_schedule(
+        self,
+        mutate: Callable[[dict[str, Any]], None],
+        action: str,
+    ) -> None:
+        """Apply one locked read-modify-write mutation to the schedule.
+
+        Every schedule writer goes through this method so a newly-added write
+        cannot accidentally omit the lock and reintroduce lost updates. The
+        shallow copy keeps a rejected PUT from modifying the cached schedule;
+        current mutations only add, replace, or remove top-level keys.
+        """
+        await self._discover_tank()
+
+        async with self._schedule_write_lock:
+            schedule_data = await self.fetch_schedule()
+            raw = schedule_data.raw.copy()
+            mutate(raw)
+
+            url = self._require_url(self._schedule_url, "schedule")
+            async with await self._request_with_reauth(
+                "PUT",
+                url,
+                json=raw,
+            ) as resp:
+                if resp.status != 200:
+                    raise MixergyApiError(f"{action} failed: {resp.status}")
+
     async def set_holiday_dates(
         self, start: datetime, end: datetime
     ) -> None:
@@ -1269,47 +1298,20 @@ class MixergyApiClient:
                 "Holiday start date must be before the end date"
             )
 
-        await self._discover_tank()
-
-        async with self._schedule_write_lock:
-            schedule_data = await self.fetch_schedule()
-            raw = schedule_data.raw
-
+        def mutate(raw: dict[str, Any]) -> None:
             raw["holiday"] = {
                 "departDate": start_ms,
                 "returnDate": end_ms,
             }
 
-            url = self._require_url(self._schedule_url, "schedule")
-            async with await self._request_with_reauth(
-                "PUT",
-                url,
-                json=raw,
-            ) as resp:
-                if resp.status != 200:
-                    raise MixergyApiError(
-                        f"Set holiday dates failed: {resp.status}"
-                    )
+        await self._mutate_schedule(mutate, "Set holiday dates")
 
     async def clear_holiday_dates(self) -> None:
         """Clear holiday mode. Serialised on _schedule_write_lock."""
-        await self._discover_tank()
-
-        async with self._schedule_write_lock:
-            schedule_data = await self.fetch_schedule()
-            raw = schedule_data.raw
+        def mutate(raw: dict[str, Any]) -> None:
             raw.pop("holiday", None)
 
-            url = self._require_url(self._schedule_url, "schedule")
-            async with await self._request_with_reauth(
-                "PUT",
-                url,
-                json=raw,
-            ) as resp:
-                if resp.status != 200:
-                    raise MixergyApiError(
-                        f"Clear holiday dates failed: {resp.status}"
-                    )
+        await self._mutate_schedule(mutate, "Clear holiday dates")
 
     async def set_default_heat_source(self, heat_source: str) -> None:
         """Set the default heat source (electric / indirect / heat_pump).
@@ -1318,23 +1320,11 @@ class MixergyApiClient:
         format ("heatpump") before sending. Serialised on _schedule_write_lock.
         """
         api_heat_source = _ha_to_api_heat_source(heat_source)
-        await self._discover_tank()
 
-        async with self._schedule_write_lock:
-            schedule_data = await self.fetch_schedule()
-            raw = schedule_data.raw
+        def mutate(raw: dict[str, Any]) -> None:
             raw["defaultHeatSource"] = api_heat_source
 
-            url = self._require_url(self._schedule_url, "schedule")
-            async with await self._request_with_reauth(
-                "PUT",
-                url,
-                json=raw,
-            ) as resp:
-                if resp.status != 200:
-                    raise MixergyApiError(
-                        f"Set default heat source failed: {resp.status}"
-                    )
+        await self._mutate_schedule(mutate, "Set default heat source")
 
     async def async_list_tanks(self) -> list[dict[str, str]]:
         """Return all tanks on the account: ``[{"serial", "firmware"}, ...]``.

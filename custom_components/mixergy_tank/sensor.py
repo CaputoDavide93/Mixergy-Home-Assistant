@@ -321,12 +321,90 @@ class MixergySensor(MixergyEntity, SensorEntity):
         )
 
 
-class MixergyEnergySensor(MixergyEntity, RestoreSensor):
-    """Cumulative energy sensor backed by per-poll power readings.
+class _MixergyAccumulatingSensor(MixergyEntity, RestoreSensor):
+    """Shared persistence and integration safeguards for running totals."""
 
-    Uses RestoreSensor so the running total survives HA restarts.
-    Accumulation: ΔE (kWh) = P (W) × Δt (h) / 1000
-    """
+    def __init__(
+        self,
+        coordinator: MixergyCoordinator,
+        *,
+        key: str,
+        translation_key: str,
+        available_fn: Callable[[TankData], bool] = lambda _: True,
+    ) -> None:
+        """Initialise a persisted running-total sensor."""
+        super().__init__(coordinator)
+        self._available_fn = available_fn
+        self._accumulated_value = 0.0
+        self._last_update: float | None = None
+        self._attr_unique_id = f"{coordinator.data.info.serial_number}_{key}"
+        self._attr_translation_key = translation_key
+
+    def _value_per_hour(self, data: TankData) -> float:
+        """Return the value accumulated over one hour at the current rate."""
+        raise NotImplementedError
+
+    async def async_added_to_hass(self) -> None:
+        """Restore the total, start the wall clock, and publish immediately.
+
+        Publishing the restored value avoids a transient zero that Home
+        Assistant could interpret as a counter reset. Wall-clock time lets a
+        short restart gap be bridged, while the integration cap below limits
+        how much can be credited after a longer outage.
+        """
+        await super().async_added_to_hass()
+        if (last := await self.async_get_last_sensor_data()) is not None:
+            try:
+                self._accumulated_value = float(last.native_value or 0)  # type: ignore[arg-type]
+            except (ValueError, TypeError):
+                self._accumulated_value = 0.0
+        self._last_update = time.time()
+        self.async_write_ha_state()
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Accumulate one safe, bounded interval from a fresh reading."""
+        now = time.time()
+        if (
+            not self.coordinator.last_update_success
+            or self.coordinator.data.measurement.report_is_fresh is False
+        ):
+            # Never persist a value derived from failed or stale data, and do
+            # not credit the gap later when fresh reports resume.
+            self._last_update = now
+            self.async_write_ha_state()
+            return
+
+        if self._last_update is not None:
+            interval = getattr(self.coordinator, "update_interval", None)
+            elapsed_hours = _capped_elapsed_hours(now, self._last_update, interval)
+            value_per_hour = self._value_per_hour(self.coordinator.data)
+            # A non-finite sample must never poison a restored total.
+            if math.isfinite(value_per_hour) and value_per_hour > 0:
+                self._accumulated_value += value_per_hour * elapsed_hours
+        self._last_update = now
+        self.async_write_ha_state()
+
+    @property
+    def native_value(self) -> float:
+        """Return a finite accumulated value."""
+        if not math.isfinite(self._accumulated_value):
+            _LOGGER.warning(
+                "Accumulator for %s went non-finite (%s); resetting to 0",
+                self._attr_unique_id,
+                self._accumulated_value,
+            )
+            self._accumulated_value = 0.0
+        return round(self._accumulated_value, 4)
+
+    @property
+    def available(self) -> bool:
+        """Return True if the entity and its source reading are available."""
+        return super().available and self._available_fn(self.coordinator.data)
+
+
+class MixergyEnergySensor(_MixergyAccumulatingSensor):
+    """Cumulative energy sensor backed by per-poll power readings."""
 
     _attr_device_class = SensorDeviceClass.ENERGY
     _attr_native_unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR
@@ -343,103 +421,29 @@ class MixergyEnergySensor(MixergyEntity, RestoreSensor):
         available_fn: Callable[[TankData], bool] = lambda _: True,
     ) -> None:
         """Initialise the energy sensor."""
-        super().__init__(coordinator)
         self._power_w_fn = power_w_fn
-        self._available_fn = available_fn
-        self._accumulated_kwh: float = 0.0
-        self._last_update: float | None = None
+        super().__init__(
+            coordinator,
+            key=key,
+            translation_key=translation_key,
+            available_fn=available_fn,
+        )
 
-        self._attr_unique_id = f"{coordinator.data.info.serial_number}_{key}"
-        self._attr_translation_key = translation_key
-
-    async def async_added_to_hass(self) -> None:
-        """Restore previous total and begin accumulating.
-
-        Two corrections from the deep review:
-        - The restored value MUST be written back to the state machine
-          immediately (async_write_ha_state). Without that the entity
-          stays as `unknown` until the first coordinator tick — and if
-          that tick fails, the next render briefly reports 0.0, which
-          a TOTAL_INCREASING state class treats as a counter reset. The
-          Energy dashboard then loses everything accumulated to date.
-        - _last_update tracks WALL-CLOCK time, not time.monotonic().
-          Monotonic resets to 0 at every process start, so on every HA
-          restart `elapsed_hours` came out as ~0 and any energy actually
-          produced during the downtime was silently dropped. Wall-clock
-          combined with the existing 2× interval cap gives correct
-          gap-bridging (energy attributed across short outages) without
-          crediting fictitious multi-hour spikes after long outages.
-        """
-        await super().async_added_to_hass()
-        if (last := await self.async_get_last_sensor_data()) is not None:
-            try:
-                # native_value is typed str|int|float|date|Decimal; the
-                # except below is what makes the narrowing safe at runtime.
-                self._accumulated_kwh = float(last.native_value or 0)  # type: ignore[arg-type]
-            except (ValueError, TypeError):
-                self._accumulated_kwh = 0.0
-        self._last_update = time.time()
-        # Push the restored value to the state machine so the Energy
-        # dashboard never sees a transient 0 between restart and the
-        # first coordinator tick.
-        self.async_write_ha_state()
-
-    @callback
-    def _handle_coordinator_update(self) -> None:
-        """Integrate power over elapsed time to accumulate energy.
-
-        Cap the integration window at 2× the coordinator's update interval
-        so a long outage (HA paused, network gone, API down) doesn't credit
-        a fictitious multi-hour spike on the next successful tick.
-        """
-        now = time.time()
-        if (
-            not self.coordinator.last_update_success
-            or self.coordinator.data.measurement.report_is_fresh is False
-        ):
-            # A failed poll leaves coordinator.data stale, and a successful
-            # cloud request can still carry an old physical-tank report.
-            # Integrating either would credit phantom kWh into a total that
-            # RestoreSensor persists across restarts. Resync the clock so the
-            # gap is not credited on recovery either.
-            self._last_update = now
-            self.async_write_ha_state()
-            return
-        if self._last_update is not None:
-            interval = getattr(self.coordinator, "update_interval", None)
-            elapsed_hours = _capped_elapsed_hours(now, self._last_update, interval)
-            power_w = self._power_w_fn(self.coordinator.data)
-            # math.isfinite guards against a NaN/inf power reading (e.g. a
-            # garbage pvEnergy value divided into pv_power_kw). NaN > 0 is
-            # False so NaN is already dropped, but inf > 0 is True and would
-            # be added to a TOTAL_INCREASING total that is PERSISTED across
-            # restarts via RestoreSensor — permanently poisoning the Energy
-            # dashboard until the entity is manually reset.
-            if math.isfinite(power_w) and power_w > 0:
-                self._accumulated_kwh += (power_w / 1000) * elapsed_hours
-        self._last_update = now
-        self.async_write_ha_state()
+    def _value_per_hour(self, data: TankData) -> float:
+        """Convert the current power in watts to kWh accumulated per hour."""
+        return self._power_w_fn(data) / 1000
 
     @property
-    def native_value(self) -> float:
-        """Return the accumulated energy in kWh."""
-        # Defensive: never surface a non-finite total to the state machine.
-        if not math.isfinite(self._accumulated_kwh):
-            _LOGGER.warning(
-                "Energy accumulator for %s went non-finite (%s); resetting to 0",
-                self._attr_unique_id,
-                self._accumulated_kwh,
-            )
-            self._accumulated_kwh = 0.0
-        return round(self._accumulated_kwh, 4)
+    def _accumulated_kwh(self) -> float:
+        """Compatibility alias for the energy-specific accumulator name."""
+        return self._accumulated_value
 
-    @property
-    def available(self) -> bool:
-        """Return True if the entity is available."""
-        return super().available and self._available_fn(self.coordinator.data)
+    @_accumulated_kwh.setter
+    def _accumulated_kwh(self, value: float) -> None:
+        self._accumulated_value = value
 
 
-class MixergyElectricCostSensor(MixergyEntity, RestoreSensor):
+class MixergyElectricCostSensor(_MixergyAccumulatingSensor):
     """Cumulative cost of electric immersion heating.
 
     Integrates electric power × elapsed time × tariff into a running cost.
@@ -459,61 +463,29 @@ class MixergyElectricCostSensor(MixergyEntity, RestoreSensor):
 
     def __init__(self, coordinator: MixergyCoordinator, *, rate: float) -> None:
         """Initialise the cost sensor."""
-        super().__init__(coordinator)
         self._rate = rate
-        self._accumulated_cost: float = 0.0
-        self._last_update: float | None = None
-        self._attr_unique_id = f"{coordinator.data.info.serial_number}_electric_cost"
+        super().__init__(
+            coordinator,
+            key="electric_cost",
+            translation_key="electric_cost",
+        )
         self._attr_native_unit_of_measurement = coordinator.hass.config.currency
 
-    async def async_added_to_hass(self) -> None:
-        """Restore the previous accumulated cost and begin accumulating."""
-        await super().async_added_to_hass()
-        if (last := await self.async_get_last_sensor_data()) is not None:
-            try:
-                # See the energy sensor: the except clause is the guard.
-                self._accumulated_cost = float(last.native_value or 0)  # type: ignore[arg-type]
-            except (ValueError, TypeError):
-                self._accumulated_cost = 0.0
-        self._last_update = time.time()
-        self.async_write_ha_state()
-
-    @callback
-    def _handle_coordinator_update(self) -> None:
-        """Integrate electric power × tariff over elapsed time."""
-        now = time.time()
-        if (
-            not self.coordinator.last_update_success
-            or self.coordinator.data.measurement.report_is_fresh is False
-        ):
-            # Failed poll or stale tank report: integrating it would credit
-            # phantom cost into a persisted total (see the energy sensor for
-            # the full rationale).
-            self._last_update = now
-            self.async_write_ha_state()
-            return
-        if self._last_update is not None:
-            interval = getattr(self.coordinator, "update_interval", None)
-            elapsed_hours = _capped_elapsed_hours(now, self._last_update, interval)
-            measurement = self.coordinator.data.measurement
-            power_w = (
-                measurement.clamp_power_w or 0.0
-                if measurement.electric_heat_source
-                else 0.0
-            )
-            if math.isfinite(power_w) and power_w > 0:
-                self._accumulated_cost += (power_w / 1000) * elapsed_hours * self._rate
-        self._last_update = now
-        self.async_write_ha_state()
+    def _value_per_hour(self, data: TankData) -> float:
+        """Return the cost accumulated per hour at the current power."""
+        measurement = data.measurement
+        power_w = (
+            measurement.clamp_power_w or 0.0
+            if measurement.electric_heat_source
+            else 0.0
+        )
+        return (power_w / 1000) * self._rate
 
     @property
-    def native_value(self) -> float:
-        """Return the accumulated cost."""
-        if not math.isfinite(self._accumulated_cost):
-            _LOGGER.warning(
-                "Cost accumulator for %s went non-finite (%s); resetting to 0",
-                self._attr_unique_id,
-                self._accumulated_cost,
-            )
-            self._accumulated_cost = 0.0
-        return round(self._accumulated_cost, 4)
+    def _accumulated_cost(self) -> float:
+        """Compatibility alias for the cost-specific accumulator name."""
+        return self._accumulated_value
+
+    @_accumulated_cost.setter
+    def _accumulated_cost(self, value: float) -> None:
+        self._accumulated_value = value

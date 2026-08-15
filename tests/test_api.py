@@ -911,36 +911,33 @@ async def test_energy_restore_writes_state_immediately():
     TOTAL_INCREASING treats any transient 0 as a counter reset, permanently
     losing all accumulated kWh stats.
     """
-    from unittest.mock import AsyncMock, MagicMock
+    from unittest.mock import AsyncMock, MagicMock, patch
+
+    from homeassistant.components.sensor import RestoreSensor
 
     from custom_components.mixergy_tank.sensor import MixergyEnergySensor
 
     coordinator = MagicMock()
     coordinator.data = MagicMock()
 
-    sensor = MixergyEnergySensor.__new__(MixergyEnergySensor)
-    sensor.coordinator = coordinator
-    sensor._accumulated_kwh = 0.0
+    sensor = MixergyEnergySensor(
+        coordinator,
+        key="electric_energy",
+        translation_key="electric_energy",
+        power_w_fn=lambda _data: 0.0,
+    )
     sensor.hass = MagicMock()
     sensor.async_write_ha_state = MagicMock()
 
-    # Stub the RestoreSensor + CoordinatorEntity bases for the test.
+    # Stub RestoreSensor explicitly. MRO-relative patching would silently
+    # patch the class under test when a shared accumulator base is introduced.
     last_state = MagicMock()
     last_state.native_value = "42.5"
     sensor.async_get_last_sensor_data = AsyncMock(return_value=last_state)
 
-    # Skip the real super().async_added_to_hass() — it requires a full
-    # HA core fixture. We're testing only our additions.
-    async def _noop(self):
-        pass
-    import custom_components.mixergy_tank.sensor as sensor_mod
-    base = sensor_mod.MixergyEnergySensor.__mro__[1]
-    original = base.async_added_to_hass
-    base.async_added_to_hass = _noop
-    try:
+    # Skip the real RestoreSensor hook — it requires a full HA core fixture.
+    with patch.object(RestoreSensor, "async_added_to_hass", AsyncMock()):
         await sensor.async_added_to_hass()
-    finally:
-        base.async_added_to_hass = original
 
     assert sensor._accumulated_kwh == 42.5, "restored kWh not loaded"
     sensor.async_write_ha_state.assert_called_once_with()

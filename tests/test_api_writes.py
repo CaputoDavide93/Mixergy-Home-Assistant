@@ -214,7 +214,9 @@ async def test_clear_holiday_dates_removes_only_the_holiday_key(
     existing = {
         "holiday": {"start": "2026-01-01", "end": "2026-01-08"},
         "defaultHeatSource": "electric",
-        "weekly": {"monday": ["06:00"]},
+        # Deliberately unknown to the client: the preservation contract must
+        # cover future API keys without pretending a fictional key is real.
+        "unrecognisedFutureField": {"nested": ["preserve", "verbatim"]},
     }
     sent: list[dict] = []
 
@@ -233,7 +235,71 @@ async def test_clear_holiday_dates_removes_only_the_holiday_key(
     written = sent[0]
     assert "holiday" not in written
     assert written["defaultHeatSource"] == "electric"
-    assert written["weekly"] == {"monday": ["06:00"]}
+    assert written["unrecognisedFutureField"] == {
+        "nested": ["preserve", "verbatim"]
+    }
+
+
+async def test_rejected_schedule_write_does_not_mutate_cached_data(
+    mock_aiohttp_session: MagicMock,
+) -> None:
+    """A failed PUT must leave the last-known-good schedule untouched."""
+    from custom_components.mixergy_tank.api import TankSchedule
+
+    cached_raw = {
+        "holiday": {"departDate": 1, "returnDate": 2},
+        "defaultHeatSource": "electric",
+    }
+    client = _write_client(mock_aiohttp_session)
+    client.fetch_schedule = AsyncMock(
+        return_value=TankSchedule(raw=cached_raw)
+    )
+    mock_aiohttp_session.request = AsyncMock(return_value=_make_resp(500, {}))
+
+    with pytest.raises(MixergyApiError, match="Clear holiday dates"):
+        await client.clear_holiday_dates()
+
+    assert "holiday" in cached_raw
+
+
+async def test_schedule_mutations_are_serialised_without_lost_updates(
+    mock_aiohttp_session: MagicMock,
+) -> None:
+    """Concurrent top-level mutations must both survive the schedule PUTs."""
+    import asyncio
+
+    from custom_components.mixergy_tank.api import TankSchedule
+
+    server_schedule: dict = {"defaultHeatSource": "electric"}
+    client = _write_client(mock_aiohttp_session)
+
+    async def fetch_schedule() -> TankSchedule:
+        snapshot = server_schedule.copy()
+        await asyncio.sleep(0)
+        return TankSchedule(raw=snapshot)
+
+    async def request(method, url, **kwargs):
+        if method == "PUT":
+            await asyncio.sleep(0)
+            server_schedule.clear()
+            server_schedule.update(kwargs["json"])
+        return _make_resp(200, {})
+
+    client.fetch_schedule = fetch_schedule  # type: ignore[method-assign]
+    mock_aiohttp_session.request = AsyncMock(side_effect=request)
+
+    start = datetime(2026, 8, 20, tzinfo=UTC)
+    end = datetime(2026, 8, 27, tzinfo=UTC)
+    await asyncio.gather(
+        client.set_holiday_dates(start, end),
+        client.set_default_heat_source("indirect"),
+    )
+
+    assert server_schedule["defaultHeatSource"] == "indirect"
+    assert server_schedule["holiday"] == {
+        "departDate": int(start.timestamp() * 1000),
+        "returnDate": int(end.timestamp() * 1000),
+    }
 
 
 async def test_clear_holiday_dates_raises_on_non_200(

@@ -12,6 +12,7 @@ from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from homeassistant.components.sensor import RestoreSensor
 from homeassistant.exceptions import HomeAssistantError
 
 from custom_components.mixergy_tank.api import (
@@ -393,7 +394,7 @@ async def test_energy_sensor_restores_its_previous_total() -> None:
     restored.native_value = 12.5
     _restoring(sensor, restored)
 
-    with patch.object(type(sensor).__mro__[1], "async_added_to_hass", AsyncMock()):
+    with patch.object(RestoreSensor, "async_added_to_hass", AsyncMock()):
         await sensor.async_added_to_hass()
 
     assert sensor.native_value == 12.5
@@ -409,7 +410,7 @@ async def test_energy_sensor_survives_an_unparsable_restored_value() -> None:
     restored.native_value = "not-a-number"
     _restoring(sensor, restored)
 
-    with patch.object(type(sensor).__mro__[1], "async_added_to_hass", AsyncMock()):
+    with patch.object(RestoreSensor, "async_added_to_hass", AsyncMock()):
         await sensor.async_added_to_hass()
 
     assert sensor.native_value == 0.0
@@ -420,7 +421,7 @@ async def test_energy_sensor_ignores_a_missing_restore() -> None:
     sensor = _energy_sensor()
     _restoring(sensor, None)
 
-    with patch.object(type(sensor).__mro__[1], "async_added_to_hass", AsyncMock()):
+    with patch.object(RestoreSensor, "async_added_to_hass", AsyncMock()):
         await sensor.async_added_to_hass()
 
     assert sensor.native_value == 0.0
@@ -464,7 +465,7 @@ async def test_cost_sensor_restores_and_handles_bad_data() -> None:
     restored.native_value = 3.75
     _restoring(sensor, restored)
 
-    with patch.object(type(sensor).__mro__[1], "async_added_to_hass", AsyncMock()):
+    with patch.object(RestoreSensor, "async_added_to_hass", AsyncMock()):
         await sensor.async_added_to_hass()
     assert sensor.native_value == 3.75
 
@@ -472,7 +473,7 @@ async def test_cost_sensor_restores_and_handles_bad_data() -> None:
     bad = MagicMock()
     bad.native_value = object()
     _restoring(broken, bad)
-    with patch.object(type(broken).__mro__[1], "async_added_to_hass", AsyncMock()):
+    with patch.object(RestoreSensor, "async_added_to_hass", AsyncMock()):
         await broken.async_added_to_hass()
     assert broken.native_value == 0.0
 
