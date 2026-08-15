@@ -87,9 +87,11 @@ The tank reports measurements to the Mixergy cloud roughly once a minute, so tha
 Check in this order:
 
 1. Compare against the Mixergy app — if the app shows the same value, the integration is faithfully reporting what the cloud has.
-2. Enable the diagnostic **Last successful update** sensor (`sensor.mixergy_tank_<serial>_last_successful_update`, disabled by default) to see the timestamp of the last successful poll.
-3. If polls are failing intermittently, see [Why are all my entities unavailable?](#why-are-all-my-entities-unavailable).
-4. If you want to reduce load on the Mixergy cloud, raise the poll interval in Configure — anywhere up to 300 s. Given the roughly one-minute server-side cadence, 60 s costs you almost nothing in freshness.
+2. Check **Tank connectivity**. Online means the tank report is fresh; offline means Home Assistant reached the cloud but the latest physical-tank report is older than five minutes (or three configured poll intervals). If the tank does not provide report timestamps, this entity is unavailable rather than guessing.
+3. Compare **Last tank measurement** (enabled diagnostic) with **Last successful update** (disabled diagnostic). If Last successful update advances but Last tank measurement does not, the cloud is serving an old tank report; check the tank's network connection and power.
+4. Check **Operating reason** and **Charge target active**. They show whether an automatic schedule, manual schedule, boost, cleansing cycle, or vacation mode is currently requesting a target — the integration does not run a background automation that holds charge at a fixed level.
+5. If polls are failing intermittently, see [Why are all my entities unavailable?](#why-are-all-my-entities-unavailable).
+6. If you want to reduce load on the Mixergy cloud, raise the poll interval in Configure — anywhere up to 300 s. Given the roughly one-minute server-side cadence, 60 s costs you almost nothing in freshness.
 
 ### Why will holiday mode not clear?
 
@@ -177,7 +179,7 @@ No. Reads come from one coordinator per tank on your configured poll interval, a
 
 ### Will it break on new Home Assistant versions?
 
-The CI test suite runs on a weekly schedule against the latest Home Assistant core, so core API churn is caught between releases rather than by users. The integration also tracks deprecations ahead of enforcement — the v1.3.2 changelog entry documents fixes landed before their HA 2026.12 and 2027.8 deadlines, verified green on HA 2026.8.1. The supported floor is HA 2025.8.
+The CI test suite runs on a weekly schedule against the latest Home Assistant core, so core API churn is caught between releases rather than by users. The integration also tracks deprecations ahead of enforcement — the v1.3.2 changelog entry documents fixes landed before their HA 2026.12 and 2027.8 deadlines. Release 2.2.0 is verified on HA 2026.8.2, and the supported floor remains HA 2025.8.
 
 ### What data leaves my network?
 

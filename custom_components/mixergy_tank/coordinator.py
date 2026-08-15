@@ -61,12 +61,30 @@ class MixergyCoordinator(DataUpdateCoordinator[TankData]):
         """Fetch data from the Mixergy API."""
         try:
             data = await self.client.fetch_all()
-            # Stamp the successful fetch time so the diagnostic sensor can show it
-            data.last_update_time = dt_util.utcnow()
-            # Clear a previously-raised tank-not-found repair if we recovered.
-            ir.async_delete_issue(
-                self.hass, DOMAIN, self._tank_not_found_issue_id
+            # Keep the HA poll timestamp separate from the tank's own report
+            # timestamps. A cloud request can succeed while serving an old tank
+            # measurement, so HTTP success alone is not a freshness signal.
+            now = dt_util.utcnow()
+            data.last_update_time = now
+            report_time = (
+                data.measurement.received_time or data.measurement.recorded_time
             )
+            if report_time is None:
+                # Older firmware may omit both fields. Preserve compatibility:
+                # the connectivity entity is unavailable and accumulators keep
+                # their pre-2.2 behaviour rather than declaring the tank dead.
+                data.measurement.report_is_fresh = None
+            else:
+                interval_seconds = (
+                    self.update_interval.total_seconds()
+                    if self.update_interval is not None
+                    else UPDATE_INTERVAL
+                )
+                max_age_seconds = max(300.0, interval_seconds * 3)
+                age_seconds = max(0.0, (now - report_time).total_seconds())
+                data.measurement.report_is_fresh = age_seconds <= max_age_seconds
+            # Clear a previously-raised tank-not-found repair if we recovered.
+            ir.async_delete_issue(self.hass, DOMAIN, self._tank_not_found_issue_id)
             return data
         except MixergyAuthError as err:
             # Triggers HA reauth flow
@@ -99,16 +117,12 @@ class MixergyCoordinator(DataUpdateCoordinator[TankData]):
                 },
             ) from err
         except MixergyConnectionError as err:
-            raise UpdateFailed(
-                f"Error communicating with Mixergy API: {err}"
-            ) from err
+            raise UpdateFailed(f"Error communicating with Mixergy API: {err}") from err
         except MixergyApiError as err:
             # Any other API-layer error that escapes the more-specific
             # branches above — surface as UpdateFailed (retryable) rather
             # than letting the bare exception abort the coordinator.
-            raise UpdateFailed(
-                f"Mixergy API error: {err}"
-            ) from err
+            raise UpdateFailed(f"Mixergy API error: {err}") from err
 
 
 # Type alias defined after the class so MixergyCoordinator is in scope.

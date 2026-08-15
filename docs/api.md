@@ -41,7 +41,7 @@ The client holds all per-tank state:
 
 Every request carries a 30-second total timeout (`REQUEST_TIMEOUT`), so a stalled cloud connection cannot hang a poll indefinitely.
 
-Data comes back as plain dataclasses: `TankData` bundles a `TankInfo`, `TankMeasurement`, `TankSettings`, and `TankSchedule`. Values are normalised at the boundary — `_as_float` coerces null, string, and non-finite values to a finite float so bad cloud data never reaches entities or the energy integrator, and the API's `"heatpump"` spelling is normalised to HA-canonical `"heat_pump"` on read and back again on write.
+Data comes back as plain dataclasses: `TankData` bundles a `TankInfo`, `TankMeasurement`, `TankSettings`, and `TankSchedule`. Settings use `_as_float` to coerce malformed values to safe finite defaults. Measurement values use `_as_optional_float`, preserving missing, malformed, and non-finite readings as `None` so Home Assistant reports them unavailable instead of manufacturing zeroes. The state payload also becomes a stable `OperatingReason`, and the tank's `recordedTime` / `receivedTime` epoch-millisecond fields become UTC datetimes. The API's `"heatpump"` spelling is normalised to HA-canonical `"heat_pump"` on read and back again on write.
 
 ## 🗺️ HATEOAS discovery walk
 
@@ -108,7 +108,7 @@ One `DataUpdateCoordinator` runs per tank (per config entry), calling `client.fe
 - **Measurement is mandatory.** Tank charge and temperature are the primary signal — if that sub-fetch failed, the whole poll fails and the coordinator marks the update as failed.
 - **Settings and schedule fall back to last-known-good.** These change slowly; a transient failure (a rate-limited endpoint, a brief upstream hiccup) logs a warning and reuses the previous successful fetch rather than blanking every entity to `unavailable` for a cycle. Only when no prior good value exists — typically the very first refresh — does the failure propagate.
 
-On success the coordinator stamps `data.last_update_time` for the diagnostic sensor and clears any outstanding tank-not-found repair issue.
+On success the coordinator stamps `data.last_update_time` for the API-poll diagnostic, then compares the tank's received (or recorded) timestamp with the current time. A report is fresh for at least five minutes, extended to three configured poll intervals when polling is slower. The connectivity binary sensor exposes that result, while energy and cost accumulators skip stale reports. If older tank firmware omits both timestamps, freshness remains unknown and the pre-2.2 accumulation behaviour is preserved. The coordinator also clears any outstanding tank-not-found repair issue.
 
 ## ✍️ Write model
 

@@ -147,6 +147,17 @@
           "heat_pump": "Pompe à chaleur"
         }
       },
+      "operating_reason": {
+        "name": "Motif de fonctionnement",
+        "state": {
+          "auto_schedule": "Programme automatique",
+          "manual_schedule": "Programme manuel",
+          "manual_boost": "Boost manuel",
+          "cleansing": "Cycle de désinfection",
+          "vacation": "Vacances",
+          "unknown": "Inconnu"
+        }
+      },
       "holiday_start": {
         "name": "Début des vacances"
       },
@@ -161,6 +172,12 @@
       },
       "last_update": {
         "name": "Dernière mise à jour réussie"
+      },
+      "recorded_time": {
+        "name": "Dernière mesure du ballon"
+      },
+      "received_time": {
+        "name": "Dernière réception cloud"
       },
       "electric_cost": {
         "name": "Coût du chauffage électrique"
@@ -187,6 +204,12 @@
       },
       "holiday_mode": {
         "name": "Mode vacances"
+      },
+      "target_charge_active": {
+        "name": "Charge cible active"
+      },
+      "tank_connectivity": {
+        "name": "Connexion du ballon"
       }
     },
     "switch": {

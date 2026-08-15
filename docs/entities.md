@@ -15,7 +15,7 @@ You can rename any entity id from its settings dialog; the tables below list the
 
 ## 📊 Sensors
 
-The sensor platform reports temperatures, charge level, power draw, heat sources, holiday dates, and diagnostics — all read-only, all refreshed on every poll (30–300 s, default 60). Three diagnostic sensors ship disabled; the two energy sensors and the optional cost sensor accumulate over time and are covered in their own sections below.
+The sensor platform reports temperatures, charge level, power draw, heat sources, operating reason, tank-report timestamps, holiday dates, and diagnostics — all read-only, all refreshed on every poll (30–300 s, default 60). Four diagnostic sensors ship disabled; **Last tank measurement** is diagnostic but enabled by default so stale tank data is visible immediately. The two energy sensors and the optional cost sensor accumulate over time and are covered in their own sections below.
 
 <!-- AUTOGEN:entities:sensors -->
 | Sensor | Unit | Description |
@@ -33,17 +33,20 @@ The sensor platform reports temperatures, charge level, power draw, heat sources
 | Clamp power | W | CT clamp power reading *(PV diverter only)* |
 | Active heat source | — | Currently active heat source |
 | Default heat source | — | Configured default heat source |
+| Operating reason | — | Why the tank is currently being controlled |
 | Holiday start date | Timestamp | Holiday mode start date |
 | Holiday end date | Timestamp | Holiday mode end date |
 | Electric heating cost | currency | Cumulative cost *(only when a tariff rate is set in options)* |
 | Firmware version | — | Tank firmware *(diagnostic, disabled by default)* |
 | Model | — | Tank model code *(diagnostic, disabled by default)* |
 | Last successful update | Timestamp | Time of the last API refresh *(diagnostic, disabled by default)* |
+| Last tank measurement | Timestamp | Time the tank recorded its latest measurement |
+| Last cloud receipt | Timestamp | Time the cloud received the latest measurement *(diagnostic, disabled by default)* |
 <!-- /AUTOGEN:entities:sensors -->
 
-### Where are the firmware and model sensors?
+### Where are the disabled diagnostic sensors?
 
-Disabled by default. **Firmware version**, **Model**, and **Last successful update** are diagnostic sensors (`entity_category: diagnostic`) registered with `entity_registry_enabled_default: False` — they exist in the entity registry but record no state until you enable them. To switch one on:
+**Firmware version**, **Model**, **Last successful update**, and **Last cloud receipt** are diagnostic sensors registered disabled by default — they exist in the entity registry but record no state until you enable them. **Last tank measurement** is also diagnostic and starts enabled. To switch a disabled sensor on:
 
 1. Open **Settings → Devices & services → Mixergy**, then select the tank device.
 2. Find the sensor in the **Diagnostic** section — disabled entities are listed under "not shown".
@@ -63,6 +66,7 @@ The accumulation rule, exactly as implemented:
 | Outage cap | Δt is capped at **2× the poll interval** — a long gap (HA stopped, network down, API outage) credits at most two intervals of energy, never a fictitious multi-hour spike |
 | Clock-skew floor | Δt is floored at 0, so an NTP correction can never subtract from the total |
 | Failed polls | a failed poll adds nothing and resynchronises the clock, so the outage window is not credited on recovery either |
+| Stale tank reports | a cloud request can succeed while returning an old tank report; reports older than five minutes (or three poll intervals) add nothing and resynchronise the clock |
 | Restart persistence | the running total is a `RestoreSensor` — it restores on startup and is written back to the state machine immediately, so the Energy dashboard never sees a transient 0 that would read as a counter reset |
 | Non-finite readings | a NaN or infinite power reading is discarded; if the stored total itself ever goes non-finite it resets to 0 with a logged warning rather than poisoning long-term statistics |
 
@@ -79,7 +83,7 @@ Two details worth knowing:
 
 ## 🚨 Binary sensors
 
-Seven on/off indicators cover heat-source activity, heating status, holiday mode, and two configurable water-level alerts. **Low hot water** turns on when charge drops below 5% and **No hot water** below 0.5% — both thresholds are options you can change, and the options flow rejects a "no" threshold that is not below the "low" one.
+Nine on/off indicators cover heat-source activity, heating status, holiday mode, an active charge target, tank connectivity, and two configurable water-level alerts. **Low hot water** turns on when charge drops below 5% and **No hot water** below 0.5% — both thresholds are options you can change, and the options flow rejects a "no" threshold that is not below the "low" one.
 
 <!-- AUTOGEN:entities:binary-sensors -->
 | Sensor | Description |
@@ -91,6 +95,8 @@ Seven on/off indicators cover heat-source activity, heating status, holiday mode
 | Low hot water | Charge is below the low threshold (default 5%, configurable) |
 | No hot water | Charge is below the no-water threshold (default 0.5%, configurable) |
 | Holiday mode | Tank is currently in holiday mode |
+| Charge target active | A non-zero charge target is currently active |
+| Tank connectivity | Latest tank report is fresh |
 <!-- /AUTOGEN:entities:binary-sensors -->
 
 ### How do I change the water-level thresholds?
@@ -172,7 +178,7 @@ The three HA operation modes map onto Mixergy heat sources:
 
 ## 🟢 Availability
 
-Two rules decide whether an entity is available. Every entity goes unavailable together when polling the Mixergy cloud fails — states freeze as `unavailable` rather than showing stale data. PV-related entities are additionally available only when the tank reports a fitted PV diverter.
+Availability reflects the data the cloud actually supplied. Every entity goes unavailable together when polling the Mixergy cloud fails. A missing temperature, charge, target, or power value makes only its own entity unavailable instead of manufacturing a zero. PV-related entities additionally require a fitted PV diverter. **Tank connectivity** is unavailable on older reports without timestamps, online for a fresh report, and offline for a stale report.
 
 ### Why are my entities unavailable?
 

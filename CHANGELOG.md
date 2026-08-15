@@ -4,6 +4,40 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2026-08-15
+
+### Added
+
+- **Operating reason** reports whether the tank is following its automatic
+  schedule, a manual schedule, a boost, cleansing, or vacation mode. This
+  makes unexpected charge changes traceable without guessing from the water
+  level alone.
+- **Charge target active** shows whether the cloud is currently asking the
+  tank to maintain a non-zero target.
+- **Tank connectivity**, **Last tank measurement**, and **Last cloud receipt**
+  distinguish a successful API request from a fresh report by the physical
+  tank.
+
+### Fixed
+
+- A successful cloud poll can no longer make an old tank report look current.
+  Reports older than five minutes (or three configured poll intervals) mark
+  Tank connectivity offline and are excluded from energy and cost
+  accumulation, preventing stale power readings from creating phantom totals.
+- Missing temperatures, charge, target charge, and power readings now become
+  unavailable instead of being displayed as credible zeroes. An inactive
+  target therefore no longer looks like the tank was deliberately forced to
+  0%.
+- The automation guide and architecture diagram now use the current
+  `mixergy_tank.*` service domain, and the hardware-support link points to the
+  current Mixergy support site.
+
+### Testing
+
+- The current compatibility lane now verifies Home Assistant 2026.8.2 with
+  `pytest-homeassistant-custom-component` 0.13.356.
+- The per-lane coverage release gate is raised from 90% to 95%.
+
 ## [2.1.0] - 2026-08-12
 
 ### Changed

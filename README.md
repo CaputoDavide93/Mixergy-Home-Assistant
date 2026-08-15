@@ -112,12 +112,15 @@ You can switch modes at any time via **Settings → Devices & Services → Mixer
 | Clamp power | W | CT clamp power reading *(PV diverter only)* |
 | Active heat source | — | Currently active heat source |
 | Default heat source | — | Configured default heat source |
+| Operating reason | — | Why the tank is currently being controlled |
 | Holiday start date | Timestamp | Holiday mode start date |
 | Holiday end date | Timestamp | Holiday mode end date |
 | Electric heating cost | currency | Cumulative cost *(only when a tariff rate is set in options)* |
 | Firmware version | — | Tank firmware *(diagnostic, disabled by default)* |
 | Model | — | Tank model code *(diagnostic, disabled by default)* |
 | Last successful update | Timestamp | Time of the last API refresh *(diagnostic, disabled by default)* |
+| Last tank measurement | Timestamp | Time the tank recorded its latest measurement |
+| Last cloud receipt | Timestamp | Time the cloud received the latest measurement *(diagnostic, disabled by default)* |
 <!-- /AUTOGEN:entities:sensors -->
 
 ### Binary Sensors
@@ -132,6 +135,8 @@ You can switch modes at any time via **Settings → Devices & Services → Mixer
 | Low hot water | Charge is below the low threshold (default 5%, configurable) |
 | No hot water | Charge is below the no-water threshold (default 0.5%, configurable) |
 | Holiday mode | Tank is currently in holiday mode |
+| Charge target active | A non-zero charge target is currently active |
+| Tank connectivity | Latest tank report is fresh |
 <!-- /AUTOGEN:entities:binary-sensors -->
 
 ### Water heater
@@ -391,7 +396,7 @@ flowchart LR
         CF["🔐 Config flow<br/>credentials · tank picker · mode"]
         CO["🔄 Coordinator<br/>one per tank · 30–300 s poll"]
         ENT["📟 Entities<br/>sensors · binary sensors<br/>controls · water heater"]
-        SVC["🛎️ Services<br/>mixergy.*<br/>entity / device / area targets"]
+        SVC["🛎️ Services<br/>mixergy_tank.*<br/>entity / device / area targets"]
     end
     subgraph CLOUD["☁️ Mixergy Cloud"]
         API["www.mixergy.io<br/>REST API"]

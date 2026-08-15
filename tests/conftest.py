@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import AsyncIterator, Generator
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
 
 import aiohttp
@@ -11,6 +12,7 @@ import pytest
 
 from custom_components.mixergy_tank.api import (
     MixergyApiClient,
+    OperatingReason,
     TankData,
     TankInfo,
     TankMeasurement,
@@ -80,7 +82,9 @@ MOCK_TANKS_RESPONSE = {
                 "serialNumber": MOCK_SERIAL,
                 "firmwareVersion": "2.1.0",
                 "_links": {
-                    "self": {"href": f"https://www.mixergy.io/api/v2/tank/{MOCK_SERIAL}"}
+                    "self": {
+                        "href": f"https://www.mixergy.io/api/v2/tank/{MOCK_SERIAL}"
+                    }
                 },
             }
         ]
@@ -118,9 +122,7 @@ MOCK_SETTINGS_RESPONSE = (
     '"distributed_computing_enabled": false, "cleansing_temperature": 53}'
 )
 
-MOCK_SCHEDULE_RESPONSE = (
-    '{"defaultHeatSource": "electric"}'
-)
+MOCK_SCHEDULE_RESPONSE = '{"defaultHeatSource": "electric"}'
 
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────
@@ -243,6 +245,10 @@ def mock_tank_data() -> TankData:
             in_holiday_mode=False,
             pv_power_kw=0.0,
             clamp_power_w=0.0,
+            operating_reason=OperatingReason.MANUAL_SCHEDULE,
+            recorded_time=datetime(2026, 8, 15, 11, 59, tzinfo=UTC),
+            received_time=datetime(2026, 8, 15, 12, 0, tzinfo=UTC),
+            report_is_fresh=True,
         ),
         settings=TankSettings(
             target_temperature=60.0,

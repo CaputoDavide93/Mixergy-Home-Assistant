@@ -21,6 +21,12 @@
       },
       "no_hot_water": {
         "default": "mdi:water-remove-outline"
+      },
+      "tank_connectivity": {
+        "default": "mdi:cloud-check-outline"
+      },
+      "target_charge_active": {
+        "default": "mdi:water-boiler-alert"
       }
     },
     "button": {
@@ -98,8 +104,17 @@
       "model": {
         "default": "mdi:water-boiler"
       },
+      "operating_reason": {
+        "default": "mdi:information-outline"
+      },
       "pv_energy": {
         "default": "mdi:solar-power"
+      },
+      "received_time": {
+        "default": "mdi:cloud-clock-outline"
+      },
+      "recorded_time": {
+        "default": "mdi:clock-check-outline"
       },
       "target_charge": {
         "default": "mdi:water-percent"

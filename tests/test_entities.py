@@ -8,6 +8,7 @@ entity sets are asserted through async_setup_entry.
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -15,6 +16,7 @@ from homeassistant.exceptions import HomeAssistantError
 
 from custom_components.mixergy_tank.api import (
     MixergyApiError,
+    OperatingReason,
     TankData,
     TankInfo,
     TankMeasurement,
@@ -39,6 +41,10 @@ def _data(*, has_pv: bool = True, **overrides) -> TankData:
         "target_charge": 80.0,
         "pv_power_kw": 1.25,
         "clamp_power_w": 340.0,
+        "operating_reason": OperatingReason.AUTO_SCHEDULE,
+        "recorded_time": datetime(2026, 8, 15, 11, 59, tzinfo=UTC),
+        "received_time": datetime(2026, 8, 15, 12, 0, tzinfo=UTC),
+        "report_is_fresh": True,
     }
     settings_fields = {
         "target_temperature": 60.0,
@@ -164,6 +170,58 @@ def test_sensor_reads_the_expected_field(key: str, expected: float) -> None:
     assert sensor.native_value == expected
 
 
+@pytest.mark.parametrize(
+    ("key", "expected"),
+    (
+        ("operating_reason", "auto_schedule"),
+        ("recorded_time", datetime(2026, 8, 15, 11, 59, tzinfo=UTC)),
+        ("received_time", datetime(2026, 8, 15, 12, 0, tzinfo=UTC)),
+    ),
+)
+def test_observability_sensors_read_the_expected_field(
+    key: str, expected: str | datetime
+) -> None:
+    """Expose the tank's reason and timestamps without reshaping them."""
+    from custom_components.mixergy_tank.sensor import (
+        SENSOR_DESCRIPTIONS,
+        MixergySensor,
+    )
+
+    description = next(d for d in SENSOR_DESCRIPTIONS if d.key == key)
+    sensor = MixergySensor(_coordinator(), description)
+    assert sensor.native_value == expected
+
+
+@pytest.mark.parametrize(
+    "key",
+    (
+        "hot_water_temperature",
+        "coldest_water_temperature",
+        "charge",
+        "target_charge",
+        "pv_power",
+        "clamp_power",
+        "operating_reason",
+        "recorded_time",
+        "received_time",
+    ),
+)
+def test_missing_measurement_values_make_their_entity_unavailable(key: str) -> None:
+    """Missing cloud values must not be presented as plausible zeroes."""
+    from custom_components.mixergy_tank.sensor import (
+        SENSOR_DESCRIPTIONS,
+        MixergySensor,
+    )
+
+    field = {
+        "pv_power": "pv_power_kw",
+        "clamp_power": "clamp_power_w",
+    }.get(key, key)
+    description = next(d for d in SENSOR_DESCRIPTIONS if d.key == key)
+    sensor = MixergySensor(_coordinator(_data(**{field: None})), description)
+    assert sensor.available is False
+
+
 def test_pv_sensors_are_unavailable_without_a_diverter() -> None:
     """PV sensors must hide on a tank with no diverter, others must not."""
     from custom_components.mixergy_tank.sensor import (
@@ -208,8 +266,7 @@ async def test_cost_sensor_only_appears_with_a_configured_tariff() -> None:
 
     def has_cost(entities) -> bool:
         return any(
-            getattr(e, "unique_id", "").endswith("_electric_cost")
-            for e in entities
+            getattr(e, "unique_id", "").endswith("_electric_cost") for e in entities
         )
 
     assert not has_cost(without)

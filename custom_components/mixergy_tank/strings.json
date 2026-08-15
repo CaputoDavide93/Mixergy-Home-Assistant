@@ -147,6 +147,17 @@
           "heat_pump": "Heat pump"
         }
       },
+      "operating_reason": {
+        "name": "Operating reason",
+        "state": {
+          "auto_schedule": "Automatic schedule",
+          "manual_schedule": "Manual schedule",
+          "manual_boost": "Manual boost",
+          "cleansing": "Cleansing cycle",
+          "vacation": "Vacation",
+          "unknown": "Unknown"
+        }
+      },
       "holiday_start": {
         "name": "Holiday start date"
       },
@@ -161,6 +172,12 @@
       },
       "last_update": {
         "name": "Last successful update"
+      },
+      "recorded_time": {
+        "name": "Last tank measurement"
+      },
+      "received_time": {
+        "name": "Last cloud receipt"
       },
       "electric_cost": {
         "name": "Electric heating cost"
@@ -187,6 +204,12 @@
       },
       "holiday_mode": {
         "name": "Holiday mode"
+      },
+      "target_charge_active": {
+        "name": "Charge target active"
+      },
+      "tank_connectivity": {
+        "name": "Tank connectivity"
       }
     },
     "switch": {
