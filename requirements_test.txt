@@ -17,7 +17,7 @@ pytest-cov==7.1.0
 # Static analysis, run by the `lint` job in tests.yaml. Pinned like the rest so
 # a new ruff release cannot turn a green branch red without a deliberate bump.
 ruff==0.16.2
-mypy==2.3.0
+mypy==2.3.1
 
 # NOT listed here on purpose: pytest-homeassistant-custom-component. It pins one
 # exact Home Assistant version per release, so putting it in this file would
