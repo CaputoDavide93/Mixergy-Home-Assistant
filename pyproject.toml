@@ -1,3 +1,7 @@
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
 [tool.ruff]
 # Match the Home Assistant core target so idioms flagged here are the same
 # ones core would flag; the repo's manifest floor is HA 2025.8 (Python 3.13).

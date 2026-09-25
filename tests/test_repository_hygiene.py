@@ -100,11 +100,11 @@ def test_brand_assets_are_complete_and_distinct() -> None:
     assert not (brand / "dark_icon@2x.png").exists()
 
     for source in ("icon.svg", "logo.svg", "dark_logo.svg", "banner.svg"):
-        assert (ROOT / "assets" / source).is_file(), source
+        assert (ROOT / "docs" / "assets" / source).is_file(), source
 
-    manifest = json.loads((ROOT / "assets" / "brand-manifest.json").read_text())
+    manifest = json.loads((ROOT / "docs" / "assets" / "brand-manifest.json").read_text())
     for name, expected_hash in manifest["sources"].items():
-        path = ROOT / "assets" / name
+        path = ROOT / "docs" / "assets" / name
         assert hashlib.sha256(path.read_bytes()).hexdigest() == expected_hash, name
     for name, expected_hash in manifest["outputs"].items():
         path = ROOT / name

@@ -33,7 +33,7 @@ jobs:
           python-version: "3.13"
           cache: pip
           cache-dependency-path: |
-            requirements_test.txt
+            requirements-test.txt
             .github/workflows/tests.yaml
 
       - name: Install dependencies
@@ -41,7 +41,7 @@ jobs:
         # the same pin the minimum matrix leg uses: HA 2025.8 pins aiodns 3.5
         # but not pycares, and pycares 5 removed symbols aiodns 3.5 imports.
         run: >-
-          python -m pip install -r requirements_test.txt
+          python -m pip install -r requirements-test.txt
           homeassistant==2025.8.0 "pycares<5"
 
       - name: ruff
@@ -76,11 +76,11 @@ jobs:
           python-version: ${{ matrix.python }}
           cache: pip
           # The big dependency (homeassistant==<matrix version>) comes from
-          # the workflow, not requirements_test.txt — include this file in
+          # the workflow, not requirements-test.txt — include this file in
           # the key so an HA version bump rotates the cache instead of
           # leaving it permanently stale for that leg.
           cache-dependency-path: |
-            requirements_test.txt
+            requirements-test.txt
             .github/workflows/tests.yaml
 
       - name: Install dependencies
@@ -99,7 +99,7 @@ jobs:
             # leg still runs everything else.
             requirements+=("pytest-homeassistant-custom-component==0.13.356")
           fi
-          python -m pip install -r requirements_test.txt "${requirements[@]}"
+          python -m pip install -r requirements-test.txt "${requirements[@]}"
 
       - name: Check generated entity docs are current
         run: python tools/gen_entity_docs.py --check
@@ -124,14 +124,14 @@ jobs:
           python-version: "3.14"
           cache: pip
           # The big dependency (homeassistant==<matrix version>) comes from
-          # the workflow, not requirements_test.txt — include this file in
+          # the workflow, not requirements-test.txt — include this file in
           # the key so an HA version bump rotates the cache instead of
           # leaving it permanently stale for that leg.
           cache-dependency-path: |
-            requirements_test.txt
+            requirements-test.txt
             .github/workflows/tests.yaml
       - name: Install latest Home Assistant
-        run: python -m pip install -r requirements_test.txt --upgrade homeassistant
+        run: python -m pip install -r requirements-test.txt --upgrade homeassistant
       - name: Assert the canary actually got the latest release
         # The canary's whole purpose is testing the CURRENT core. If HA bumps
         # its Python floor above this job's pinned interpreter, pip silently
