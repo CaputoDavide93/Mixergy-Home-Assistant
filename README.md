@@ -466,4 +466,8 @@ This project is licensed under the [MIT License](LICENSE).
 
 ---
 
-<p align="center">⭐ <b>If this integration helped you, please give it a star!</b> ⭐&ensp;·&ensp;<sub>Made with ❤️ by <a href="https://github.com/CaputoDavide93">Davide Caputo</a> for the Home Assistant community</sub></p>
+<p align="center">
+  <sub>⭐ If this project helped you, please give it a star! ⭐</sub>
+  <br>
+  <sub>Made with ❤️ by <a href="https://github.com/CaputoDavide93">Davide Caputo</a></sub>
+</p>
