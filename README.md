@@ -2,21 +2,24 @@
 
 <img src="https://raw.githubusercontent.com/CaputoDavide93/Mixergy-Home-Assistant/main/custom_components/mixergy_tank/brand/icon.png" alt="Mixergy for Home Assistant" width="104" height="104">
 
-# Mixergy for Home Assistant
+# ♨️ Mixergy for Home Assistant
 
-Monitor and control your [Mixergy](https://www.mixergy.io/) smart hot water tank from Home Assistant.
+**Monitor and control your [Mixergy](https://www.mixergy.io/) smart hot water tank from Home Assistant.**
 
 Live charge and temperatures, one-tap boost, Energy Dashboard support, PV diverter controls, and holiday scheduling.
 
-[![HACS](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://hacs.xyz)
+![Python](https://img.shields.io/badge/Python-3.13-3776AB?logo=python&logoColor=white)
+![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2025.8%2B-18BCF2?logo=homeassistant&logoColor=white)
+[![HACS](https://img.shields.io/badge/HACS-Custom-41BDF5)](https://hacs.xyz)
 [![GitHub Release](https://img.shields.io/github/v/release/CaputoDavide93/Mixergy-Home-Assistant)](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/releases)
+![License](https://img.shields.io/badge/License-MIT-green)
 [![Tests](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/actions/workflows/tests.yaml/badge.svg)](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/actions/workflows/tests.yaml)
 
 </div>
 
 ---
 
-## ⚡ Quick Start
+## 🚀 Quick Start
 
 1. **Install via HACS** — add `https://github.com/CaputoDavide93/Mixergy-Home-Assistant` as a custom repository, install **Mixergy**, restart Home Assistant.
 2. **Add the integration** — **Settings → Devices & Services → Add Integration → Mixergy**, sign in with your Mixergy app credentials and pick your tank.
@@ -43,54 +46,6 @@ Live charge and temperatures, one-tap boost, Energy Dashboard support, PV divert
 | [API client](docs/api.md) | Architecture and the standalone Python client for the Mixergy cloud API |
 
 All guides in one place: [docs/README.md](docs/README.md).
-
----
-
-## 🚀 Installation
-
-### Via HACS (Recommended)
-
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=CaputoDavide93&repository=Mixergy-Home-Assistant&category=integration)
-
-Or add manually in HACS:
-
-1. Open [HACS](https://hacs.xyz/) in Home Assistant
-2. Go to **Integrations** → click the 3-dots menu → **Custom repositories**
-3. Add `https://github.com/CaputoDavide93/Mixergy-Home-Assistant` with category **Integration**
-4. Search for **Mixergy** and install it
-5. Restart Home Assistant
-
-> **Upgrading from 1.x?** Version 2.0.0 changed the integration domain. The
-> old `custom_components/mixergy/` directory must be removed before restarting;
-> HACS installs `mixergy_tank/` but does not remove the former domain directory.
-> Follow the complete [1.x → 2.x migration](docs/installation.md#upgrading-from-1x-to-2x).
-
-### Manual Installation
-
-1. Download the [latest release](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/releases)
-2. Copy `custom_components/mixergy_tank/` into your HA `config/custom_components/` directory
-3. Restart Home Assistant
-
-Full details, updating, and uninstalling: [Installation guide](docs/installation.md).
-
----
-
-## ⚙️ Setup
-
-1. Go to **Settings** → **Devices & Services** → **Add Integration**
-2. Search for **Mixergy**
-3. Enter your Mixergy account **username** and **password** — the same credentials you use in the Mixergy app
-4. Pick your tank from the list (or type the **serial number** printed on the tank label)
-5. Choose your **experience mode**
-
-### Experience Modes
-
-| Mode | Who it's for | What's included |
-| ---- | ------------ | --------------- |
-| **Simple** | Most users | Live temperatures & charge, heating status, energy dashboard, hot water boost slider |
-| **Advanced** | Power users | Everything in Simple, plus: temperature controls, heat source switching, PV diverter settings, frost protection, DSR, holiday scheduling, and a native water-heater entity |
-
-You can switch modes at any time via **Settings → Devices & Services → Mixergy → Configure**. The full walkthrough lives in the [Configuration guide](docs/configuration.md).
 
 ---
 
@@ -209,187 +164,6 @@ Automations UI: *hot water low*, *heating started*, *heating stopped*,
 
 ---
 
-## 🛠️ Options
-
-Configure via the integration's **Configure** button:
-
-| Option | Description |
-| ------ | ----------- |
-| Experience mode | Simple (monitoring + boost) or Advanced (full control) |
-| Update interval | Poll frequency, 30–300 seconds (default 60) |
-| Low / no hot water thresholds | Charge % at which the alert binary sensors trip (defaults 5% / 0.5%) |
-| Electricity price per kWh | Set a tariff to enable the electric heating **cost** sensor (0 = off) |
-
-Changing options reloads the integration automatically. Credentials can be
-updated any time from the **Reconfigure** button, and if they expire the
-integration prompts you to re-authenticate — no removal needed.
-
----
-
-## 🤖 Example Automations
-
-Four starters — the [Automations cookbook](docs/automations.md) has ten more,
-covering solar-surplus boosting, cheap-tariff windows, holiday scheduling from
-a calendar, and water-heater service calls.
-
-### Notify when hot water is low
-
-```yaml
-automation:
-  - alias: "Low hot water alert"
-    triggers:
-      - trigger: state
-        entity_id: binary_sensor.mixergy_tank_<serial>_low_hot_water
-        from: "off"
-        to: "on"
-    actions:
-      - action: notify.mobile_app_your_phone
-        data:
-          title: "Low hot water"
-          message: "Tank charge is below the low threshold — consider a boost."
-```
-
-### Boost hot water on weekday mornings
-
-```yaml
-automation:
-  - alias: "Morning hot water boost"
-    triggers:
-      - trigger: time
-        at: "06:00:00"
-    conditions:
-      - condition: time
-        weekday: [mon, tue, wed, thu, fri]
-    actions:
-      - action: mixergy_tank.boost_charge
-```
-
-### Set holiday mode before a trip
-
-```yaml
-automation:
-  - alias: "Set Mixergy holiday mode"
-    triggers:
-      - trigger: state
-        entity_id: input_boolean.going_on_holiday
-        to: "on"
-    actions:
-      - action: mixergy_tank.set_holiday_dates
-        data:
-          start_date: "2026-08-14T00:00:00"
-          end_date: "2026-08-28T00:00:00"
-```
-
-### Boost when solar export is high
-
-```yaml
-automation:
-  - alias: "Solar boost"
-    triggers:
-      - trigger: numeric_state
-        entity_id: sensor.solar_export_power
-        above: 2000
-        for:
-          minutes: 10
-    conditions:
-      - condition: numeric_state
-        entity_id: sensor.mixergy_tank_<serial>_current_charge
-        below: 80
-    actions:
-      - action: mixergy_tank.boost_charge
-```
-
-> Entity ids follow the pattern `sensor.mixergy_tank_<serial>_…` — replace
-> `<serial>` with your tank's serial number, or pick the entity from the UI.
-
----
-
-## 🔌 Supported Devices
-
-| Device | Support |
-| ------ | ------- |
-| Mixergy hot water tanks (all models) | Full |
-| Tanks with PV diverter | Full — additional PV sensors & controls |
-| Heat pump configurations | Full |
-| Indirect (gas/oil) heating | Full |
-| Electric immersion | Full |
-
-**Requires Home Assistant 2025.8 or newer** and a Mixergy cloud account (the
-one you use in the Mixergy app). This is a cloud-polling integration — the
-tank has no local API.
-
-English covers the complete UI. German, French, and Italian translations are
-included where available, with Home Assistant's English fallback for newer
-options and repair messages while locale parity is completed.
-
----
-
-## ❓ FAQ
-
-### Does this work locally, without the internet?
-
-No. Mixergy tanks are controlled through the official Mixergy cloud API, so
-the integration polls `www.mixergy.io` over TLS. If your connection drops,
-entities show as unavailable and recover on their own with the next
-successful poll.
-
-### How many tanks can I add?
-
-As many as your Mixergy account has. Each tank is its own config entry with
-its own device and entities, and every service call can target one specific
-tank — or all of them.
-
-### Will a Home Assistant update break this integration?
-
-The test suite runs on every change **and on a weekly schedule against the
-latest Home Assistant release**, so core API changes are caught between
-releases, and deprecations are fixed before they become errors. See the
-[changelog](CHANGELOG.md) for the compatibility history.
-
-### What data leaves my network?
-
-Your Mixergy account credentials and tank commands go to `www.mixergy.io` —
-nowhere else. Every request is TLS-verified, tokens auto-refresh before
-expiry, and downloaded diagnostics redact credentials, tokens, and the tank
-serial. See [Security](#-security).
-
-### Why don't I see the PV entities?
-
-They exist on every tank but stay **unavailable** unless your tank reports
-PV diverter hardware, and the PV controls appear in Advanced mode only. If
-the tank has a diverter and they still show unavailable, see the
-[Troubleshooting guide](docs/troubleshooting.md).
-
-### Can I track heating costs?
-
-Yes — set your electricity price per kWh in the integration options and a
-cumulative **cost sensor** appears, in your HA currency. The
-[Energy guide](docs/energy.md) covers how it accumulates and how to reset it.
-
----
-
-## 🩺 Troubleshooting
-
-The [Troubleshooting guide](docs/troubleshooting.md) walks through every
-common symptom — auth errors, missing entities, stale data, holiday mode —
-with the checks in order. The two things you'll need for any bug report:
-
-**Debug logging** — add to `configuration.yaml` and restart:
-
-```yaml
-logger:
-  default: warning
-  logs:
-    custom_components.mixergy_tank: debug
-```
-
-**Diagnostics** — **Settings → Devices & Services → Mixergy → Download
-diagnostics**. Credentials, tokens, and the tank serial are redacted
-automatically, so the file is safe to attach to an
-[issue](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/issues).
-
----
-
 ## 🗺️ Architecture
 
 ```mermaid
@@ -414,17 +188,117 @@ flowchart LR
 The full design — the discovery walk, auth lifecycle, error taxonomy, and the
 standalone Python client — is documented in the [API guide](docs/api.md).
 
-### 🔒 Security
+---
 
-- **TLS with certificate verification** on every API call (no `verify_ssl=False`)
-- **30-second request timeout** prevents indefinite hangs
-- **Bearer token with auto-refresh** — tokens are refreshed 5 minutes before expiry
-- **Discovered API links are validated** — the client refuses to send the token to any non-HTTPS or non-Mixergy host
-- **Credentials stored in HA config entry** — never written to logs or diagnostics
-- **Diagnostics redaction** — credentials, tokens, and the tank serial are stripped from diagnostic downloads
-- **Per-tank service authorisation** — non-admin users need control permission on the tank they target
+## 📦 Installation
 
-To report a vulnerability privately, see [SECURITY.md](SECURITY.md).
+### Via HACS (Recommended)
+
+Use the button in [Quick Start](#-quick-start), or add it manually in HACS:
+
+1. Open [HACS](https://hacs.xyz/) in Home Assistant
+2. Go to **Integrations** → click the 3-dots menu → **Custom repositories**
+3. Add `https://github.com/CaputoDavide93/Mixergy-Home-Assistant` with category **Integration**
+4. Search for **Mixergy** and install it
+5. Restart Home Assistant
+
+> **Upgrading from 1.x?** Version 2.0.0 changed the integration domain. The
+> old `custom_components/mixergy/` directory must be removed before restarting;
+> HACS installs `mixergy_tank/` but does not remove the former domain directory.
+> Follow the complete [1.x → 2.x migration](docs/installation.md#upgrading-from-1x-to-2x).
+
+### Manual Installation
+
+1. Download the [latest release](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/releases)
+2. Copy `custom_components/mixergy_tank/` into your HA `config/custom_components/` directory
+3. Restart Home Assistant
+
+Full details, updating, and uninstalling: [Installation guide](docs/installation.md).
+
+---
+
+## ⚙️ Setup
+
+1. Go to **Settings** → **Devices & Services** → **Add Integration**
+2. Search for **Mixergy**
+3. Enter your Mixergy account **username** and **password** — the same credentials you use in the Mixergy app
+4. Pick your tank from the list (or type the **serial number** printed on the tank label)
+5. Choose your **experience mode**
+
+### Experience Modes
+
+| Mode | Who it's for | What's included |
+| ---- | ------------ | --------------- |
+| **Simple** | Most users | Live temperatures & charge, heating status, energy dashboard, hot water boost slider |
+| **Advanced** | Power users | Everything in Simple, plus: temperature controls, heat source switching, PV diverter settings, frost protection, DSR, holiday scheduling, and a native water-heater entity |
+
+You can switch modes at any time via **Settings → Devices & Services → Mixergy → Configure**. The full walkthrough lives in the [Configuration guide](docs/configuration.md).
+
+---
+
+## 🛠️ Options
+
+Configure via the integration's **Configure** button:
+
+| Option | Description |
+| ------ | ----------- |
+| Experience mode | Simple (monitoring + boost) or Advanced (full control) |
+| Update interval | Poll frequency, 30–300 seconds (default 60) |
+| Low / no hot water thresholds | Charge % at which the alert binary sensors trip (defaults 5% / 0.5%) |
+| Electricity price per kWh | Set a tariff to enable the electric heating **cost** sensor (0 = off) |
+
+Changing options reloads the integration automatically. Credentials can be
+updated any time from the **Reconfigure** button, and if they expire the
+integration prompts you to re-authenticate — no removal needed.
+
+---
+
+## 🤖 Example Automations
+
+One starter below; the [Automations cookbook](docs/automations.md) has the rest,
+including workday-morning and solar-surplus boosts, cheap-tariff
+windows, holiday scheduling from a calendar or helpers, and water-heater
+service calls.
+
+### Notify when hot water is low
+
+```yaml
+automation:
+  - alias: "Low hot water alert"
+    triggers:
+      - trigger: state
+        entity_id: binary_sensor.mixergy_tank_<serial>_low_hot_water
+        from: "off"
+        to: "on"
+    actions:
+      - action: notify.mobile_app_your_phone
+        data:
+          title: "Low hot water"
+          message: "Tank charge is below the low threshold — consider a boost."
+```
+
+> Entity ids follow the pattern `sensor.mixergy_tank_<serial>_…` — replace
+> `<serial>` with your tank's serial number, or pick the entity from the UI.
+
+---
+
+## 🔌 Supported Devices
+
+| Device | Support |
+| ------ | ------- |
+| Mixergy hot water tanks (all models) | Full |
+| Tanks with PV diverter | Full — additional PV sensors & controls |
+| Heat pump configurations | Full |
+| Indirect (gas/oil) heating | Full |
+| Electric immersion | Full |
+
+**Requires Home Assistant 2025.8 or newer** and a Mixergy cloud account (the
+one you use in the Mixergy app). This is a cloud-polling integration — the
+tank has no local API.
+
+English covers the complete UI. German, French, and Italian translations are
+included where available, with Home Assistant's English fallback for newer
+options and repair messages while locale parity is completed.
 
 ---
 
@@ -453,12 +327,63 @@ Mixergy-Home-Assistant/
 
 ---
 
+## ❓ FAQ
+
+| Question | Answer |
+| --- | --- |
+| [Does it work locally, without the internet?](docs/troubleshooting.md#does-this-work-without-internet-or-locally) | No — it polls the official Mixergy cloud API over TLS |
+| [How many tanks can I add?](docs/troubleshooting.md#how-many-tanks-does-it-support) | As many as your account has; each is its own device, and services can target one |
+| [Will a Home Assistant update break it?](docs/troubleshooting.md#will-it-break-on-new-home-assistant-versions) | The test suite also runs weekly against the latest Home Assistant release |
+| [What data leaves my network?](docs/troubleshooting.md#what-data-leaves-my-network) | Credentials and commands to `mixergy.io` only; see [Security](#-security) |
+| [Why don't I see the PV entities?](docs/troubleshooting.md#why-are-the-pv-entities-missing-or-unavailable) | They stay unavailable without PV diverter hardware; controls are Advanced-only |
+| [Can I track heating costs?](docs/energy.md#-electric-cost-sensor) | Yes — set a price per kWh in the options and a cost sensor appears |
+
+---
+
+## 🩺 Troubleshooting
+
+The [Troubleshooting guide](docs/troubleshooting.md) walks through every
+common symptom — auth errors, missing entities, stale data, holiday mode —
+with the checks in order. The two things you'll need for any bug report:
+
+**Debug logging** — add to `configuration.yaml` and restart:
+
+```yaml
+logger:
+  default: warning
+  logs:
+    custom_components.mixergy_tank: debug
+```
+
+**Diagnostics** — **Settings → Devices & Services → Mixergy → Download
+diagnostics**. Credentials, tokens, and the tank serial are redacted
+automatically, so the file is safe to attach to an
+[issue](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/issues).
+
+---
+
+## 🔒 Security
+
+- **TLS with certificate verification** on every API call (no `verify_ssl=False`)
+- **30-second request timeout** prevents indefinite hangs
+- **Bearer token with auto-refresh** — tokens are refreshed 5 minutes before expiry
+- **Discovered API links are validated** — the client refuses to send the token to any non-HTTPS or non-Mixergy host
+- **Credentials stored in HA config entry** — never written to logs or diagnostics
+- **Diagnostics redaction** — credentials, tokens, and the tank serial are stripped from diagnostic downloads
+- **Per-tank service authorisation** — non-admin users need control permission on the tank they target
+
+To report a vulnerability privately, see [SECURITY.md](SECURITY.md).
+
+---
+
 ## 🤝 Contributing
 
 Contributions are welcome! Please open an
 [issue](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/issues) or
 pull request. The test suite (`pytest tests/`) and the docs generator
 (`python tools/gen_entity_docs.py --check`) both run in CI.
+
+---
 
 ## 📄 License
 
