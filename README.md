@@ -42,6 +42,8 @@ Live charge and temperatures, one-tap boost, Energy Dashboard support, PV divert
 | [Troubleshooting](docs/troubleshooting.md) | Symptom-first fixes, debug logging, diagnostics, FAQ |
 | [API client](docs/api.md) | Architecture and the standalone Python client for the Mixergy cloud API |
 
+All guides in one place: [docs/README.md](docs/README.md).
+
 ---
 
 ## 🚀 Installation
@@ -421,6 +423,33 @@ standalone Python client — is documented in the [API guide](docs/api.md).
 - **Credentials stored in HA config entry** — never written to logs or diagnostics
 - **Diagnostics redaction** — credentials, tokens, and the tank serial are stripped from diagnostic downloads
 - **Per-tank service authorisation** — non-admin users need control permission on the tank they target
+
+To report a vulnerability privately, see [SECURITY.md](SECURITY.md).
+
+---
+
+## 📁 Repo structure
+
+```text
+Mixergy-Home-Assistant/
+├── custom_components/
+│   └── mixergy_tank/           # 🏠 the integration (HACS installs this folder)
+│       ├── brand/              # 🎨 packaged icon + logos (HA 2026.3+)
+│       └── translations/       # 🌍 de, en, fr, it
+├── tests/                      # 🧪 pytest suite (run in CI with coverage)
+├── tools/
+│   └── gen_entity_docs.py      # 🤖 regenerates the entity tables (--check in CI)
+├── docs/                       # 📚 guides (index: docs/README.md)
+│   └── assets/                 # 🖼️ vector brand sources, banner, brand-manifest.json
+├── .github/                    # 🤖 hassfest, HACS validation, tests; issue templates; Dependabot
+├── hacs.json                   # 🏠 HACS metadata
+├── pyproject.toml              # ⚙️ pytest, ruff, mypy, coverage config
+├── requirements-test.txt       # 🧪 test + lint dependencies
+├── llms.txt                    # 🤖 doc map for LLM crawlers
+├── CHANGELOG.md
+├── SECURITY.md
+└── LICENSE
+```
 
 ---
 

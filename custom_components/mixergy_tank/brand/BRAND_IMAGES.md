@@ -26,19 +26,19 @@ every asset can be regenerated at any size without quality loss:
 
 | Source | Renders to |
 | ------ | ---------- |
-| [`assets/icon.svg`](../../../assets/icon.svg) | `icon.png`, `icon@2x.png` |
-| [`assets/logo.svg`](../../../assets/logo.svg) | `logo.png`, `logo@2x.png` |
-| [`assets/dark_logo.svg`](../../../assets/dark_logo.svg) | `dark_logo.png`, `dark_logo@2x.png` |
-| [`assets/banner.svg`](../../../assets/banner.svg) | `assets/banner.png` (1280 × 640, README hero + GitHub social preview) |
+| [`docs/assets/icon.svg`](../../../docs/assets/icon.svg) | `icon.png`, `icon@2x.png` |
+| [`docs/assets/logo.svg`](../../../docs/assets/logo.svg) | `logo.png`, `logo@2x.png` |
+| [`docs/assets/dark_logo.svg`](../../../docs/assets/dark_logo.svg) | `dark_logo.png`, `dark_logo@2x.png` |
+| [`docs/assets/banner.svg`](../../../docs/assets/banner.svg) | `docs/assets/banner.png` (1280 × 640, README hero + GitHub social preview) |
 
 Re-render with any SVG rasteriser, for example:
 
 ```bash
 pip install cairosvg
-python -c "import cairosvg; cairosvg.svg2png(url='assets/icon.svg', write_to='custom_components/mixergy_tank/brand/icon@2x.png', output_width=512, output_height=512)"
+python -c "import cairosvg; cairosvg.svg2png(url='docs/assets/icon.svg', write_to='custom_components/mixergy_tank/brand/icon@2x.png', output_width=512, output_height=512)"
 ```
 
-After re-rendering, update `assets/brand-manifest.json`. Repository tests verify
+After re-rendering, update `docs/assets/brand-manifest.json`. Repository tests verify
 the reviewed SHA-256 of every vector source and raster output, so a stale PNG or
 an unreviewed source edit cannot pass silently.
 
@@ -54,7 +54,7 @@ an unreviewed source edit cannot pass silently.
 
 ## GitHub social preview
 
-`assets/banner.png` is sized for GitHub's social preview card (1280 × 640,
+`docs/assets/banner.png` is sized for GitHub's social preview card (1280 × 640,
 2:1). GitHub has no API for this — upload it manually via
 **Repo → Settings → General → Social preview → Edit**.
 
