@@ -214,7 +214,7 @@ class Canvas:
             f'markerHeight="6" orient="auto-start-reverse">'
             f'<path d="M0 0 10 5 0 10z" fill="{c["line"]}"/></marker>'
             f'<marker id="b" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="6" '
-            f'markerHeight="6" orient="auto-start-reverse">'
+            f'markerHeight="6" orient="auto">'
             f'<path d="M10 0 0 5 10 10z" fill="{c["line"]}"/></marker>'
             f'</defs>' + "".join(self.parts) + "</svg>"
         )
