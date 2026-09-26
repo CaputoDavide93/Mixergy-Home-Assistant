@@ -13,3 +13,8 @@ updates:
       interval: weekly
     labels:
       - dependencies
+    ignore:
+      # pytest must equal the exact pin in pytest-homeassistant-custom-component
+      # (see requirements-test.txt), otherwise the current-HA leg cannot resolve.
+      # Bump it by hand together with that package's version in tests.yaml.
+      - dependency-name: pytest
