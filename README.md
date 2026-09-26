@@ -164,6 +164,27 @@ Automations UI: *hot water low*, *heating started*, *heating stopped*,
 
 ---
 
+## 📸 Screenshots
+
+Captured from a live tank on a real Home Assistant install.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/screenshots/device-dark.png">
+  <img src="docs/assets/screenshots/device-light.png" width="100%" alt="The Mixergy tank's device page in Home Assistant: device info, the hot water boost control, and the sensor list with charge, temperatures, heat source and clamp power.">
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/screenshots/tank-card-dark.png">
+  <img src="docs/assets/screenshots/tank-card-light.png" width="100%" alt="A dashboard built from the integration's entities: a gauge for the tank's charge next to top, bottom and target temperatures, the active heat source and clamp power.">
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/screenshots/history-dark.png">
+  <img src="docs/assets/screenshots/history-light.png" width="100%" alt="Home Assistant's History view for one day: the tank's charge falling overnight and recovering in the morning, with top and bottom water temperatures below it.">
+</picture>
+
+---
+
 ## 🗺️ Architecture
 
 <picture>
@@ -309,7 +330,7 @@ Mixergy-Home-Assistant/
 │   ├── gen_entity_docs.py      # 🤖 regenerates the entity tables (--check in CI)
 │   └── gen_diagram.py          # 🗺️ draws the architecture SVGs (--check in CI)
 ├── docs/                       # 📚 guides (index: docs/README.md)
-│   └── assets/                 # 🖼️ architecture SVGs, brand sources, banner, brand-manifest.json
+│   └── assets/                 # 🖼️ architecture SVGs, screenshots, brand sources, banner, brand-manifest.json
 ├── .github/                    # 🤖 hassfest, HACS validation, tests; issue templates; Dependabot
 ├── hacs.json                   # 🏠 HACS metadata
 ├── pyproject.toml              # ⚙️ pytest, ruff, mypy, coverage config
