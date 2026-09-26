@@ -43,7 +43,7 @@ SENSOR_TEXT = {
     "cleansing_temperature": "Anti-legionella cleansing temperature",
     "charge": "Current hot water charge level",
     "target_charge": "Configured target charge level",
-    "electric_power": "Real power draw from CT clamp",
+    "electric_power": "Immersion element power draw; `source` attribute names the reading",
     "electric_energy": "Cumulative electric energy (Energy Dashboard)",
     "pv_power": "Solar PV power being diverted",
     "pv_energy": "Cumulative PV energy (Energy Dashboard)",

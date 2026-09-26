@@ -116,7 +116,17 @@
         "name": "Carica target"
       },
       "electric_power": {
-        "name": "Potenza riscaldamento elettrico"
+        "name": "Potenza riscaldamento elettrico",
+        "state_attributes": {
+          "source": {
+            "name": "Origine della lettura",
+            "state": {
+              "immersion_energy": "Energia della resistenza",
+              "clamp_power": "Potenza clamp",
+              "idle": "Inattivo"
+            }
+          }
+        }
       },
       "electric_energy": {
         "name": "Energia riscaldamento elettrico"
