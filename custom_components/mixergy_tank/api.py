@@ -13,7 +13,7 @@ import math
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from enum import StrEnum
 from typing import Any
 from urllib.parse import urlparse
@@ -440,6 +440,156 @@ class TankSettings:
     pv_over_temperature: float = 0.0
 
 
+# Weekday names as the schedule document spells them ("mon" … "sun"), plus the
+# full English names so a capitalised or spelled-out variant still parses.
+# Index matches datetime.weekday(): Monday is 0.
+_WEEKDAYS = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
+_WEEKDAY_ALIASES = {
+    **{day: day for day in _WEEKDAYS},
+    "monday": "mon",
+    "tuesday": "tue",
+    "wednesday": "wed",
+    "thursday": "thu",
+    "friday": "fri",
+    "saturday": "sat",
+    "sunday": "sun",
+}
+
+
+def _schedule_day(value: Any) -> str | None:
+    """Normalise one schedule weekday; None for anything unrecognised.
+
+    Integers are deliberately rejected: whether 0 means Monday or Sunday is
+    not attested, and guessing wrong would shift every charge by a day.
+    """
+    if not isinstance(value, str):
+        return None
+    return _WEEKDAY_ALIASES.get(value.strip().lower())
+
+
+def _schedule_time(value: Any) -> str | None:
+    """Normalise an ``HH:MM`` (or ``HH:MM:SS``) wall-clock time to ``HH:MM``."""
+    if not isinstance(value, str):
+        return None
+    parts = value.strip().split(":")
+    if len(parts) not in (2, 3) or not all(p.isdigit() for p in parts):
+        return None
+    hour, minute = int(parts[0]), int(parts[1])
+    if not (0 <= hour < 24 and 0 <= minute < 60):
+        return None
+    return f"{hour:02d}:{minute:02d}"
+
+
+def _schedule_percent(value: Any) -> float | None:
+    """A 0–100 schedule percentage, or None when absent or out of range."""
+    if isinstance(value, bool):
+        return None
+    result = _as_optional_float(value)
+    if result is None or not 0 <= result <= 100:
+        return None
+    return result
+
+
+@dataclass(frozen=True)
+class ScheduledCharge:
+    """One charge event of the tank's own weekly programme (read-only)."""
+
+    days: tuple[str, ...]
+    time: str
+    target_charge: float | None = None
+    maintain_on: float | None = None
+    maintain_off: float | None = None
+
+    def as_dict(self) -> dict[str, Any]:
+        """Return a JSON-friendly form for entity attributes."""
+        return {
+            "days": list(self.days),
+            "time": self.time,
+            "target_charge": self.target_charge,
+            "maintain_on": self.maintain_on,
+            "maintain_off": self.maintain_off,
+        }
+
+
+@dataclass(frozen=True)
+class ScheduledHeatSource:
+    """One heat-source change of the tank's own daily programme (read-only)."""
+
+    start_time: str
+    heat_source: str
+
+    def as_dict(self) -> dict[str, Any]:
+        """Return a JSON-friendly form for entity attributes."""
+        return {"start_time": self.start_time, "heat_source": self.heat_source}
+
+
+def _parse_charge_programme(value: Any) -> tuple[ScheduledCharge, ...]:
+    """Parse ``schedule`` tolerantly; skip whatever does not match.
+
+    The document shape comes from third-party captures, not vendor docs, so an
+    unexpected entry is dropped rather than failing the poll. Parsing never
+    touches ``TankSchedule.raw``, which is what writes send back verbatim.
+    """
+    if not isinstance(value, list):
+        return ()
+    charges: list[ScheduledCharge] = []
+    for block in value:
+        if not isinstance(block, dict):
+            continue
+        raw_days = block.get("days")
+        if not isinstance(raw_days, list):
+            continue
+        days = {day for d in raw_days if (day := _schedule_day(d)) is not None}
+        if not days:
+            continue
+        ordered_days = tuple(day for day in _WEEKDAYS if day in days)
+        items = block.get("items")
+        if not isinstance(items, list):
+            continue
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            if (at := _schedule_time(item.get("time"))) is None:
+                continue
+            maintain = item.get("maintain")
+            if not isinstance(maintain, dict):
+                maintain = {}
+            charges.append(
+                ScheduledCharge(
+                    days=ordered_days,
+                    time=at,
+                    target_charge=_schedule_percent(item.get("set")),
+                    maintain_on=_schedule_percent(maintain.get("on")),
+                    maintain_off=_schedule_percent(maintain.get("off")),
+                )
+            )
+    return tuple(sorted(charges, key=lambda c: (c.time, c.days)))
+
+
+def _parse_heat_source_programme(value: Any) -> tuple[ScheduledHeatSource, ...]:
+    """Parse ``heatSourceSchedule`` tolerantly; skip whatever does not match."""
+    if not isinstance(value, list):
+        return ()
+    changes: list[ScheduledHeatSource] = []
+    for item in value:
+        if not isinstance(item, dict):
+            continue
+        at = _schedule_time(item.get("startTime"))
+        source = item.get("heatSource")
+        if at is None or not isinstance(source, str):
+            continue
+        source = source.strip().lower()
+        if source not in {"electric", "indirect", "heatpump"}:
+            continue
+        changes.append(
+            ScheduledHeatSource(
+                start_time=at,
+                heat_source=_api_to_ha_heat_source(source),
+            )
+        )
+    return tuple(sorted(changes, key=lambda c: c.start_time))
+
+
 @dataclass
 class TankSchedule:
     """Tank schedule from the API."""
@@ -448,6 +598,35 @@ class TankSchedule:
     holiday_start: datetime | None = None
     holiday_end: datetime | None = None
     default_heat_source: str = "electric"
+    charge_programme: tuple[ScheduledCharge, ...] = ()
+    heat_source_programme: tuple[ScheduledHeatSource, ...] = ()
+
+    def next_charge(
+        self, now: datetime
+    ) -> tuple[datetime, ScheduledCharge] | None:
+        """Return the next programmed charge strictly after ``now``.
+
+        Programme times are wall-clock times, so they are placed in ``now``'s
+        timezone (Home Assistant's configured zone). None when the tank has no
+        fixed programme — for example while it follows its learned automatic
+        schedule, which reports empty programme arrays.
+        """
+        best: tuple[datetime, ScheduledCharge] | None = None
+        for offset in range(8):
+            day = (now + timedelta(days=offset)).date()
+            weekday = _WEEKDAYS[day.weekday()]
+            for charge in self.charge_programme:
+                if weekday not in charge.days:
+                    continue
+                hour, minute = (int(p) for p in charge.time.split(":"))
+                when = datetime(
+                    day.year, day.month, day.day, hour, minute, tzinfo=now.tzinfo
+                )
+                if when > now and (best is None or when < best[0]):
+                    best = (when, charge)
+            if best is not None:
+                return best
+        return None
 
 
 @dataclass
@@ -1150,6 +1329,14 @@ class MixergyApiClient:
                     )
             except (TypeError, ValueError, OSError):
                 pass
+
+        # The tank's own programme, read-only. Parsed from `data` into new
+        # fields; `schedule.raw` stays the untouched document that writes
+        # round-trip, so keys this client does not understand survive.
+        schedule.charge_programme = _parse_charge_programme(data.get("schedule"))
+        schedule.heat_source_programme = _parse_heat_source_programme(
+            data.get("heatSourceSchedule")
+        )
 
         return schedule
 

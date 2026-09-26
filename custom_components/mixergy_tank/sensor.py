@@ -25,6 +25,7 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.util import dt as dt_util
 
 from .api import OperatingReason, TankData
 from .const import CONF_ELECTRIC_RATE, PERCENTAGE_UNIT
@@ -35,6 +36,28 @@ _LOGGER = logging.getLogger(__name__)
 
 # Read-only, coordinator-driven platform — no per-entity API fan-out.
 PARALLEL_UPDATES = 0
+
+
+def _next_charge_time(data: TankData) -> datetime | None:
+    """When the tank's own programme next starts a charge, if it has one."""
+    upcoming = data.schedule.next_charge(dt_util.now())
+    return upcoming[0] if upcoming is not None else None
+
+
+def _programme_attributes(data: TankData) -> dict[str, Any]:
+    """Expose the next charge's details and the whole read-only programme."""
+    schedule = data.schedule
+    upcoming = schedule.next_charge(dt_util.now())
+    charge = upcoming[1] if upcoming is not None else None
+    return {
+        "target_charge": charge.target_charge if charge else None,
+        "maintain_on": charge.maintain_on if charge else None,
+        "maintain_off": charge.maintain_off if charge else None,
+        "programme": [c.as_dict() for c in schedule.charge_programme],
+        "heat_source_programme": [
+            c.as_dict() for c in schedule.heat_source_programme
+        ],
+    }
 
 
 def _capped_elapsed_hours(
@@ -186,6 +209,14 @@ SENSOR_DESCRIPTIONS: tuple[MixergySensorEntityDescription, ...] = (
             else None
         ),
         available_fn=lambda data: data.measurement.operating_reason is not None,
+    ),
+    # ── Tank programme (read-only) ───────────────────────────────────
+    MixergySensorEntityDescription(
+        key="next_scheduled_charge",
+        translation_key="next_scheduled_charge",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        value_fn=_next_charge_time,
+        attributes_fn=_programme_attributes,
     ),
     # ── Holiday date sensors ─────────────────────────────────────────
     MixergySensorEntityDescription(

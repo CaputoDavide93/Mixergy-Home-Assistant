@@ -168,6 +168,26 @@
           "unknown": "Unknown"
         }
       },
+      "next_scheduled_charge": {
+        "name": "Next scheduled charge",
+        "state_attributes": {
+          "target_charge": {
+            "name": "Target charge"
+          },
+          "maintain_on": {
+            "name": "Maintain on"
+          },
+          "maintain_off": {
+            "name": "Maintain off"
+          },
+          "programme": {
+            "name": "Charge programme"
+          },
+          "heat_source_programme": {
+            "name": "Heat source programme"
+          }
+        }
+      },
       "holiday_start": {
         "name": "Holiday start date"
       },

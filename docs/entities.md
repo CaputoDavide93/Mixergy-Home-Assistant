@@ -34,6 +34,7 @@ The sensor platform reports temperatures, charge level, power draw, heat sources
 | Active heat source | — | Currently active heat source |
 | Default heat source | — | Configured default heat source |
 | Operating reason | — | Why the tank is currently being controlled |
+| Next scheduled charge | Timestamp | Next charge in the tank's own weekly programme; programme as attributes |
 | Holiday start date | Timestamp | Holiday mode start date |
 | Holiday end date | Timestamp | Holiday mode end date |
 | Electric heating cost | currency | Cumulative cost *(only when a tariff rate is set in options)* |
@@ -53,6 +54,19 @@ The sensor platform reports temperatures, charge level, power draw, heat sources
 3. Open the entity, press the cog, and toggle **Enabled**.
 
 The same firmware and model values always appear on the device page (see below), so most installations never need these sensors enabled.
+
+### What does Next scheduled charge show?
+
+**Next scheduled charge** reads the tank's own heating programme from the Mixergy schedule endpoint. It is read-only, so the programme is still set in the Mixergy app. The state is the next time the programme starts a charge, in Home Assistant's timezone; programme times are wall-clock times, so a charge at `02:01` stays at 02:01 across a clock change.
+
+| Attribute | Meaning |
+| --- | --- |
+| `target_charge` | Charge % the next programmed charge aims for |
+| `maintain_on` / `maintain_off` | The next charge's maintain band, when the programme sets one |
+| `programme` | Every programmed charge: `days` (`mon` … `sun`), `time` (`HH:MM`), `target_charge`, `maintain_on`, `maintain_off` |
+| `heat_source_programme` | Daily heat-source changes: `start_time` (`HH:MM`) and `heat_source` |
+
+A tank following Mixergy's learned **automatic schedule** reports an empty programme. The sensor is then `unknown` and both lists are empty, while **Operating reason** shows `Automatic schedule`. The programme's document shape comes from third-party captures, not vendor documentation, so entries the integration cannot read (for example numeric weekdays, whose Monday-or-Sunday convention is not known) are skipped rather than guessed. If your programme in the app does not match the attributes, download the diagnostics: they include the parsed programme and the schedule document's key names, without its values.
 
 ## ⚡ How do the energy sensors accumulate?
 

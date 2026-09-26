@@ -6,6 +6,20 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **Next scheduled charge** shows when the tank's own weekly programme next
+  starts a charge, with the target charge, maintain band, the full charge
+  programme and the heat-source programme as attributes. Automations can now
+  defer to the tank instead of colliding with it; the cheap-tariff recipe in
+  the automation guide does exactly that. The programme is read-only and
+  parsed tolerantly — unrecognised entries are skipped, and schedule writes
+  still send the untouched document back so unknown keys are preserved. A
+  tank on Mixergy's learned automatic schedule reports an empty programme,
+  so the sensor is `unknown` there.
+- Diagnostics include the parsed programme and the schedule document's key
+  names (values stay redacted).
+
 ### Changed
 
 - **Electric heat power now comes from the tank's immersion reading.** The
