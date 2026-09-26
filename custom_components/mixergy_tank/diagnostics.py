@@ -49,6 +49,13 @@ async def async_get_config_entry_diagnostics(
     if "info" in tank_data and "serial_number" in tank_data["info"]:
         tank_data["info"]["serial_number"] = REDACTED
 
+    # Derived properties are not dataclass fields, so asdict() drops them.
+    # Which reading backs electric heat power is the first question when a
+    # user's electric energy looks wrong, so record it explicitly.
+    tank_data["measurement"]["electric_power_source"] = (
+        coordinator.data.measurement.electric_power_source.value
+    )
+
     # Remove raw schedule payload (may contain account-specific data)
     if "schedule" in tank_data and "raw" in tank_data["schedule"]:
         tank_data["schedule"]["raw"] = REDACTED

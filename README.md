@@ -62,7 +62,7 @@ All guides in one place: [docs/README.md](docs/README.md).
 | Cleansing temperature | °C | Anti-legionella cleansing temperature |
 | Current charge | % | Current hot water charge level |
 | Target charge | % | Configured target charge level |
-| Electric heat power | W | Real power draw from CT clamp |
+| Electric heat power | W | Immersion element power draw; `source` attribute names the reading |
 | Electric heat energy | kWh | Cumulative electric energy (Energy Dashboard) |
 | PV power | kW | Solar PV power being diverted *(PV diverter only)* |
 | PV energy | kWh | Cumulative PV energy (Energy Dashboard) *(PV diverter only)* |
