@@ -104,6 +104,9 @@
       "model": {
         "default": "mdi:water-boiler"
       },
+      "next_scheduled_charge": {
+        "default": "mdi:calendar-clock"
+      },
       "operating_reason": {
         "default": "mdi:information-outline"
       },

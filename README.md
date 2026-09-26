@@ -70,6 +70,7 @@ All guides in one place: [docs/README.md](docs/README.md).
 | Active heat source | — | Currently active heat source |
 | Default heat source | — | Configured default heat source |
 | Operating reason | — | Why the tank is currently being controlled |
+| Next scheduled charge | Timestamp | Next charge in the tank's own weekly programme; programme as attributes |
 | Holiday start date | Timestamp | Holiday mode start date |
 | Holiday end date | Timestamp | Holiday mode end date |
 | Electric heating cost | currency | Cumulative cost *(only when a tariff rate is set in options)* |

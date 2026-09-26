@@ -168,6 +168,26 @@
           "unknown": "Unbekannt"
         }
       },
+      "next_scheduled_charge": {
+        "name": "Nächste geplante Ladung",
+        "state_attributes": {
+          "target_charge": {
+            "name": "Ziel-Ladestand"
+          },
+          "maintain_on": {
+            "name": "Halten ein"
+          },
+          "maintain_off": {
+            "name": "Halten aus"
+          },
+          "programme": {
+            "name": "Ladeprogramm"
+          },
+          "heat_source_programme": {
+            "name": "Wärmequellen-Programm"
+          }
+        }
+      },
       "holiday_start": {
         "name": "Urlaubsbeginn"
       },

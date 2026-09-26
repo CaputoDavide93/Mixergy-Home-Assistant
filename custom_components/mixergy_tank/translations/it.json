@@ -168,6 +168,26 @@
           "unknown": "Sconosciuto"
         }
       },
+      "next_scheduled_charge": {
+        "name": "Prossima carica programmata",
+        "state_attributes": {
+          "target_charge": {
+            "name": "Carica obiettivo"
+          },
+          "maintain_on": {
+            "name": "Mantenimento attivo"
+          },
+          "maintain_off": {
+            "name": "Mantenimento disattivo"
+          },
+          "programme": {
+            "name": "Programma di carica"
+          },
+          "heat_source_programme": {
+            "name": "Programma fonti di calore"
+          }
+        }
+      },
       "holiday_start": {
         "name": "Data inizio vacanza"
       },

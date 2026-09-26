@@ -162,7 +162,7 @@ If your tank has a PV diverter, it can do this natively without any automation â
 
 ### 4. Cheap-tariff overnight boost window
 
-Charge the tank during an off-peak window (Economy 7, Intelligent Octopus, and similar). The condition skips the call when the tank is already at a full target; adapt the trigger time to the start of your cheap window.
+Charge the tank during an off-peak window (Economy 7, Intelligent Octopus, and similar). The first condition skips the call when the tank is already at a full target. The second defers to the tank's own programme: if **Next scheduled charge** already falls within the next eight hours, the tank is going to charge anyway and the boost would only fight it. Adapt the trigger time to the start of your cheap window and the window length to your tariff.
 
 ```yaml
 alias: "Tank â€” off-peak overnight charge"
@@ -173,6 +173,10 @@ conditions:
   - condition: numeric_state
     entity_id: sensor.mixergy_tank_<serial>_current_charge
     below: 100
+  - condition: template
+    value_template: >-
+      {% set next = states('sensor.mixergy_tank_<serial>_next_scheduled_charge') | as_datetime(none) %}
+      {{ next is none or next > now() + timedelta(hours=8) }}
 actions:
   - action: mixergy_tank.boost_charge
     target:
