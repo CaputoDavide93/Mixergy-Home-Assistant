@@ -56,8 +56,14 @@ async def async_get_config_entry_diagnostics(
         coordinator.data.measurement.electric_power_source.value
     )
 
-    # Remove raw schedule payload (may contain account-specific data)
+    # Remove raw schedule payload (may contain account-specific data), but
+    # keep its top-level key names: the parsed programme above only shows what
+    # this integration understood, and the key list reveals a schema change
+    # (a renamed or new programme field) without disclosing any values.
     if "schedule" in tank_data and "raw" in tank_data["schedule"]:
+        tank_data["schedule"]["raw_keys"] = sorted(
+            str(key) for key in coordinator.data.schedule.raw
+        )
         tank_data["schedule"]["raw"] = REDACTED
 
     return {

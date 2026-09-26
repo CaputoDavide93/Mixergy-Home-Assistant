@@ -51,6 +51,7 @@ SENSOR_TEXT = {
     "active_heat_source": "Currently active heat source",
     "default_heat_source": "Configured default heat source",
     "operating_reason": "Why the tank is currently being controlled",
+    "next_scheduled_charge": "Next charge in the tank's own weekly programme; programme as attributes",
     "holiday_start": "Holiday mode start date",
     "holiday_end": "Holiday mode end date",
     "electric_cost": "Cumulative cost *(only when a tariff rate is set in options)*",
