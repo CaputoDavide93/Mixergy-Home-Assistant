@@ -4,26 +4,13 @@ This page is the developer reference for this integration's internals: the stand
 
 ## 🧭 Architecture overview
 
-The integration is three layers. The config flow collects credentials and a tank serial, then builds a `MixergyApiClient`. One `MixergyCoordinator` per tank owns that client and polls it. Entities subscribe to the coordinator for state and write through its client; the domain services resolve their targets to coordinators and write through the same path.
+The integration is three layers. The config flow collects credentials and a tank serial, checks them with a throwaway client, and saves a config entry; `async_setup_entry` then builds the long-lived `MixergyApiClient` from that entry. One `MixergyCoordinator` per tank owns that client and polls it. Entities subscribe to the coordinator for state and write through its client; the domain services resolve their targets to coordinators and write through the same path.
 
-```mermaid
-flowchart LR
-    subgraph HA["Home Assistant"]
-        CF["Config flow<br/>(credentials + serial)"]
-        CO["MixergyCoordinator<br/>one per tank"]
-        EN["Entities<br/>sensor · binary_sensor · switch · number ·<br/>select · datetime · button · water_heater"]
-        SV["Services<br/>set_holiday_dates · clear_holiday_dates ·<br/>boost_charge"]
-    end
-    API["MixergyApiClient<br/>(HA-independent)"]
-    CLOUD["Mixergy cloud API<br/>www.mixergy.io/api/v2"]
-
-    CF -->|"creates"| API
-    API -->|"owned by"| CO
-    CO -->|"fetch_all() each poll"| API
-    EN -->|"read coordinator.data /<br/>write via coordinator.client"| CO
-    SV -->|"resolve targets + authorise,<br/>then coordinator.client"| CO
-    API <-->|"HTTPS + bearer token"| CLOUD
-```
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/api-dark.svg">
+  <img src="assets/api-light.svg" width="100%"
+       alt="The config flow only tests the login and saves the entry; async_setup_entry builds one MixergyApiClient and one coordinator per tank, the coordinator polls the client with fetch_all(), entities and services write through it, and only the client talks to the Mixergy cloud API, over HTTPS with a bearer token.">
+</picture>
 
 `async_setup_entry` (`__init__.py`) wires this up: it builds the client from the entry's username, password and serial number, creates the coordinator, runs `async_config_entry_first_refresh()`, stores the coordinator in `entry.runtime_data`, and forwards the eight platforms. The domain's services are registered separately in `async_setup`, not here, so they exist even when no config entry has loaded — and they are never unregistered, so an automation referencing them keeps validating while entries come and go.
 
