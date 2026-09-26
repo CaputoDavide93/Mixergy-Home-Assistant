@@ -116,7 +116,17 @@
         "name": "Target charge"
       },
       "electric_power": {
-        "name": "Electric heat power"
+        "name": "Electric heat power",
+        "state_attributes": {
+          "source": {
+            "name": "Reading source",
+            "state": {
+              "immersion_energy": "Immersion energy",
+              "clamp_power": "Clamp power",
+              "idle": "Idle"
+            }
+          }
+        }
       },
       "electric_energy": {
         "name": "Electric heat energy"

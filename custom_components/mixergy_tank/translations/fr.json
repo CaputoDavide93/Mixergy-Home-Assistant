@@ -116,7 +116,17 @@
         "name": "Charge cible"
       },
       "electric_power": {
-        "name": "Puissance chauffage électrique"
+        "name": "Puissance chauffage électrique",
+        "state_attributes": {
+          "source": {
+            "name": "Source de la mesure",
+            "state": {
+              "immersion_energy": "Énergie de la résistance",
+              "clamp_power": "Puissance pince",
+              "idle": "Inactif"
+            }
+          }
+        }
       },
       "electric_energy": {
         "name": "Énergie chauffage électrique"

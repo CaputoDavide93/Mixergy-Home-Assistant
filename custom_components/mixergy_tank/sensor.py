@@ -8,6 +8,7 @@ import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Any
 
 from homeassistant.components.sensor import (
     RestoreSensor,
@@ -61,6 +62,7 @@ class MixergySensorEntityDescription(SensorEntityDescription):
 
     value_fn: Callable[[TankData], float | int | str | datetime | None]
     available_fn: Callable[[TankData], bool] = lambda _: True
+    attributes_fn: Callable[[TankData], dict[str, Any]] | None = None
 
 
 SENSOR_DESCRIPTIONS: tuple[MixergySensorEntityDescription, ...] = (
@@ -129,15 +131,11 @@ SENSOR_DESCRIPTIONS: tuple[MixergySensorEntityDescription, ...] = (
         device_class=SensorDeviceClass.POWER,
         native_unit_of_measurement=UnitOfPower.WATT,
         state_class=SensorStateClass.MEASUREMENT,
-        value_fn=lambda data: (
-            data.measurement.clamp_power_w
-            if data.measurement.electric_heat_source
-            else 0.0
-        ),
-        available_fn=lambda data: (
-            not data.measurement.electric_heat_source
-            or data.measurement.clamp_power_w is not None
-        ),
+        value_fn=lambda data: data.measurement.electric_heat_power_w,
+        available_fn=lambda data: data.measurement.electric_heat_power_w is not None,
+        attributes_fn=lambda data: {
+            "source": data.measurement.electric_power_source.value
+        },
     ),
     MixergySensorEntityDescription(
         key="pv_power",
@@ -264,11 +262,7 @@ async def async_setup_entry(
                 coordinator,
                 key="electric_energy",
                 translation_key="electric_energy",
-                power_w_fn=lambda data: (
-                    data.measurement.clamp_power_w or 0.0
-                    if data.measurement.electric_heat_source
-                    else 0.0
-                ),
+                power_w_fn=lambda data: data.measurement.electric_heat_power_w or 0.0,
             ),
             MixergyEnergySensor(
                 coordinator,
@@ -312,6 +306,13 @@ class MixergySensor(MixergyEntity, SensorEntity):
     def native_value(self) -> float | int | str | datetime | None:
         """Return the sensor value."""
         return self.entity_description.value_fn(self.coordinator.data)
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any] | None:
+        """Return description-provided attributes, if any."""
+        if (attributes_fn := self.entity_description.attributes_fn) is None:
+            return None
+        return attributes_fn(self.coordinator.data)
 
     @property
     def available(self) -> bool:
@@ -473,12 +474,7 @@ class MixergyElectricCostSensor(_MixergyAccumulatingSensor):
 
     def _value_per_hour(self, data: TankData) -> float:
         """Return the cost accumulated per hour at the current power."""
-        measurement = data.measurement
-        power_w = (
-            measurement.clamp_power_w or 0.0
-            if measurement.electric_heat_source
-            else 0.0
-        )
+        power_w = data.measurement.electric_heat_power_w or 0.0
         return (power_w / 1000) * self._rate
 
     @property

@@ -335,6 +335,40 @@ def _ha_to_api_heat_source(ha_value: str) -> str:
     return "heatpump" if ha_value == "heat_pump" else ha_value
 
 
+class ElectricPowerSource(StrEnum):
+    """Which measurement field the electric heat power was derived from."""
+
+    IMMERSION_ENERGY = "immersion_energy"
+    CLAMP_POWER = "clamp_power"
+    IDLE = "idle"
+
+
+# A domestic immersion element is 3 kW class (a captured cleansing cycle
+# reported ~2.8 kW). A per-minute ``energy`` sample implying more than this is
+# not a one-minute immersion reading — most likely a cumulative counter or a
+# unit change — and integrating it would permanently inflate the kWh total.
+MAX_PLAUSIBLE_IMMERSION_POWER_W = 10_000.0
+
+
+def _immersion_power_w(value: Any) -> float | None:
+    """Convert the measurement's ``energy`` (J per 1-minute report) to watts."""
+    if isinstance(value, bool):
+        return None
+    joules = _as_optional_float(value)
+    if joules is None or joules < 0:
+        return None
+    watts = joules / 60
+    if watts > MAX_PLAUSIBLE_IMMERSION_POWER_W:
+        _LOGGER.warning(
+            "Ignoring implausible immersion energy reading %s J (%.0f W); "
+            "electric heat power is unavailable for this report",
+            value,
+            watts,
+        )
+        return None
+    return watts
+
+
 @dataclass
 class TankMeasurement:
     """Snapshot of the latest tank measurement."""
@@ -349,12 +383,45 @@ class TankMeasurement:
     in_holiday_mode: bool = False
     pv_power_kw: float | None = None
     clamp_power_w: float | None = None
+    # Whether the report carried the ``energy`` key at all. The cloud omits it
+    # entirely while the immersion is off, so absence and a malformed value
+    # mean different things (idle versus unknown).
+    immersion_energy_reported: bool = False
+    immersion_power_w: float | None = None
     active_heat_source: HeatSource = HeatSource.NONE
     is_heating: bool = False
     operating_reason: OperatingReason | None = None
     recorded_time: datetime | None = None
     received_time: datetime | None = None
     report_is_fresh: bool | None = None
+
+    @property
+    def electric_power_source(self) -> ElectricPowerSource:
+        """Name the reading that backs the electric heat power sensor.
+
+        ``energy`` is the immersion element's own consumption, so it wins
+        whenever the report carries it — including when the immersion runs
+        while another heat source is nominally active (cleansing, or a heat
+        pump that cannot reach temperature). Without it, a tank that says the
+        electric immersion is on falls back to ``clampPower``, the reading this
+        sensor used before ``energy`` was understood: on a PV-diverter tank
+        that is the diverter's CT clamp, not a direct immersion measurement.
+        """
+        if self.immersion_energy_reported:
+            return ElectricPowerSource.IMMERSION_ENERGY
+        if self.electric_heat_source:
+            return ElectricPowerSource.CLAMP_POWER
+        return ElectricPowerSource.IDLE
+
+    @property
+    def electric_heat_power_w(self) -> float | None:
+        """Electric immersion power in watts; None when it cannot be known."""
+        source = self.electric_power_source
+        if source is ElectricPowerSource.IMMERSION_ENERGY:
+            return self.immersion_power_w
+        if source is ElectricPowerSource.CLAMP_POWER:
+            return self.clamp_power_w
+        return 0.0
 
 
 @dataclass
@@ -920,6 +987,13 @@ class MixergyApiClient:
             )
         if "clampPower" in data:
             measurement.clamp_power_w = _as_optional_float(data["clampPower"])
+        # Immersion consumption: joules over the report's one-minute window,
+        # present only while the element is energised. Cross-checked against a
+        # captured report (energy 169623 J with 231.8 V × 12.14 A ≈ 2.81 kW,
+        # and 169623 / 60 ≈ 2.83 kW) — the same J/min convention as pvEnergy.
+        if "energy" in data:
+            measurement.immersion_energy_reported = True
+            measurement.immersion_power_w = _immersion_power_w(data["energy"])
 
         # Parse state JSON
         try:

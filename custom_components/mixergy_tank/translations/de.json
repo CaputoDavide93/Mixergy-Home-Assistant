@@ -116,7 +116,17 @@
         "name": "Zielladezustand"
       },
       "electric_power": {
-        "name": "Elektrische Heizleistung"
+        "name": "Elektrische Heizleistung",
+        "state_attributes": {
+          "source": {
+            "name": "Messquelle",
+            "state": {
+              "immersion_energy": "Heizstab-Energie",
+              "clamp_power": "Clamp-Leistung",
+              "idle": "Inaktiv"
+            }
+          }
+        }
       },
       "electric_energy": {
         "name": "Elektrische Heizenergie"

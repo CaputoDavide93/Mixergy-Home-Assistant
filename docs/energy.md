@@ -1,6 +1,6 @@
 # Energy Dashboard & Cost Tracking
 
-This page shows you how to add your Mixergy tank to the Home Assistant Energy Dashboard, explains exactly how the integration turns CT-clamp power readings into cumulative kWh totals, covers the optional electric cost sensor and its tariff option, and finishes with how to reset totals and how to shift heating into cheap tariff windows.
+This page shows you how to add your Mixergy tank to the Home Assistant Energy Dashboard, explains exactly how the integration turns the tank's power readings into cumulative kWh totals, covers the optional electric cost sensor and its tariff option, and finishes with how to reset totals and how to shift heating into cheap tariff windows.
 
 Entity ids on this page use `<serial>` as a placeholder for your tank's serial number — a real id looks like `sensor.mixergy_tank_mx001234_electric_heat_energy`.
 
@@ -33,7 +33,7 @@ On every successful poll the integration multiplies the current power reading by
 
 The two totals draw from different power sources:
 
-- **Electric heat energy** integrates the CT-clamp power, and only while the electric immersion is the active heat source. Clamp power measured while the immersion is off contributes nothing.
+- **Electric heat energy** integrates **Electric heat power**, the immersion element's draw. See [Where does electric heat power come from?](#-where-does-electric-heat-power-come-from) below.
 - **PV energy** integrates the PV diverter power on tanks that have one.
 
 Three protections keep the totals honest:
@@ -54,7 +54,33 @@ Other sources of divergence:
 
 - The totals start at zero when you install the integration — they never include history from before that point.
 - Energy used during an outage longer than 2× the poll interval is deliberately discarded by the outage cap rather than guessed.
-- Electric heat energy excludes clamp power measured while the immersion is inactive, so it tracks heating energy specifically.
+- Electric heat energy counts only the immersion element. Grid import, export and PV diversion measured by a diverter's CT clamp are not counted as immersion energy while the tank reports its own immersion reading.
+
+## 🔌 Where does electric heat power come from?
+
+The tank's measurement report can carry two electrical readings, and they measure different things:
+
+| Field | What it is | When it is present |
+| --- | --- | --- |
+| `energy` | The immersion element's own consumption, in joules over the report's one-minute window | Only while the immersion is energised — the cloud omits the key entirely when it is off |
+| `clampPower` | The PV diverter's CT clamp on the grid connection, in watts | Only on tanks with a PV diverter |
+
+**Electric heat power** picks its reading in this order, and its `source` attribute tells you which one it used:
+
+| `source` | Rule | Value |
+| --- | --- | --- |
+| `immersion_energy` | The report carries `energy` | `energy ÷ 60` W. A malformed, negative, or implausible value (above 10 kW) makes the sensor unavailable rather than falling back to the clamp |
+| `clamp_power` | No `energy`, but the tank says the electric immersion is heating | `clampPower`, as earlier releases always did. Unavailable if the tank has no clamp |
+| `idle` | Neither | 0 W |
+
+The `energy ÷ 60` conversion is the same joules-per-minute convention the integration already uses for `pvEnergy`. It is cross-checked against a captured report taken during a cleansing cycle: `energy` 169623 J gives 2.83 kW, and the same report's `voltage` × `current` (231.81 V × 12.14 A) gives 2.81 kW. Mixergy does not document the field, so this is evidence rather than a vendor guarantee.
+
+Two things follow from the immersion reading being preferred:
+
+- Immersion use while another heat source is nominally active — a cleansing cycle, or a heat pump that cannot reach temperature — now counts as electric heating. It previously read 0 W because the tank's nominal heat source was not `electric`.
+- On a PV-diverter tank the value is the immersion element, not the grid clamp. If the diverter is feeding the element with surplus solar, that energy is still immersion energy, so it can appear in both **Electric heat energy** and **PV energy**, and the cost sensor prices it at your grid tariff.
+
+`clamp_power` remains only as a fallback for a tank that reports electric heating without `energy`. If you see `source: clamp_power` while your immersion is on, please download the integration's diagnostics and open an issue — that is exactly the case the fallback exists to catch.
 
 ## 💷 Electric cost sensor
 

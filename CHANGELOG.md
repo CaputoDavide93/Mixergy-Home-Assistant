@@ -6,6 +6,26 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- **Electric heat power now comes from the tank's immersion reading.** The
+  measurement's `energy` field (joules over the one-minute report, present
+  only while the immersion is energised) is converted to watts and preferred
+  over `clampPower`, which on a PV-diverter tank is the diverter's grid CT
+  clamp rather than the element. The sensor's new `source` attribute shows
+  which reading was used (`immersion_energy`, `clamp_power`, or `idle`), and
+  diagnostics record it too. Implausible readings (above 10 kW) are rejected
+  instead of being integrated. Immersion use while another heat source is
+  nominally active, such as a cleansing cycle on a heat-pump tank, is now
+  counted rather than reported as 0 W.
+
+  **Migration note:** existing **Electric heat energy** and **Electric heating
+  cost** totals are kept and keep increasing; nothing resets. From upgrade
+  onwards they accumulate at the immersion's own draw, so a PV-diverter tank
+  may accumulate at a different rate than before, and a heat-pump or indirect
+  tank may start accumulating immersion boosts that it previously missed.
+  See [Energy](docs/energy.md#-where-does-electric-heat-power-come-from).
+
 ### Fixed
 
 - All schedule changes now share one locked read-modify-write path, so a new
