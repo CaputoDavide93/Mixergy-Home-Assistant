@@ -47,6 +47,9 @@ jobs:
       - name: ruff
         run: ruff check .
 
+      - name: Check architecture diagrams are current
+        run: python3 tools/gen_diagram.py --check
+
       - name: mypy
         run: mypy custom_components/mixergy_tank
 

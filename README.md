@@ -166,24 +166,18 @@ Automations UI: *hot water low*, *heating started*, *heating stopped*,
 
 ## 🗺️ Architecture
 
-```mermaid
-flowchart LR
-    subgraph HA["🏠 Home Assistant"]
-        CF["🔐 Config flow<br/>credentials · tank picker · mode"]
-        CO["🔄 Coordinator<br/>one per tank · 30–300 s poll"]
-        ENT["📟 Entities<br/>sensors · binary sensors<br/>controls · water heater"]
-        SVC["🛎️ Services<br/>mixergy_tank.*<br/>entity / device / area targets"]
-    end
-    subgraph CLOUD["☁️ Mixergy Cloud"]
-        API["www.mixergy.io<br/>REST API"]
-        TANK["♨️ Tank"]
-    end
-    CF -->|validates| API
-    CO <-->|"HTTPS · bearer token<br/>auto-refresh · auto re-auth"| API
-    API <--> TANK
-    CO --> ENT
-    SVC --> CO
-```
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/architecture-dark.svg">
+  <img src="docs/assets/architecture-light.svg" width="100%"
+       alt="The Mixergy tank reports to the Mixergy cloud; the integration's coordinator polls the cloud API over HTTPS and feeds the Home Assistant entities and the Energy Dashboard, while services and controls write back to the cloud.">
+</picture>
+
+There is no local path to the tank: every read and write goes through the
+Mixergy cloud API. One coordinator per tank polls it (60 s by default,
+30–300 s allowed) with three parallel GETs — measurement, settings and
+schedule. Services and control entities send a `PUT` and then ask the
+coordinator to refresh at once, so a change never waits for the next poll.
+The config flow uses the same API to validate credentials and list your tanks.
 
 The full design — the discovery walk, auth lifecycle, error taxonomy, and the
 standalone Python client — is documented in the [API guide](docs/api.md).
@@ -312,9 +306,10 @@ Mixergy-Home-Assistant/
 │       └── translations/       # 🌍 de, en, fr, it
 ├── tests/                      # 🧪 pytest suite (run in CI with coverage)
 ├── tools/
-│   └── gen_entity_docs.py      # 🤖 regenerates the entity tables (--check in CI)
+│   ├── gen_entity_docs.py      # 🤖 regenerates the entity tables (--check in CI)
+│   └── gen_diagram.py          # 🗺️ draws the architecture SVGs (--check in CI)
 ├── docs/                       # 📚 guides (index: docs/README.md)
-│   └── assets/                 # 🖼️ vector brand sources, banner, brand-manifest.json
+│   └── assets/                 # 🖼️ architecture SVGs, brand sources, banner, brand-manifest.json
 ├── .github/                    # 🤖 hassfest, HACS validation, tests; issue templates; Dependabot
 ├── hacs.json                   # 🏠 HACS metadata
 ├── pyproject.toml              # ⚙️ pytest, ruff, mypy, coverage config
