@@ -39,6 +39,9 @@ ignore = [
     "F811",     # re-imported fixtures//helpers inside test functions
 ]
 "tools/*" = ["E501"]
+# The house diagram kit's engine is shared verbatim across repositories, so it
+# keeps its own compact style rather than this repo's.
+"tools/gen_diagram.py" = ["E501", "E702", "C408", "UP037"]
 
 [tool.mypy]
 python_version = "3.13"
