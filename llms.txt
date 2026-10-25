@@ -1,28 +1,45 @@
 # Mixergy for Home Assistant
 
-> Home Assistant custom integration for Mixergy smart hot water tanks. Cloud-polling integration for the official Mixergy API (www.mixergy.io): live charge and temperatures, hot water boost, a native water-heater entity, PV diverter monitoring and controls, holiday scheduling, Energy Dashboard support, and per-tank services. Installed through HACS as a custom repository. Requires Home Assistant 2025.8 or newer. MIT licensed.
+> Home Assistant custom integration for Mixergy smart hot water tanks. It reads the tank through Mixergy's cloud API (www.mixergy.io) and gives Home Assistant live charge and temperatures, a hot water boost, an optional native water heater entity, PV diverter monitoring and controls, holiday scheduling, Energy dashboard sensors and per-tank services. Installed through HACS as a custom repository. Requires Home Assistant 2025.8 or newer. MIT licensed. Independent project, not made or endorsed by Mixergy.
 
-Key facts:
-- Domain: `mixergy_tank`; one config entry per tank; multiple tanks supported
-- Two experience modes: Simple (monitoring + boost slider) and Advanced (full control surface incl. water heater, heat-source select, PV controls, holiday pickers)
-- Services: `mixergy_tank.set_holiday_dates`, `mixergy_tank.clear_holiday_dates`, `mixergy_tank.boost_charge` — all accept entity/device/area targets
-- Energy: cumulative electric and PV kWh sensors compatible with the HA Energy Dashboard, plus an optional tariff-based cost sensor
-- Alerts: configurable low / no hot water binary sensors and device triggers
-- Observability: operating reason, active target, tank report timestamps, and stale-report connectivity
-- Cloud polling every 30–300 s (default 60); credentials stay in the HA config entry; TLS-verified requests only
+## Install
+
+1. In HACS, add https://github.com/CaputoDavide93/Mixergy-Home-Assistant as a custom repository of type Integration, download Mixergy, restart Home Assistant.
+2. Settings, Devices and services, Add integration, Mixergy. Sign in with the email address and password of your Mixergy app account and pick your tank.
+3. Choose Simple (sensors and a boost slider) or Advanced (full control surface). The mode can be changed later from the Configure button.
+
+## Key facts
+
+- Domain: `mixergy_tank`. One config entry and one device per tank, several tanks supported.
+- Cloud polling only: no local API on the tank, so no internet means no data. Poll interval 30 to 300 seconds, default 60.
+- Services: `mixergy_tank.set_holiday_dates`, `mixergy_tank.clear_holiday_dates`, `mixergy_tank.boost_charge`. All accept entity, device or area targets.
+- Energy: cumulative electric and PV kWh sensors for the Energy dashboard, plus an optional cost sensor when a price per kWh is set.
+- Alerts: configurable low and no hot water binary sensors, a tank connectivity sensor and device triggers.
+- Privacy: credentials stay in the Home Assistant config entry; requests go to mixergy.io over verified TLS only; no telemetry.
+- Languages: English, German, French, Italian.
+
+## Tested on
+
+- Home Assistant 2025.8.0 (minimum) and 2026.8.2: test suite in CI, plus hassfest and HACS validation.
+- One tank run live by the maintainer: indirect (gas or oil) heating, firmware 7.2.1.
+- Electric immersion, heat pump and PV diverter tanks: handled in code and unit tests with sample API responses, unverified on hardware. Reports welcome: https://github.com/CaputoDavide93/Mixergy-Home-Assistant/blob/main/CONTRIBUTING.md
 
 ## Docs
 
-- [README](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/blob/main/README.md): overview, feature tables, quick start
-- [Installation](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/blob/main/docs/installation.md): HACS and manual install, updating, uninstalling
-- [Configuration](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/blob/main/docs/configuration.md): setup flow, experience modes, options, reauthentication
-- [Entities](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/blob/main/docs/entities.md): every sensor, binary sensor, and control with behaviour details
-- [Automations](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/blob/main/docs/automations.md): services, device triggers, and a recipe cookbook
-- [Energy](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/blob/main/docs/energy.md): Energy Dashboard setup and cost tracking
-- [Troubleshooting](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/blob/main/docs/troubleshooting.md): symptom-first fixes and FAQ
-- [API client](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/blob/main/docs/api.md): architecture and the standalone Python API client
+- [README](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/blob/main/README.md): overview, comparison, install in 3 steps, features
+- [Setup](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/blob/main/docs/setup.md): numbered walkthrough with a screenshot per step
+- [Installation](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/blob/main/docs/installation.md): HACS and manual install, updating, 1.x to 2.x migration, uninstalling
+- [Configuration](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/blob/main/docs/configuration.md): setup flow, Simple and Advanced modes, options, reauthentication
+- [Entities](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/blob/main/docs/entities.md): every sensor, binary sensor, control and service, generated from the code
+- [Automations](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/blob/main/docs/automations.md): services, device triggers, recipe cookbook
+- [Energy](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/blob/main/docs/energy.md): Energy dashboard setup and cost tracking
+- [How it works](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/blob/main/docs/how-it-works.md): polling, writes, freshness, energy counting
+- [Troubleshooting](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/blob/main/docs/troubleshooting.md): symptom-first fixes, debug logging, diagnostics
+- [FAQ](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/blob/main/docs/faq.md): cloud or local, tanks, privacy, compatibility, upgrading
+- [API client](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/blob/main/docs/api.md): architecture and the standalone Python client
 
 ## Source
 
 - [Repository](https://github.com/CaputoDavide93/Mixergy-Home-Assistant): code, issues, releases
 - [Changelog](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/blob/main/CHANGELOG.md): versioned release history
+- [Contributing](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/blob/main/CONTRIBUTING.md): reporting untested hardware, running the checks
