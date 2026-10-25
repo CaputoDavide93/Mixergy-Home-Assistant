@@ -1,0 +1,10 @@
+{
+  "domain": "screenshot_env",
+  "name": "Mixergy screenshot environment",
+  "codeowners": [],
+  "dependencies": ["recorder"],
+  "documentation": "https://github.com/CaputoDavide93/Mixergy-Home-Assistant",
+  "iot_class": "calculated",
+  "requirements": [],
+  "version": "0.0.0"
+}

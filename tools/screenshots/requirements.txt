@@ -1,0 +1,13 @@
+# The screenshot environment (make screenshots), kept apart from the test
+# venv. Home Assistant is the current release the test matrix covers; the
+# frontend is the one that release asks for (its frontend manifest).
+homeassistant==2026.8.2
+home-assistant-frontend==20260729.7
+playwright==1.64.1
+pillow
+aiohttp
+# Imported by built-in integrations the frontend asks about at start-up.
+# Pinned here so Home Assistant never has to build them while it starts.
+mutagen==1.48.1
+pymicro-vad==1.0.1
+pyspeex-noise==1.0.2
