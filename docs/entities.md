@@ -202,6 +202,18 @@ The last poll failed. All entities share one data coordinator, so a cloud API er
 
 Your tank reports no PV diverter. **PV power**, **Clamp power**, **PV energy**, the **PV export divert** switch, and the four PV number controls stay unavailable unless the tank's cloud record says a PV diverter is fitted — they are created regardless, so they appear the moment the hardware does.
 
+## 🛠️ Services
+
+The three services below are generated from `services.yaml`. Targets, permission rules and examples are in the [Automations guide](automations.md).
+
+<!-- AUTOGEN:entities:services -->
+| Service | Description |
+| ------- | ----------- |
+| `mixergy_tank.set_holiday_dates` | Set the holiday start and end dates for the Mixergy tank. |
+| `mixergy_tank.clear_holiday_dates` | Clear the holiday mode dates for the Mixergy tank. |
+| `mixergy_tank.boost_charge` | Boost the hot water to 100% charge immediately. |
+<!-- /AUTOGEN:entities:services -->
+
 ## 🔔 Device triggers
 
 Five ready-made triggers appear in the automation editor when you pick the tank as a device — no entity ids needed. They cover the moments most automations care about: hot water running low, heating starting or stopping, and holiday mode beginning or ending.

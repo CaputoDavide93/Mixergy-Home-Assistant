@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Generate the README entity/service tables from the integration source.
+"""Generate the entity/service tables from the integration source.
 
-The tables between the ``<!-- AUTOGEN:... -->`` markers in README.md are
+The tables between the ``<!-- AUTOGEN:... -->`` markers in docs/entities.md are
 produced by this script — do not edit them by hand. Sources of truth:
 
 - ``strings.json``            → entity names per platform, service names/descriptions
@@ -12,11 +12,11 @@ Only the short prose in the *Description* column lives in this script
 (``SENSOR_TEXT`` / ``BINARY_TEXT`` / ``CONTROL_TEXT``). A completeness check
 cross-references every table against ``strings.json``: adding, removing, or
 renaming an entity in the integration makes ``--check`` fail until both the
-description map here and the README are updated.
+description map here and the docs are updated.
 
 Usage:
-    python tools/gen_entity_docs.py           # rewrite README.md in place
-    python tools/gen_entity_docs.py --check   # exit non-zero if README is stale
+    python tools/gen_entity_docs.py           # rewrite the docs in place
+    python tools/gen_entity_docs.py --check   # exit non-zero if the docs are stale
 
 Stdlib only — no Home Assistant install required.
 """
@@ -382,16 +382,17 @@ def render_blocks(src: dict) -> dict[str, str]:
 
 # ── Document splicing ────────────────────────────────────────────────────────
 
-# Files carrying the AUTOGEN markers. README.md is mandatory; docs/entities.md
-# is spliced too when present so the deep-dive reference can never drift from
-# the tables the README shows.
-TARGETS = [README, ROOT / "docs" / "entities.md"]
+# Files carrying the AUTOGEN markers. docs/entities.md is mandatory and must
+# carry every block; README.md is spliced too when it carries any, so a summary
+# table there could never drift from the reference.
+ENTITIES = ROOT / "docs" / "entities.md"
+TARGETS = [ENTITIES, README]
 
 
 def splice(
     text: str, blocks: dict[str, str], name_for_errors: str, *, strict: bool = True
 ) -> str:
-    """Replace each marked block. Strict targets (README) must carry every
+    """Replace each marked block. Strict targets (docs/entities.md) must carry every
     marker pair; lenient targets may carry a subset — only the pairs present
     are refreshed."""
     for name, table in blocks.items():
@@ -429,12 +430,12 @@ def main() -> int:
     stale: list[str] = []
     for target in TARGETS:
         if not target.exists():
-            if target == README:
-                raise SystemExit("README.md not found")
+            if target == ENTITIES:
+                raise SystemExit("docs/entities.md not found")
             continue
         rel = target.relative_to(ROOT)
         current = target.read_text(encoding="utf-8")
-        updated = splice(current, blocks, str(rel), strict=target == README)
+        updated = splice(current, blocks, str(rel), strict=target == ENTITIES)
         if updated == current:
             continue
         if args.check:
