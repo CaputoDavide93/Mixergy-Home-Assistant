@@ -1,6 +1,6 @@
-# Troubleshooting & FAQ
+# Troubleshooting
 
-Symptom-first fixes for the problems people actually hit with the Mixergy integration — setup failures, unavailable entities, missing PV controls, stuck holiday mode, reauthentication loops — followed by how to gather debug logs and diagnostics, where to file issues, and answers to the most common questions about how the integration works.
+Symptom-first fixes for the problems people actually hit with the Mixergy integration — setup failures, unavailable entities, missing PV controls, stuck holiday mode, reauthentication loops — followed by how to gather debug logs and diagnostics, where to file issues, and a pointer to the [FAQ](faq.md).
 
 Entity ids in the examples use `<serial>` as a placeholder for your tank's serial number. The integration names devices `Mixergy Tank (<SERIAL>)`, so a real id looks like `sensor.mixergy_tank_mx001234_current_charge`.
 
@@ -151,7 +151,7 @@ File issues at [github.com/CaputoDavide93/Mixergy-Home-Assistant/issues](https:/
 3. The [diagnostics download](#how-do-i-download-diagnostics) — it is already redacted.
 4. A [debug log](#how-do-i-enable-debug-logging) excerpt covering the failure, if the problem is intermittent.
 
-## ❓ FAQ
+## 🖼️ Cosmetic
 
 ### Why is the icon missing in HACS?
 
@@ -161,32 +161,11 @@ It is a known HACS limitation, not an issue with this integration. Since Home As
 
 There is nothing to fix on your side and no effect on functionality. Tracked upstream at [hacs/integration#5171](https://github.com/hacs/integration/issues/5171), with a fix proposed in [hacs/integration#5388](https://github.com/hacs/integration/pull/5388).
 
-### Does this work without internet, or locally?
-
-No. This is a cloud-polling integration for the official Mixergy API at `www.mixergy.io` — the tank has no supported local API, so every reading and every command goes through Mixergy's cloud. If your internet connection or Mixergy's service is down, entities go unavailable until it recovers.
-
-### Is this the Mixergy integration from the HACS default store?
-
-No. This is an independent project, installed as a **HACS custom repository**. Any other Mixergy integration is an unrelated codebase — never run two integrations against the same tank, and file issues for this one at [github.com/CaputoDavide93/Mixergy-Home-Assistant](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/issues).
-
-### How many tanks does it support?
-
-Multiple — one config entry per tank, each keyed by its serial number. The config flow lists the tanks on your account so you can pick each one; the `set_holiday_dates`, `clear_holiday_dates`, and `boost_charge` services accept a standard Home Assistant target (entity, device, or area) to act on a specific tank, and apply to every configured tank when called without a target.
-
-### Does boosting cost extra API calls or hammer the cloud?
-
-No. Reads come from one coordinator per tank on your configured poll interval, and writes are serialised — schedule operations (holiday dates, default heat source) take a lock so concurrent callers cannot interleave, and each write platform runs one update at a time. A boost is one write plus one refresh request, nothing more.
-
-### Will it break on new Home Assistant versions?
-
-The CI test suite runs on a weekly schedule against the latest Home Assistant core, so core API churn is caught between releases rather than by users. The integration also tracks deprecations ahead of enforcement — the v1.3.2 changelog entry documents fixes landed before their HA 2026.12 and 2027.8 deadlines. Release 2.2.0 is verified on HA 2026.8.2, and the supported floor remains HA 2025.8.
-
-### What data leaves my network?
-
-Your Mixergy account credentials and tank commands go to `mixergy.io` over TLS — nothing else, to nobody else. The client validates every API URL before sending the bearer token and refuses plain-HTTP or off-origin links, so the token cannot leak to a third party even if the cloud served a bad link. There are no analytics, telemetry, or third-party services.
+Questions that are not a fault (local control, tank count, data sent, Home Assistant upgrades) are answered in the [FAQ](faq.md).
 
 ## 🔗 See also
 
+- [FAQ](faq.md)
 - [Installation](installation.md)
 - [Configuration](configuration.md)
 - [Entities](entities.md)
