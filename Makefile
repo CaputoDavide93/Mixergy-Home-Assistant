@@ -1,7 +1,7 @@
 # One entry point for the checks CI runs. `make check` before every push.
 PYTHON := .venv/bin/python
 
-.PHONY: venv test lint typecheck diagram check screenshots
+.PHONY: venv test lint typecheck diagram check screenshots brand
 
 venv: ## Home Assistant 2026.8.2 test environment, built with uv
 	uv venv -q --allow-existing --python 3.14 .venv
@@ -35,3 +35,7 @@ screenshots: ## Retake docs/assets/screenshots/ from a throwaway Home Assistant 
 		VIRTUAL_ENV=.venv-screenshots uv pip install -q -r tools/screenshots/requirements.txt )
 	.venv-screenshots/bin/python -m playwright install chromium
 	.venv-screenshots/bin/python tools/screenshots/take_screenshots.py
+
+brand: ## Redraw the README icon and the social preview (needs Chrome and Pillow)
+	python3 tools/brand/brand_kit.py icon
+	python3 tools/brand/brand_kit.py social

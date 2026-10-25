@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="custom_components/mixergy_tank/brand/icon.png" alt="Mixergy for Home Assistant: a hot water tank, half full, with a lightning bolt" width="104" height="104">
+<img src="docs/assets/brand/icon.svg" alt="Mixergy for Home Assistant icon: a rounded tank outline with a wave line for the water level, on a magenta tile" width="104" height="104">
 
 # ♨️ Mixergy for Home Assistant
 
@@ -187,19 +187,19 @@ Mixergy-Home-Assistant/
 ├── tools/
 │   ├── gen_entity_docs.py   # 🤖 regenerates the entity tables in docs/entities.md
 │   ├── gen_diagram.py       # 🗺️ draws the architecture SVGs
+│   ├── brand/               # 🎨 icon tile and social preview generator (make brand)
 │   └── screenshots/         # 📸 throwaway Home Assistant and demo tank for make screenshots
 ├── docs/                    # 📚 guides, index in docs/README.md
-│   └── assets/              # 🖼️ diagrams, screenshots, brand sources, banner, social preview
+│   └── assets/              # 🖼️ diagrams, screenshots, brand sources, README icon, banner, social preview
 ├── .github/                 # ⚙️ hassfest, HACS validation, tests, templates, Dependabot
 ├── .gitignore
-├── Makefile                 # 🔧 make check, make screenshots
+├── Makefile                 # 🔧 make check, make screenshots, make brand
 ├── hacs.json                # 🏠 HACS metadata
 ├── pyproject.toml           # ⚙️ pytest, ruff, mypy, coverage
 ├── requirements-test.txt    # 🧪 test and lint dependencies
 ├── llms.txt                 # 🤖 the project in one page for AI search
 ├── AGENTS.md
 ├── CHANGELOG.md
-├── CLAUDE.md
 ├── CONTRIBUTING.md
 ├── SECURITY.md
 └── LICENSE
