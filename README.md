@@ -4,7 +4,7 @@
 
 # ♨️ Mixergy for Home Assistant
 
-**See how much hot water is left in your Mixergy tank and heat it when you choose, from Home Assistant, with no YAML and one HACS install**
+**See how much hot water is left in your Mixergy tank and heat it when you choose, from Home Assistant, set up in the UI through HACS**
 
 ![Python](https://img.shields.io/badge/Python-3.13%2B-3776AB?logo=python&logoColor=white)
 ![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2025.8%2B-18BCF2?logo=homeassistant&logoColor=white)
@@ -198,7 +198,6 @@ Mixergy-Home-Assistant/
 ├── pyproject.toml           # ⚙️ pytest, ruff, mypy, coverage
 ├── requirements-test.txt    # 🧪 test and lint dependencies
 ├── llms.txt                 # 🤖 the project in one page for AI search
-├── AGENTS.md
 ├── CHANGELOG.md
 ├── CONTRIBUTING.md
 ├── SECURITY.md
