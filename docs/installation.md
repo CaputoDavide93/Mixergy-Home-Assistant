@@ -1,12 +1,12 @@
 # Installation
 
-This page covers everything needed to get the integration running: what you need before you start, installing through HACS (recommended) or manually, how updates arrive and how to apply them safely, how to uninstall cleanly, and where the integration stores your data. Entity ids in examples use `<serial>` as a placeholder for your tank's serial number — the integration names devices `Mixergy Tank (<SERIAL>)`, so real ids look like `sensor.mixergy_tank_mx001234_current_charge`.
+This page covers everything needed to get the integration running: what you need before you start, installing through HACS (recommended) or manually, how updates arrive and how to apply them safely, how to uninstall cleanly, and where the integration stores your data. Entity ids in examples use `<serial>` as a placeholder for your tank's serial number, the integration names devices `Mixergy Tank (<SERIAL>)`, so real ids look like `sensor.mixergy_tank_mx001234_current_charge`.
 
 ---
 
 ## ✅ Requirements
 
-You need Home Assistant 2025.8 or newer, a Mixergy smart hot water tank, and the Mixergy cloud account you use in the Mixergy app. Your Home Assistant instance must be able to reach `https://www.mixergy.io` — this is a cloud-polling integration with no local API, so no internet means no data.
+You need Home Assistant 2025.8 or newer, a Mixergy smart hot water tank, and the Mixergy cloud account you use in the Mixergy app. Your Home Assistant instance must be able to reach `https://www.mixergy.io`: this is a cloud-polling integration with no local API, so no internet means no data.
 
 | Requirement | Detail |
 | ----------- | ------ |
@@ -23,7 +23,7 @@ The integration polls the Mixergy cloud API over HTTPS with certificate verifica
 
 ## 📦 Install via HACS (recommended)
 
-This integration is distributed as a HACS **custom repository** — it is not in the HACS default store. Add `https://github.com/CaputoDavide93/Mixergy-Home-Assistant` as a custom repository with category **Integration**, install it, and restart Home Assistant. The badge below opens the repository directly in your instance.
+This integration is distributed as a HACS **custom repository**: it is not in the HACS default store. Add `https://github.com/CaputoDavide93/Mixergy-Home-Assistant` as a custom repository with category **Integration**, install it, and restart Home Assistant. The badge below opens the repository directly in your instance.
 
 [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=CaputoDavide93&repository=Mixergy-Home-Assistant&category=integration)
 
@@ -48,7 +48,7 @@ After the restart, add the integration itself: **Settings** → **Devices & Serv
 
 ## 🛠️ Manual installation
 
-Manual installation copies the integration files into your Home Assistant configuration directory yourself. It works identically to a HACS install once running, but you take on the job of applying updates by hand — HACS will not know the integration exists.
+Manual installation copies the integration files into your Home Assistant configuration directory yourself. It works identically to a HACS install once running, but you take on the job of applying updates by hand, HACS will not know the integration exists.
 
 1. Download the [latest release](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/releases) from GitHub
 2. Copy `custom_components/mixergy_tank/` into your HA `config/custom_components/` directory
@@ -70,21 +70,21 @@ config/
 
 ## 🔄 How do updates arrive?
 
-Updates arrive as GitHub releases on [CaputoDavide93/Mixergy-Home-Assistant](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/releases). If you installed through HACS, new releases appear in the HACS update list and on Home Assistant's **Settings** page like any other update. Manual installs receive nothing automatically — watch the releases page yourself.
+Updates arrive as GitHub releases on [CaputoDavide93/Mixergy-Home-Assistant](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/releases). If you installed through HACS, new releases appear in the HACS update list and on Home Assistant's **Settings** page like any other update. Manual installs receive nothing automatically, watch the releases page yourself.
 
 ---
 
 ## ⬆️ How do I update safely?
 
-For normal updates within the same domain, read the release notes first, take a Home Assistant backup, then apply the update through HACS and restart. Your configuration entry — credentials, serial number, experience mode, and options — survives those updates. The 1.x → 2.x domain rename is the exception; use the dedicated migration below.
+For normal updates within the same domain, read the release notes first, take a Home Assistant backup, then apply the update through HACS and restart. Your configuration entry, credentials, serial number, experience mode, and options, survives those updates. The 1.x → 2.x domain rename is the exception; use the dedicated migration below.
 
 1. Open the release notes for the new version on the [releases page](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/releases) and check for breaking changes
 2. Take a Home Assistant backup (**Settings** → **System** → **Backups**)
 3. In HACS, open **Mixergy** and select **Update** (or use the update entry on the Settings page)
 4. Restart Home Assistant
-5. Confirm the tank device still reports — check an entity such as `sensor.mixergy_tank_<serial>_current_charge` has a fresh state
+5. Confirm the tank device still reports, check an entity such as `sensor.mixergy_tank_<serial>_current_charge` has a fresh state
 
-For a manual install, replace the whole `config/custom_components/mixergy_tank/` directory with the new release's copy, then restart. Do not merge old and new files — stale leftovers from a previous version cause hard-to-diagnose errors.
+For a manual install, replace the whole `config/custom_components/mixergy_tank/` directory with the new release's copy, then restart. Do not merge old and new files, stale leftovers from a previous version cause hard-to-diagnose errors.
 
 ### Upgrading from 1.x to 2.x
 
@@ -128,13 +128,13 @@ Remove the integration entry first, then remove the repository from HACS. Deleti
 
 For a manual install, replace steps 3–4 with deleting the `config/custom_components/mixergy_tank/` directory and restarting.
 
-If you created automations, dashboards, or Energy Dashboard entries that reference Mixergy entities, remove those references too — they will show as unavailable entities otherwise.
+If you created automations, dashboards, or Energy Dashboard entries that reference Mixergy entities, remove those references too, they will show as unavailable entities otherwise.
 
 ---
 
 ## 🔐 What data is stored where?
 
-Your Mixergy username, password, and tank serial number live in the Home Assistant config entry — Home Assistant's own storage under your `config/.storage/` directory, protected by the same access controls as the rest of your HA configuration. Nothing is written elsewhere, and deleting the integration entry removes the credentials with it.
+Your Mixergy username, password, and tank serial number live in the Home Assistant config entry, Home Assistant's own storage under your `config/.storage/` directory, protected by the same access controls as the rest of your HA configuration. Nothing is written elsewhere, and deleting the integration entry removes the credentials with it.
 
 | Data | Where | Notes |
 | ---- | ----- | ----- |
@@ -148,10 +148,10 @@ All communication with the Mixergy cloud runs over TLS with certificate verifica
 
 ## 🔗 See also
 
-- [Configuration](configuration.md) — setup flow, experience modes, and options
-- [Entities](entities.md) — every sensor, binary sensor, and control
-- [Automations](automations.md) — services, device triggers, and examples
-- [Energy Dashboard](energy.md) — electric and PV energy sensors
-- [Troubleshooting](troubleshooting.md) — common errors and debugging
-- [API](api.md) — the Mixergy cloud API client
-- [README](../README.md) — project overview
+- [Configuration](configuration.md), setup flow, experience modes, and options
+- [Entities](entities.md), every sensor, binary sensor, and control
+- [Automations](automations.md), services, device triggers, and examples
+- [Energy Dashboard](energy.md), electric and PV energy sensors
+- [Troubleshooting](troubleshooting.md), common errors and debugging
+- [API](api.md), the Mixergy cloud API client
+- [README](../README.md), project overview
