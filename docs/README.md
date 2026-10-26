@@ -13,4 +13,4 @@
 | [FAQ](faq.md) | Short answers: cloud or local, tanks, privacy, compatibility, upgrading |
 | [API client](api.md) | Architecture and the standalone Python client for the Mixergy cloud API |
 
-[`assets/`](assets/) holds the diagrams, screenshots, vector brand sources, the README banner, the README icon in `brand/` (not the icon Home Assistant shows), the social preview and `brand-manifest.json` (reviewed hashes); see [BRAND_IMAGES.md](../custom_components/mixergy_tank/brand/BRAND_IMAGES.md).
+[`assets/`](assets/) holds the diagrams, screenshots, vector brand sources, the README banner, the social preview and `brand-manifest.json` (reviewed hashes); see [BRAND_IMAGES.md](../custom_components/mixergy_tank/brand/BRAND_IMAGES.md).
