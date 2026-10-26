@@ -35,7 +35,7 @@ Or add the repository by hand:
 4. Search for **Mixergy** and install it
 5. Restart Home Assistant
 
-> Searching HACS without adding the custom repository first can surface unrelated Mixergy projects from the default store. Check the repository owner is **CaputoDavide93** before installing.
+> Searching HACS without adding the custom repository first can surface other results from the default store. Install only one Mixergy integration per tank, and check the repository owner is **CaputoDavide93** before installing.
 
 > Upgrading from a 1.x release is different from a fresh install because the
 > integration domain changed in 2.0.0. Follow the dedicated

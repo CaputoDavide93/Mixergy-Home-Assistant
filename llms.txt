@@ -20,7 +20,7 @@
 
 ## Tested on
 
-- Home Assistant 2025.8.0 (minimum) and 2026.8.2: test suite in CI, plus hassfest and HACS validation.
+- The minimum supported and the current Home Assistant (see the CI matrix): test suite in CI, plus hassfest and HACS validation.
 - One tank run live by the maintainer: indirect (gas or oil) heating, firmware 7.2.1.
 - Electric immersion, heat pump and PV diverter tanks: handled in code and unit tests with sample API responses, unverified on hardware. Reports welcome: https://github.com/CaputoDavide93/Mixergy-Home-Assistant/blob/main/CONTRIBUTING.md
 
