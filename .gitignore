@@ -39,3 +39,7 @@ home-assistant_v2.db-shm
 
 # Source icon (high-res original; brand/ contains the correctly-sized copies)
 /icon.png
+
+# Screenshot environment
+.venv-screenshots/
+.venv-typecheck/

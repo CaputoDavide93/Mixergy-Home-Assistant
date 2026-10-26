@@ -42,6 +42,8 @@ ignore = [
 # The house diagram kit's engine is shared verbatim across repositories, so it
 # keeps its own compact style rather than this repo's.
 "tools/gen_diagram.py" = ["E501", "E702", "C408", "UP037"]
+# The brand script is a compact one-file renderer, kept in the same style.
+"tools/brand/brand_kit.py" = ["E401", "E701", "E702", "E731", "E741", "UP031", "I001"]
 
 [tool.mypy]
 python_version = "3.13"

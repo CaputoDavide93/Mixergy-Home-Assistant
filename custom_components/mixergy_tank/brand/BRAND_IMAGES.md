@@ -54,8 +54,8 @@ an unreviewed source edit cannot pass silently.
 
 ## GitHub social preview
 
-`docs/assets/banner.png` is sized for GitHub's social preview card (1280 × 640,
-2:1). GitHub has no API for this — upload it manually via
+`docs/assets/social-preview.png` (a metadata-free copy of `banner.png`, 1280 × 640,
+2:1) is sized for GitHub's social preview card. GitHub has no API for this, so upload it manually via
 **Repo → Settings → General → Social preview → Edit**.
 
 ## After changing images

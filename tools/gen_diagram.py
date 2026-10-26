@@ -4,8 +4,7 @@
   docs/assets/<name>-light.svg
   docs/assets/<name>-dark.svg
 
-House diagram kit (canonical copy: ~/.claude/skills/new-repo/assets/gen_diagram.py,
-first built for InkFrame-Immich). The engine below the "diagrams" line is shared
+House diagram kit. The engine below the "diagrams" line is shared
 verbatim across repos; only the diagram functions and DIAGRAMS change per repo.
 
 GitHub sanitises SVG in markdown: no <style>, no <script>, no web font, no
