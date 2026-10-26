@@ -12,9 +12,9 @@ It is a free, open-source (MIT) Home Assistant custom integration that reads and
 
 No. It is an independent project and is not made or endorsed by Mixergy. It talks to the same cloud service as the Mixergy app, using your own account.
 
-### Is this the Mixergy integration from the HACS default store?
+### Can I run it next to another Mixergy integration?
 
-No. This one is installed as a HACS custom repository. Any other Mixergy integration is an unrelated codebase, so never run two integrations against the same tank, and file issues for this one at [github.com/CaputoDavide93/Mixergy-Home-Assistant](https://github.com/CaputoDavide93/Mixergy-Home-Assistant/issues).
+Avoid it: two integrations polling the same tank double the cloud requests. Remove the other one first.
 
 ### How do I install it?
 
@@ -72,7 +72,7 @@ They are created for every tank but stay unavailable unless the tank reports a P
 
 ### Will it break on new Home Assistant versions?
 
-The test suite runs weekly against the latest Home Assistant release, so core changes tend to surface in CI before they reach users. Release 2.2.0 is checked on Home Assistant 2025.8.0 (the minimum) and 2026.8.2.
+The test suite runs weekly against the latest Home Assistant release, so core changes tend to surface in CI before they reach users. The CI matrix runs the minimum supported Home Assistant and the current one (see `.github/workflows/tests.yaml`).
 
 ## Privacy and security
 
