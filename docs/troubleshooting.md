@@ -1,6 +1,6 @@
 # Troubleshooting
 
-Symptom-first fixes for the problems people actually hit with the Mixergy integration — setup failures, unavailable entities, missing PV controls, stuck holiday mode, reauthentication loops — followed by how to gather debug logs and diagnostics, where to file issues, and a pointer to the [FAQ](faq.md).
+Symptom-first fixes for the problems people actually hit with the Mixergy integration (setup failures, unavailable entities, missing PV controls, stuck holiday mode, reauthentication loops), followed by how to gather debug logs and diagnostics, where to file issues, and a pointer to the [FAQ](faq.md).
 
 Entity ids in the examples use `<serial>` as a placeholder for your tank's serial number. The integration names devices `Mixergy Tank (<SERIAL>)`, so a real id looks like `sensor.mixergy_tank_mx001234_current_charge`.
 

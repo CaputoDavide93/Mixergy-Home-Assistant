@@ -207,7 +207,7 @@ class MixergyBoostNumber(MixergyEntity, NumberEntity):
     def __init__(self, coordinator: MixergyCoordinator) -> None:
         """Initialise the boost number entity."""
         super().__init__(coordinator)
-        # Share the unique_id with target_charge_control for seamless mode switching
+        # Share the unique_id with target_charge_control so mode switching keeps one entity
         self._attr_unique_id = (
             f"{coordinator.data.info.serial_number}_target_charge_control"
         )
