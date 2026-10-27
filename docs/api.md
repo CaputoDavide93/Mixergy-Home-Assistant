@@ -9,7 +9,7 @@ The integration is three layers. The config flow collects credentials and a tank
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/api-dark.svg">
   <img src="assets/api-light.svg" width="100%"
-       alt="The config flow only tests the login and saves the entry; async_setup_entry builds one MixergyApiClient and one coordinator per tank, the coordinator polls the client with fetch_all(), entities and services write through it, and only the client talks to the Mixergy cloud API, over HTTPS with a bearer token.">
+       alt="The Config Flow only tests the login and saves the entry; Setup Entry builds one Mixergy API Client and one Coordinator per tank, the Coordinator polls the client with fetch_all(), Entities and Services write through it, and only the client talks to the Mixergy Cloud API, over HTTPS with a bearer token.">
 </picture>
 
 `async_setup_entry` (`__init__.py`) wires this up: it builds the client from the entry's username, password and serial number, creates the coordinator, runs `async_config_entry_first_refresh()`, stores the coordinator in `entry.runtime_data`, and forwards the eight platforms. The domain's services are registered separately in `async_setup`, not here, so they exist even when no config entry has loaded, and they are never unregistered, so an automation referencing them keeps validating while entries come and go.
