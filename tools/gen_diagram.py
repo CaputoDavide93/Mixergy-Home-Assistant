@@ -234,12 +234,12 @@ def architecture(scheme):
     bot, BH = 240, 92
     k.add(
         k.group(640, 40, 520, 316, "HOME ASSISTANT"),
-        k.box(24, top, 184, H, "Mixergy tank", ["Reports to the cloud", "about every 60 s"], icon="bolt"),
-        k.box(284, top, 232, H, "Mixergy cloud", ["www.mixergy.io/api/v2", "REST, HATEOAS links"], icon="cloud"),
+        k.box(24, top, 184, H, "Mixergy Tank", ["Reports to the cloud", "about every 60 s"], icon="bolt"),
+        k.box(284, top, 232, H, "Mixergy Cloud", ["www.mixergy.io/api/v2", "REST, HATEOAS links"], icon="cloud"),
         k.box(660, top, 220, H, "Coordinator", ["One per tank, polls every", "60 s (30 to 300 s)"], icon="server", tone="accent"),
         k.box(928, top, 208, H, "Entities", ["8 platforms, from sensors", "to the water heater"], icon="chip"),
-        k.box(660, bot, 220, BH, "Services, controls", ["3 services, plus number,", "switch and select entities"], icon="gear"),
-        k.box(928, bot, 208, BH, "Energy dashboard", ["Individual devices"], icon="chart"),
+        k.box(660, bot, 220, BH, "Services and Controls", ["3 services, plus number,", "switch and select entities"], icon="gear"),
+        k.box(928, bot, 208, BH, "Energy Dashboard", ["Individual devices"], icon="chart"),
         # Tank and cloud talk to each other; Home Assistant never reaches the tank.
         k.edge([(208 + 8, mid), (284 - 8, mid)], both=True, label="reports"),
         k.text(246, mid + 20, "commands", size=11.5, font=MONO, colour=c["chip"], anchor="middle"),
@@ -258,10 +258,10 @@ def architecture(scheme):
     return k.render()
 
 
-API_LABEL = ("The config flow only tests the login and saves the entry; async_setup_entry builds "
-             "one MixergyApiClient and one coordinator per tank, the coordinator polls the client "
-             "with fetch_all(), entities and services write through it, and only the client talks "
-             "to the Mixergy cloud API, over HTTPS with a bearer token.")
+API_LABEL = ("The Config Flow only tests the login and saves the entry; Setup Entry builds one "
+             "Mixergy API Client and one Coordinator per tank, the Coordinator polls the client "
+             "with fetch_all(), Entities and Services write through it, and only the client talks "
+             "to the Mixergy Cloud API, over HTTPS with a bearer token.")
 
 
 def api(scheme):
@@ -272,14 +272,14 @@ def api(scheme):
     m2 = r2 + H / 2
     lab = dict(size=11.5, font=MONO, colour=c["chip"])
     k.add(
-        k.group(24, 40, 640, 460, "HOME ASSISTANT"),
-        k.box(44, r1, 240, H, "Config flow", ["username, password, serial", "tests login, saves entry"], icon="key"),
-        k.box(424, r1, 220, H, "async_setup_entry", ["__init__.py, per entry", "builds client + coordinator"], icon="code"),
+        k.group(24, 40, 628, 460, "HOME ASSISTANT"),
+        k.box(44, r1, 240, H, "Config Flow", ["username, password, serial", "tests login, saves entry"], icon="key"),
+        k.box(424, r1, 220, H, "Setup Entry", ["async_setup_entry, per entry", "builds client + coordinator"], icon="code"),
         k.box(44, r2, 240, H, "Entities", ["8 platforms", "write, then request refresh"], icon="chip"),
         k.box(424, r2, 220, H, "Coordinator", ["one per tank", "every 60 s (30 to 300 s)"], icon="refresh"),
         k.box(44, r3, 240, 108, "Services", ["set_holiday_dates", "clear_holiday_dates", "boost_charge"], icon="gear"),
-        k.box(756, r2, 260, H, "MixergyApiClient", ["api.py, no HA imports", "token, HATEOAS links, locks"], icon="api", tone="accent"),
-        k.box(756, 384, 260, H, "Mixergy cloud API", ["www.mixergy.io/api/v2", "endpoints found via _links"], icon="cloud"),
+        k.box(756, r2, 260, H, "Mixergy API Client", ["api.py, no HA imports", "token, HATEOAS links, locks"], icon="api", tone="accent"),
+        k.box(756, 384, 260, H, "Mixergy Cloud API", ["www.mixergy.io/api/v2", "endpoints found via _links"], icon="cloud"),
         # Setup: the flow saves an entry; setup builds the runtime client and coordinator.
         k.edge([(284 + 8, r1 + H / 2), (424 - 8, r1 + H / 2)], label="config entry"),
         k.edge([(534, r1 + H + 8), (534, r2 - 8)]),
@@ -297,7 +297,7 @@ def api(scheme):
         k.edge([(886, r2 + H + 8), (886, 384 - 8)], both=True),
         k.text(898, (r2 + H + 384) / 2 + 4, "HTTPS + bearer", **lab),
         k.text(874, (r2 + H + 384) / 2 + 4, "GET x3 / poll, PUT", anchor="end", **lab),
-        k.footer("Every read and write goes through one MixergyApiClient per tank, and it sends its "
+        k.footer("Every read and write goes through one Mixergy API Client per tank, and it sends its "
                  "token only to https://www.mixergy.io."),
     )
     return k.render()
