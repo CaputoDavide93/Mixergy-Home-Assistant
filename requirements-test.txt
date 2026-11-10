@@ -11,7 +11,7 @@ PyYAML
 # unresolvable, and the two must agree for the fixture-backed flow tests to
 # install at all. pytest-asyncio and pytest-cov already match its pins.
 pytest==9.0.3
-pytest-asyncio==1.4.0
+pytest-asyncio==1.4.1.post1
 pytest-cov==7.1.0
 
 # Static analysis, run by the `lint` job in tests.yaml. Pinned like the rest so
