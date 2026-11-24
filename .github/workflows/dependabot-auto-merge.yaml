@@ -1,8 +1,10 @@
 name: Dependabot auto-merge
 
-# Approves a Dependabot pull request and turns on auto-merge. GitHub then
-# merges it only once every required check is green. Pull requests from anyone
-# else are ignored. No code from the pull request is checked out or run.
+# Approves a Dependabot pull request and turns on auto-merge, but only for a
+# patch or minor update (or a pinned-commit bump). GitHub then merges it once
+# every required check is green. Majors, Docker base images and Terraform are
+# left for the Sunday sweep; pull requests from anyone else are ignored. No
+# code from the pull request is checked out or run.
 on: pull_request_target
 
 permissions:
@@ -16,7 +18,16 @@ jobs:
       contents: write
       pull-requests: write
     steps:
+      - name: Read the update type
+        id: meta
+        uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98 # v3.1.0
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Approve and enable auto-merge
+        if: >-
+          steps.meta.outputs.update-type != 'version-update:semver-major'
+          && steps.meta.outputs.package-ecosystem != 'docker'
+          && steps.meta.outputs.package-ecosystem != 'terraform'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_URL: ${{ github.event.pull_request.html_url }}
