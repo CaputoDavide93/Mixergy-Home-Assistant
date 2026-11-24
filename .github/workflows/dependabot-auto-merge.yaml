@@ -5,7 +5,8 @@ name: Dependabot auto-merge
 # else are ignored. No code from the pull request is checked out or run.
 on: pull_request_target
 
-permissions: {}
+permissions:
+  contents: read
 
 jobs:
   auto-merge:
