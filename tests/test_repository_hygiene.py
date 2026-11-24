@@ -17,6 +17,14 @@ WORKFLOWS = ROOT / ".github" / "workflows"
 # this repository legitimately needs is read-only.
 _READ_ONLY = {"read", "none"}
 
+# The one workflow allowed to widen, and exactly how far. It approves and
+# auto-merges pull requests opened by Dependabot and nothing else; its job is
+# guarded by the author check asserted below. Any other workflow, or any other
+# scope in this one, still fails.
+_WRITE_EXCEPTIONS = {
+    "dependabot-auto-merge.yaml": {"contents": "write", "pull-requests": "write"},
+}
+
 
 def _png_metadata(path: Path) -> tuple[int, int, int]:
     """Return width, height, and PNG color type from the IHDR chunk."""
@@ -44,7 +52,15 @@ def test_workflows_pin_actions_and_use_read_only_permissions() -> None:
             # Job-level permissions override the workflow default — the
             # standard way scopes get widened. Require any override to be
             # read-only too.
-            for scope, level in (job.get("permissions") or {}).items():
+            granted = job.get("permissions") or {}
+            allowed = _WRITE_EXCEPTIONS.get(path.name)
+            if allowed is not None:
+                assert granted == allowed, f"{path}: job '{job_name}' differs from its exception"
+                assert "dependabot[bot]" in str(job.get("if")), (
+                    f"{path}: job '{job_name}' must be limited to Dependabot"
+                )
+                continue
+            for scope, level in granted.items():
                 assert level in _READ_ONLY, (
                     f"{path}: job '{job_name}' widens '{scope}' to '{level}'"
                 )
